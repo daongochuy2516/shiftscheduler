@@ -1,0 +1,471 @@
+# Lịch Ca Làm Việc
+
+Ứng dụng xếp ca nội bộ cho nhân viên. React + Vite + TypeScript + Tailwind, backend là Supabase (Postgres + Auth + Realtime).
+
+Mô hình dữ liệu cốt lõi: **một ca chứa nhiều lượt phân công**, mỗi nhân viên trong ca có khung giờ riêng.
+
+```
+Ca: Trực trang, 08:00–18:00
+├── Huy    08:00–12:00   đã xác nhận
+├── Thiên  10:00–16:00   đã xác nhận
+└── An     15:00–18:00   chờ xác nhận
+```
+
+---
+
+## Mục lục
+
+- [1. Chạy dự án](#1-chạy-dự-án)
+- [2. Đăng nhập và đăng xuất](#2-đăng-nhập-và-đăng-xuất)
+- [3. Thanh điều hướng chung](#3-thanh-điều-hướng-chung)
+- [4. Trang Lịch — ba chế độ xem](#4-trang-lịch--ba-chế-độ-xem)
+- [5. Đọc timeline ngày](#5-đọc-timeline-ngày)
+- [6. Tạo, sửa và xoá ca](#6-tạo-sửa-và-xoá-ca)
+- [7. Ca mẫu và nhận ca nhanh](#7-ca-mẫu-và-nhận-ca-nhanh)
+- [8. Ba trang lọc](#8-ba-trang-lọc)
+- [9. Đa ngôn ngữ và cập nhật thời gian thực](#9-đa-ngôn-ngữ-và-cập-nhật-thời-gian-thực)
+- [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
+- [11. Dành cho quản trị viên](#11-dành-cho-quản-trị-viên)
+- [12. Cấu trúc mã nguồn](#12-cấu-trúc-mã-nguồn)
+
+---
+
+## 1. Chạy dự án
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # kiểm tra kiểu + build production
+npm run lint
+```
+
+### Biến môi trường
+
+Tạo file `.env` trong thư mục `shift-management/` (xem mẫu ở `.env.example`):
+
+```
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+Dự án cũ dùng tên `VITE_SUPABASE_ANON_KEY` — ứng dụng chấp nhận cả hai tên.
+Tuyệt đối **không** đặt `service_role` key vào đây: mọi biến `VITE_` đều được gửi xuống trình duyệt.
+
+> Vite chỉ đọc `.env` lúc khởi động. Sửa xong phải khởi động lại `npm run dev`.
+
+### SQL cần chạy trên Supabase
+
+Chạy theo thứ tự trong **SQL Editor** của Supabase:
+
+| File | Nội dung |
+| --- | --- |
+| `supabase/schema.sql` | 3 bảng `profiles` / `shifts` / `shift_assignments`, RLS, trigger tạo profile tự động, Realtime |
+| `supabase/002_shift_templates.sql` | Bảng `shift_templates` + cột `shifts.template_id` cho tính năng ca mẫu |
+
+Nếu chưa chạy file 002, ứng dụng **vẫn chạy bình thường**, chỉ hiện thông báo vàng ở khu vực ca mẫu.
+
+### Chế độ dữ liệu mẫu
+
+Không có `.env` thì ứng dụng tự chuyển sang dữ liệu mẫu trong `localStorage`, hiện dải băng vàng *"Đang chạy dữ liệu mẫu"*. Đăng nhập bằng bất kỳ email mẫu nào với mật khẩu `password`. Hữu ích khi muốn xem giao diện mà chưa có Supabase.
+
+---
+
+## 2. Đăng nhập và đăng xuất
+
+Mở ứng dụng, nếu chưa đăng nhập bạn luôn bị chuyển về `/login`. Không có trang đăng ký — tài khoản do quản trị viên tạo (xem [mục 11](#11-dành-cho-quản-trị-viên)).
+
+**Cách đăng nhập**
+
+1. Nhập **Email** và **Mật khẩu** công ty cấp.
+2. Bấm **Đăng nhập**.
+
+Vài điểm cần biết:
+
+- Nút **Tiếng Việt / English** nằm ngay trên form, đổi được trước cả khi đăng nhập.
+- Sai email hoặc mật khẩu sẽ hiện *"Email hoặc mật khẩu không đúng."* Các lỗi khác (bị khoá, giới hạn số lần thử) hiện nguyên văn để dễ báo cho quản trị viên.
+- Nếu bạn dán một đường dẫn sâu (ví dụ `/pending`) khi chưa đăng nhập, hệ thống ghi nhớ và **đưa bạn về đúng trang đó** sau khi đăng nhập xong.
+- Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
+
+**Đăng xuất**: bấm biểu tượng ↪ ở góc phải trên cùng, cạnh tên bạn. Bạn sẽ được đưa về trang đăng nhập ngay.
+
+### Quên mật khẩu
+
+Link **Quên mật khẩu?** nằm bên phải nhãn *Mật khẩu* trên form đăng nhập. Bấm vào chỉ hiện một hộp thoại hướng dẫn — **không có chức năng tự đặt lại mật khẩu**, quản trị viên phải đặt lại thủ công (xem [mục 11](#11-dành-cho-quản-trị-viên)).
+
+Cố ý làm vậy: bật tính năng gửi email đặt lại mật khẩu của Supabase sẽ cho phép bất kỳ ai biết email nhân viên cũng kích hoạt được luồng đó.
+
+> Muốn ghi số điện thoại hay email của quản trị viên vào hộp thoại, sửa chuỗi `forgot.body` trong `src/i18n/translations.ts` (cả bản `vi` lẫn `en`).
+
+### Đổi mật khẩu
+
+Bấm biểu tượng **chìa khoá 🔑** ở góc phải trên cùng, ngay bên trái nút đăng xuất.
+
+Form gồm ba ô: **Mật khẩu hiện tại**, **Mật khẩu mới**, **Nhập lại mật khẩu mới**. Có nút *Hiện mật khẩu* để soi lại nếu gõ nhầm.
+
+Điều kiện để nút **Đổi mật khẩu** sáng lên:
+
+- Mật khẩu mới dài **ít nhất 6 ký tự** (đúng mức tối thiểu mặc định của Supabase — nếu dự án bạn đặt chính sách chặt hơn, thông báo của máy chủ sẽ hiện nguyên văn).
+- Hai ô mật khẩu mới **khớp nhau**.
+- Mật khẩu mới **khác** mật khẩu hiện tại.
+
+Lỗi hiện ngay dưới từng ô khi bạn gõ, không phải bấm nút mới biết.
+
+> **Mật khẩu hiện tại được kiểm tra thật.** Supabase không tự đối chiếu mật khẩu cũ khi đổi, nên ứng dụng đăng nhập lại ngầm bằng mật khẩu bạn vừa nhập trước khi cho đổi. Nhờ vậy người tình cờ ngồi vào máy bạn đang mở sẵn cũng không đổi được mật khẩu.
+
+Sau khi đổi thành công, bạn **vẫn đăng nhập bình thường trên thiết bị này**. Các thiết bị khác giữ phiên cho tới khi hết hạn.
+
+*Ở chế độ dữ liệu mẫu, mật khẩu mới được lưu trong `localStorage` của trình duyệt, đủ để thử luồng đổi mật khẩu mà không cần Supabase.*
+
+---
+
+## 3. Thanh điều hướng chung
+
+Thanh trên cùng có mặt ở mọi trang:
+
+| Thành phần | Công dụng |
+| --- | --- |
+| **Lịch** | Trang chính: timeline ngày/tuần/tháng |
+| **Tất cả ca** | Danh sách mọi ca, có tìm kiếm |
+| **Ca của tôi** | Chỉ những ca bạn được phân công |
+| **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
+| **VI / EN** | Đổi ngôn ngữ giao diện |
+| **Tạo ca** (nút xanh) | Mở form tạo ca mới, mặc định là **hôm nay** |
+| Avatar + tên | Tài khoản đang đăng nhập |
+| 🔑 | Đổi mật khẩu |
+| ↪ | Đăng xuất |
+
+> Con số màu vàng cạnh chữ "Chờ xác nhận" là tổng số lượt phân công đang chờ **của cả nhóm**, không riêng bạn.
+
+---
+
+## 4. Trang Lịch — ba chế độ xem
+
+Đây là màn hình chính. Bên trái là bộ điều hướng thời gian, bên phải là bộ chuyển chế độ xem **Ngày | Tuần | Tháng**.
+
+### Điều hướng thời gian
+
+| Nút | Chế độ Ngày | Chế độ Tuần | Chế độ Tháng |
+| --- | --- | --- | --- |
+| `‹` | Ngày trước | Tuần trước | Tháng trước |
+| Nút giữa | **Hôm nay** | **Tuần này** | **Tháng này** |
+| `›` | Ngày sau | Tuần sau | Tháng sau |
+
+Dòng dưới tiêu đề luôn cho biết phạm vi đang xem có bao nhiêu ca và bao nhiêu lượt phân công.
+
+### Chế độ **Ngày**
+
+Timeline chi tiết theo giờ. Đây là chế độ duy nhất có:
+
+- **Thanh ca mẫu** để nhận ca nhanh (xem [mục 7](#7-ca-mẫu-và-nhận-ca-nhanh)).
+- **Bộ chọn khung giờ**: *Vừa theo ngày* (tự co giãn theo dữ liệu thực tế), *06:00–22:00*, *08:00–20:00*, *Cả ngày*.
+- Nút **Thêm ca vào ngày này** — khác với nút "Tạo ca" ở thanh trên (nút đó luôn dùng ngày hôm nay).
+- Dải chip liệt kê các ca trong ngày ở cuối trang; bấm chip là mở ca đó ra sửa.
+
+### Chế độ **Tuần**
+
+Lưới **nhân viên theo hàng × 7 ngày theo cột**, tuần bắt đầu từ Thứ Hai.
+
+- Mỗi ô là các chip ca của người đó trong ngày đó; bấm chip để sửa.
+- Cột **Tổng** ở ngoài cùng bên phải là tổng số giờ làm trong tuần của từng người — dùng để cân đối khối lượng.
+- Bấm vào **tiêu đề cột ngày** để nhảy sang chế độ Ngày của ngày đó.
+
+### Chế độ **Tháng**
+
+Lịch tháng dạng lưới, tuần bắt đầu từ Thứ Hai, có hiển thị cả các ngày đầu/cuối tháng liền kề để đủ tuần.
+
+- Mỗi ô hiện tối đa **3 ca**, phần còn lại gộp thành **"+N nữa"**.
+- Ca **bạn có tham gia** được viền màu indigo.
+- Bấm **số ngày** hoặc **"+N nữa"** để mở chế độ Ngày.
+- Bấm một chip ca để sửa ca đó.
+
+> Chế độ Tuần và Ngày có ô tích **"Chỉ nhân viên có ca"** để ẩn những người không được phân công, giúp lưới gọn lại khi công ty đông người.
+
+---
+
+## 5. Đọc timeline ngày
+
+Đây là phần cần nắm rõ nhất.
+
+```
+          08    09    10    11    12    13    14    15    16    17    18
+Huy  ┃ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ ┃                                       ← đã xác nhận
+     ┃              ┌ ─ ─ ─ ─ ─ ─ ─ ┐                                   ← chờ xác nhận
+Thiên┃              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+An   ┃                                        ┌ ─ ─ ─ ─ ─ ─ ─ ┐
+```
+
+| Quy ước | Ý nghĩa |
+| --- | --- |
+| **Cột trái** | Danh sách nhân viên. **Bạn luôn ở hàng đầu tiên**, nền indigo nhạt, có nhãn *"Bạn"* |
+| **Trục ngang** | Giờ trong ngày, theo khung giờ bạn đang chọn |
+| **Khối màu** | Một lượt phân công. Bên trong ghi tên ca và khung giờ của riêng người đó |
+| **Viền liền** | Trạng thái **đã xác nhận** |
+| **Viền nét đứt + icon đồng hồ** | Trạng thái **chờ xác nhận** |
+| **Màu khối** | Mỗi ca một màu cố định, không đổi giữa các lần tải trang |
+| **Nhiều khối xếp chồng trong một hàng** | Người đó có các lượt phân công **trùng giờ nhau** — hệ thống tự tách tầng để không đè lên nhau |
+| **Vạch đỏ dọc** | Thời điểm hiện tại. Chỉ xuất hiện khi bạn đang xem **hôm nay** |
+
+**Bấm vào một khối** sẽ mở form sửa ca, đồng thời cuộn tới và tô sáng đúng dòng nhân viên bạn vừa bấm.
+
+**Dải cảnh báo vàng ở đáy timeline** xuất hiện khi có lượt phân công nằm ngoài khung giờ đang xem (ví dụ ca đêm 22:00–02:00 trong khi bạn đang xem 08:00–20:00). Chuyển bộ chọn khung giờ sang **Cả ngày** để thấy chúng.
+
+Timeline cuộn ngang được khi khung giờ rộng; cột tên nhân viên luôn dính lại bên trái.
+
+---
+
+## 6. Tạo, sửa và xoá ca
+
+### Mở form
+
+| Cách | Kết quả |
+| --- | --- |
+| Nút **Tạo ca** trên thanh điều hướng | Ca mới, ngày = hôm nay |
+| Nút **Thêm ca vào ngày này** (chế độ Ngày) | Ca mới, ngày = ngày đang xem |
+| Bấm một khối trên timeline / chip tuần / chip tháng | Sửa ca đã có |
+| Nút **Sửa** trên thẻ ca ở các trang danh sách | Sửa ca đã có |
+
+### Phần thông tin ca
+
+**Tiêu đề**, **Ngày**, **Bắt đầu**, **Kết thúc**, **Ghi chú** (không bắt buộc).
+
+Khung giờ ở đây là khung giờ *tổng* của ca. Từng nhân viên vẫn có giờ riêng bên dưới.
+
+### Phần nhân viên trong ca
+
+Mỗi dòng gồm: **chọn người** · **Từ** · **Đến** · **Trạng thái** · nút xoá · ô ghi chú riêng cho người đó.
+
+- **Thêm nhân viên**: thêm một dòng mới, mặc định lấy khung giờ của ca và trạng thái *Chờ xác nhận*.
+- Người đã có trong ca sẽ bị **làm mờ** trong danh sách chọn, tránh trùng.
+- Nút thùng rác **gỡ người đó khỏi ca**. Thay đổi chỉ có hiệu lực sau khi bấm **Lưu thay đổi**.
+- Dưới mỗi dòng hiện **thời lượng** đã tính sẵn (ví dụ `4h 30m`).
+
+### Kiểm tra dữ liệu
+
+| Loại | Thông báo | Hậu quả |
+| --- | --- | --- |
+| **Lỗi** (đỏ) | *Vui lòng nhập tiêu đề* | Không lưu được |
+| **Lỗi** (đỏ) | *Giờ kết thúc phải sau giờ bắt đầu* | Không lưu được |
+| **Cảnh báo** (vàng) | *Nằm ngoài khung giờ của ca* | **Vẫn lưu được** — chỉ nhắc bạn xem lại |
+
+Cảnh báo vàng cố ý không chặn, vì có những ca thực tế cần người vào sớm hoặc ở lại muộn hơn khung chung.
+
+### Xoá ca
+
+Bấm **Xoá** (góc trái dưới), form chuyển sang bước xác nhận, bấm **Xoá ca** lần nữa. Thao tác này xoá luôn toàn bộ phân công thuộc ca đó.
+
+### Đóng form
+
+Ba cách: nút **✕**, phím **Esc**, hoặc bấm ra vùng nền tối bên ngoài. Thay đổi chưa lưu sẽ bị bỏ.
+
+---
+
+## 7. Ca mẫu và nhận ca nhanh
+
+Ca mẫu là **định nghĩa ca lặp lại** — ví dụ *Trực trang 08:00–18:00, Thứ 2 đến Thứ 6*. Nhân viên nhận ca chỉ bằng một cú bấm, không phải điền form.
+
+Thanh ca mẫu nằm ngay trên timeline, **chỉ có ở chế độ Ngày** (vì nhận ca luôn gắn với một ngày cụ thể).
+
+### Nhận ca
+
+Mỗi ca mẫu lặp vào thứ đó hiện thành một chip: `● Trực trang  08:00 – 18:00  [+ Nhận ca]`
+
+Bấm **Nhận ca** sẽ mở hộp thoại **chọn ngày** — bạn không bị mặc định nhận vào ngày đang xem, và **chọn được nhiều ngày cùng lúc**.
+
+**Chọn nhanh** (hàng chip phía trên):
+
+| Chip | Kết quả |
+| --- | --- |
+| **Hôm nay** | Chọn đúng hôm nay |
+| **Ngày mai** | Chọn đúng ngày mai |
+| **Ngày đang xem** | Chỉ hiện khi ngày đang xem khác hôm nay/ngày mai |
+| **Các ngày lặp tuần này** | Thêm mọi ngày mà ca mẫu lặp trong tuần hiện tại |
+| **Các ngày lặp tuần sau** | Tương tự cho tuần kế tiếp |
+| **Bỏ chọn hết** | Xoá toàn bộ lựa chọn |
+
+**Lịch chọn** bên dưới có nút chuyển **Tuần | Tháng** cùng mũi tên `‹ ›` để đi tới lui. Quy ước ô ngày:
+
+| Hiển thị | Ý nghĩa |
+| --- | --- |
+| Ô nền indigo | Đang chọn |
+| Ô nền xanh lá + dấu ✓ | Bạn **đã nhận** ngày đó rồi — không bấm được |
+| Chấm tròn nhỏ dưới số ngày | Ngày ca mẫu lặp lại |
+| Số ngày màu nhạt | Ngoài các ngày lặp — **vẫn chọn được** nếu bạn muốn làm bù |
+| Viền indigo mảnh | Hôm nay |
+
+Bấm một ô để bật/tắt lựa chọn. Nút dưới cùng ghi rõ số ngày, ví dụ **Nhận 5 ngày**.
+
+Với mỗi ngày được chọn, hệ thống làm đúng ba việc:
+
+1. Nếu ngày đó **chưa ai** nhận ca mẫu này → tạo ca thật từ mẫu.
+2. Nếu **đã có người** nhận → bạn được thêm vào **chính ca đó**.
+3. Bạn được phân công với khung giờ của mẫu, trạng thái **Chờ xác nhận**.
+
+> Một ca mẫu + một ngày = **đúng một ca**. Ràng buộc này nằm ở tầng cơ sở dữ liệu, nên hai người bấm cùng lúc cũng không tạo ra ca trùng.
+
+Trên chip ca mẫu, nhãn **✓ Đã nhận** cho biết bạn đã nhận ca đó **trong ngày đang xem**. Nút *Nhận ca* vẫn bấm được để đặt thêm những ngày khác.
+
+Muốn đổi giờ sau khi nhận? Bấm vào khối của bạn trên timeline rồi sửa như ca thường.
+
+### Quản lý ca mẫu
+
+Bấm **Quản lý ca mẫu** ở góc phải thanh ca mẫu.
+
+- **Tạo ca mẫu**: tiêu đề, giờ bắt đầu/kết thúc, ghi chú.
+- **Lặp vào**: chọn các thứ trong tuần. **Không chọn thứ nào = lặp mọi ngày.**
+- **Đang dùng**: bỏ tích để tạm ngừng — mẫu vẫn được lưu nhưng không ai nhận được nữa.
+- **Xoá ca mẫu**: các ca đã tạo từ mẫu đó **vẫn được giữ nguyên**, chỉ mất liên kết với mẫu.
+
+### Nếu thấy thông báo vàng "Chưa cài đặt tính năng ca mẫu"
+
+Nghĩa là file `supabase/002_shift_templates.sql` chưa được chạy. Mọi phần khác của ứng dụng vẫn hoạt động bình thường.
+
+---
+
+## 8. Ba trang lọc
+
+### Tất cả ca
+
+Danh sách đầy đủ, **nhóm theo ngày**, tiêu đề nhóm ghi rõ *Hôm nay / Ngày mai / Hôm qua* khi phù hợp.
+
+- **Ô tìm kiếm**: lọc theo tiêu đề ca, ghi chú, **và tên nhân viên**.
+- **Sắp tới / Đã qua / Tất cả**: lọc theo mốc hôm nay.
+- Mỗi thẻ ca liệt kê toàn bộ nhân viên kèm giờ, thời lượng và trạng thái.
+- Dòng của bạn có nền indigo nhạt và nhãn *"Bạn"*.
+- Dòng đang **chờ xác nhận** có nút **✓ Xác nhận** để duyệt ngay tại chỗ, không cần mở form.
+
+### Ca của tôi
+
+Chỉ các ca bạn có tham gia, và trong mỗi ca **chỉ hiện dòng của bạn**.
+
+Bốn ô số ở đầu trang:
+
+| Ô | Ý nghĩa |
+| --- | --- |
+| **Lượt phân công** | Tổng số lượt của bạn, cả quá khứ lẫn tương lai |
+| **Sắp tới** | Số lượt từ hôm nay trở đi |
+| **Chờ xác nhận** | Số lượt của bạn chưa được xác nhận |
+| **Số giờ sắp tới** | Tổng giờ từ hôm nay trở đi |
+
+### Chờ xác nhận
+
+Chỉ hiện các lượt phân công đang chờ.
+
+- Ô tích **"Chỉ ca của tôi"** để lọc riêng phần của bạn.
+- Bấm **✓ Xác nhận** trên từng dòng để duyệt.
+- Khi mọi thứ đã duyệt xong, trang hiện *"Không có gì chờ xác nhận."*
+
+---
+
+## 9. Đa ngôn ngữ và cập nhật thời gian thực
+
+**Ngôn ngữ.** Mặc định tiếng Việt. Nút **VI / EN** ở thanh trên đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
+
+**Thời gian thực.** Ứng dụng lắng nghe thay đổi trên `shifts`, `shift_assignments` và `shift_templates` qua Supabase Realtime. Khi đồng nghiệp tạo ca, nhận ca hay xác nhận, màn hình của bạn **tự cập nhật** — không cần F5.
+
+---
+
+## 10. Tra cứu nhanh
+
+### Đường dẫn
+
+| URL | Màn hình |
+| --- | --- |
+| `/` | Lịch, chế độ Ngày, hôm nay |
+| `/?view=week` | Lịch, chế độ Tuần |
+| `/?view=month&date=2026-09-08` | Lịch tháng 9/2026 |
+| `/?date=2026-09-08` | Timeline ngày 08/09/2026 |
+| `/shifts` | Tất cả ca |
+| `/my-shifts` | Ca của tôi |
+| `/pending` | Chờ xác nhận |
+| `/login` | Đăng nhập |
+
+Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình bạn đang xem**.
+
+### Quy ước hiển thị
+
+| Dấu hiệu | Ý nghĩa |
+| --- | --- |
+| Viền nét đứt + 🕐 | Chờ xác nhận |
+| Viền liền | Đã xác nhận |
+| Nền indigo nhạt + nhãn "Bạn" | Hàng / dòng của chính bạn |
+| Viền indigo (chế độ Tháng) | Ca bạn có tham gia |
+| Vạch đỏ dọc | Thời điểm hiện tại |
+| Dải vàng dưới timeline | Có phân công ngoài khung giờ đang xem |
+| Số vàng cạnh "Chờ xác nhận" | Tổng số lượt chờ của cả nhóm |
+
+### Phím và thao tác
+
+| Thao tác | Kết quả |
+| --- | --- |
+| `Esc` | Đóng form đang mở |
+| Bấm nền tối ngoài form | Đóng form |
+| Bấm khối / chip ca | Mở form sửa ca đó |
+| Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |
+| Bấm số ngày (Tháng) | Sang chế độ Ngày |
+
+---
+
+## 11. Dành cho quản trị viên
+
+### Tạo tài khoản nhân viên
+
+Không có đăng ký công khai, nên tài khoản phải tạo thủ công:
+
+1. Supabase Dashboard → **Authentication → Users → Add user**.
+2. Nhập email và mật khẩu, **tích `Auto Confirm User`**.
+3. (Nên làm) Thêm user metadata: `{"display_name": "Nguyễn Văn Huy"}`.
+
+Trigger `handle_new_user` tự tạo dòng tương ứng trong bảng `profiles`. Nếu không đặt `display_name`, hệ thống lấy phần trước dấu `@` của email làm tên hiển thị.
+
+### Đặt lại mật khẩu cho nhân viên
+
+Ứng dụng không có luồng tự đặt lại — khi nhân viên báo quên mật khẩu, bạn làm thủ công:
+
+1. Supabase Dashboard → **Authentication → Users**.
+2. Tìm tài khoản → menu `···` → **Reset password** (hoặc sửa trực tiếp mật khẩu).
+3. Gửi mật khẩu tạm cho nhân viên qua kênh nội bộ.
+4. Nhắc họ tự đổi lại bằng nút **chìa khoá 🔑** sau khi đăng nhập.
+
+> Nếu timeline báo *"Chưa có tài khoản nhân viên"* thì bảng `profiles` đang rỗng — hãy tạo tài khoản trước khi phân ca.
+
+### Thiết lập Auth cần thiết
+
+| Mục | Giá trị |
+| --- | --- |
+| Email provider | **Bật** |
+| Confirm email | **Tắt** (tài khoản do admin tạo sẵn) |
+| Allow new users to sign up | **Tắt** — đây là thứ chặn đăng ký công khai |
+| Site URL | `http://localhost:5173` (đổi khi deploy) |
+| Redirect URLs | `http://localhost:5173/**` |
+
+### Phân quyền
+
+Ở mức MVP hiện tại: **anon không có quyền gì**; **mọi nhân viên đã đăng nhập đều xem và sửa được tất cả ca** — kể cả ca của người khác. Đây là chủ ý cho công cụ nội bộ. Nếu sau này cần giới hạn (ví dụ chỉ người tạo mới được xoá), sửa các policy trong `supabase/schema.sql`.
+
+---
+
+## 12. Cấu trúc mã nguồn
+
+```
+src/
+├── auth/           # Xác thực: interface + bản mock + bản Supabase
+├── data/           # Truy cập dữ liệu: interface + bản mock + bản Supabase
+├── components/     # Timeline, WeekGrid, MonthGrid, các modal, layout
+├── pages/          # Login, Lịch, Tất cả ca, Ca của tôi, Chờ xác nhận
+├── i18n/           # Từ điển vi/en và provider
+├── lib/            # Tiện ích thời gian, màu sắc, Supabase client
+└── types.ts        # Kiểu dữ liệu, khớp 1:1 với cột trong Supabase
+```
+
+Hai file quyết định backend nào đang chạy:
+
+- `src/data/index.ts` — chọn `supabaseBackend` hoặc `mockBackend`
+- `src/auth/index.ts` — chọn `supabaseAuth` hoặc `mockAuth`
+
+Cả hai tự động dựa vào việc `.env` có được cấu hình hay không. Giao diện không import trực tiếp bất kỳ backend nào, nên đổi backend không phải sửa component.
+
+### Giới hạn đã biết
+
+- `listShifts()` tải **toàn bộ** ca, chưa giới hạn theo khoảng thời gian. Phù hợp giai đoạn đầu, nhưng cần thêm bộ lọc khi dữ liệu tích luỹ qua nhiều tháng.
+- Bundle khoảng 590 KB (chủ yếu là `supabase-js`), chưa tách code.
+- Ca qua nửa đêm (22:00 → 02:00) chưa được hỗ trợ: ràng buộc `end_time > start_time` yêu cầu ca nằm gọn trong một ngày.

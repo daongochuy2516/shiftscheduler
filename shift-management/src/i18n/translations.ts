@@ -1,0 +1,497 @@
+/**
+ * Flat key -> string dictionaries.
+ *
+ * `en` is the source of truth: `vi` is typed as Record<TranslationKey, string>,
+ * so leaving a key untranslated is a compile error.
+ *
+ * Plurals: a key may be defined as `foo_one` / `foo_other`. Calling
+ * t('foo', { count }) picks the right one and falls back to plain `foo`,
+ * which is what Vietnamese uses since it has no plural inflection.
+ */
+export const en = {
+  // ---- common ----
+  'common.cancel': 'Cancel',
+  'common.save': 'Save',
+  'common.saving': 'Saving…',
+  'common.delete': 'Delete',
+  'common.deleting': 'Deleting…',
+  'common.edit': 'Edit',
+  'common.close': 'Close',
+  'common.optional': '(optional)',
+  'common.you': 'You',
+  'common.staff': 'Staff',
+  'common.from': 'From',
+  'common.to': 'To',
+  'common.status': 'Status',
+  'common.note': 'Note',
+  'common.title': 'Title',
+  'common.date': 'Date',
+  'common.starts': 'Starts',
+  'common.ends': 'Ends',
+  'common.unknownStaff': 'Unknown staff',
+
+  // ---- status ----
+  'status.pending': 'Pending',
+  'status.confirmed': 'Confirmed',
+
+  // ---- auth ----
+  'auth.appName': 'Shift Scheduler',
+  'auth.subtitle': 'Sign in with your staff account to continue.',
+  'auth.email': 'Email',
+  'auth.password': 'Password',
+  'auth.signIn': 'Sign in',
+  'auth.signingIn': 'Signing in…',
+  'auth.signOut': 'Sign out',
+  'auth.invalidCredentials': 'Invalid email or password.',
+  'auth.mockMode': 'Mock mode',
+  'auth.mockHint': 'Any seeded staff email works with the password {{password}}:',
+  'auth.mockBanner': 'Running on mock data — Supabase is not connected yet.',
+
+  // ---- nav ----
+  'nav.timeline': 'Schedule',
+  'nav.allShifts': 'All shifts',
+  'nav.myShifts': 'My shifts',
+  'nav.pending': 'Pending',
+  'nav.newShift': 'New shift',
+  'nav.language': 'Language',
+
+  // ---- schedule views ----
+  'view.day': 'Day',
+  'view.week': 'Week',
+  'view.month': 'Month',
+  'view.today': 'Today',
+  'view.thisWeek': 'This week',
+  'view.thisMonth': 'This month',
+  'view.prevDay': 'Previous day',
+  'view.nextDay': 'Next day',
+  'view.prevWeek': 'Previous week',
+  'view.nextWeek': 'Next week',
+  'view.prevMonth': 'Previous month',
+  'view.nextMonth': 'Next month',
+
+  // ---- timeline / grids ----
+  'timeline.shiftCount_one': '{{count}} shift',
+  'timeline.shiftCount_other': '{{count}} shifts',
+  'timeline.assignmentCount_one': '{{count}} assignment',
+  'timeline.assignmentCount_other': '{{count}} assignments',
+  'timeline.onlyStaffWorking': 'Only staff working',
+  'timeline.onlyMine': 'Only mine',
+  'timeline.hourScale': 'Hour scale',
+  'timeline.scale.fit': 'Fit to day',
+  'timeline.scale.work': '06:00 – 22:00',
+  'timeline.scale.business': '08:00 – 20:00',
+  'timeline.scale.full': 'Full day',
+  'timeline.addShiftOnDay': 'Add shift on this day',
+  'timeline.nobodyScheduled': 'Nobody is scheduled on this day.',
+  'timeline.nobodyScheduledWeek': 'Nobody is scheduled this week.',
+  'timeline.noStaffMatch': 'No staff match the current filter.',
+  'timeline.noStaffAccounts': 'No staff accounts yet.',
+  'timeline.noStaffAccountsHint':
+    'An administrator needs to create staff accounts before anyone can be rostered.',
+  'timeline.clipped_one':
+    '{{count}} assignment falls outside the visible hours — switch the scale to Full day to see it.',
+  'timeline.clipped_other':
+    '{{count}} assignments fall outside the visible hours — switch the scale to Full day to see them.',
+  'timeline.staffCount_one': '{{count}} staff',
+  'timeline.staffCount_other': '{{count}} staff',
+  'timeline.weekTotal': 'Total',
+  'timeline.moreCount': '+{{count}} more',
+  'timeline.openDay': 'Open this day',
+
+  // ---- shift modal ----
+  'shift.new': 'New shift',
+  'shift.edit': 'Edit shift',
+  'shift.createSubtitle':
+    'Create a shift, then assign staff with their own hours.',
+  'shift.assignedCount_one': '{{count}} staff assigned',
+  'shift.assignedCount_other': '{{count}} staff assigned',
+  'shift.titlePlaceholder': 'e.g. Page Support',
+  'shift.notePlaceholder': 'Anything the team should know about this shift',
+  'shift.staffOnShift': 'Staff on this shift',
+  'shift.addStaff': 'Add staff',
+  'shift.noOneAssigned': 'No one assigned yet — add the first staff member',
+  'shift.removeStaff': 'Remove {{name}}',
+  'shift.personNotePlaceholder': 'Note for this person (optional)',
+  'shift.deleteConfirm': 'Delete this shift and all of its assignments?',
+  'shift.deleteAction': 'Delete shift',
+  'shift.create': 'Create shift',
+  'shift.saveChanges': 'Save changes',
+  'shift.errTitleRequired': 'Title is required.',
+  'shift.errShiftRange': 'Shift end time must be after the start time.',
+  'shift.errRowRange': 'End time must be after start time.',
+  'shift.warnOutside': 'Outside the shift window.',
+  'shift.errSave': 'Could not save the shift.',
+  'shift.errDelete': 'Could not delete the shift.',
+  'shift.everyoneAssigned': 'Every staff member is already on this shift.',
+  'shift.noStaffAccounts':
+    'No staff accounts exist yet — an administrator needs to create them before anyone can be assigned.',
+
+  // ---- lists ----
+  'list.today': 'Today',
+  'list.tomorrow': 'Tomorrow',
+  'list.yesterday': 'Yesterday',
+  'list.noStaffAssigned': 'No staff assigned yet.',
+  'list.confirm': 'Confirm',
+  'list.searchPlaceholder': 'Search title, note or staff',
+  'list.window.upcoming': 'Upcoming',
+  'list.window.past': 'Past',
+  'list.window.all': 'All',
+  'allShifts.title': 'All shifts',
+  'allShifts.shown_one': '{{count}} shift shown',
+  'allShifts.shown_other': '{{count}} shifts shown',
+  'allShifts.empty': 'No shifts match this view.',
+  'allShifts.emptyHint':
+    'Try a different search or time window, or create a new shift.',
+  'myShifts.title': 'My shifts',
+  'myShifts.subtitle': 'Assignments for {{name}}',
+  'myShifts.stat.assignments': 'Assignments',
+  'myShifts.stat.upcoming': 'Upcoming',
+  'myShifts.stat.pending': 'Awaiting confirmation',
+  'myShifts.stat.hours': 'Upcoming hours',
+  'myShifts.empty': 'You are not on any shifts yet.',
+  'myShifts.emptyHint': 'Shifts you are assigned to will show up here.',
+  'pending.title': 'Pending assignments',
+  'pending.subtitle_one': '{{count}} assignment still needs confirming',
+  'pending.subtitle_other': '{{count}} assignments still need confirming',
+  'pending.empty': 'Nothing is pending.',
+  'pending.emptyHint': 'Every assignment has been confirmed.',
+
+  // ---- shift templates ----
+  'tpl.section': 'Shift templates',
+  'tpl.sectionHint': 'Claim a recurring shift in one click.',
+  'tpl.manage': 'Manage templates',
+  'tpl.claim': 'Claim',
+  'tpl.claiming': 'Claiming…',
+  'tpl.claimed': 'Claimed',
+  'tpl.claimTitle': 'Claim {{title}} on this day',
+  'tpl.claimedTitle': 'You already have this shift on this day',
+  'tpl.empty': 'No templates yet.',
+  'tpl.emptyHint':
+    'Templates are recurring shifts staff can claim without filling in a form.',
+  'tpl.noneToday': 'No templates repeat on this day.',
+  'tpl.new': 'New template',
+  'tpl.editTitle': 'Edit template',
+  'tpl.titlePlaceholder': 'e.g. Late Desk',
+  'tpl.repeatOn': 'Repeats on',
+  'tpl.everyDay': 'Every day',
+  'tpl.active': 'Active',
+  'tpl.inactiveHint': 'Inactive templates stay saved but cannot be claimed.',
+  'tpl.deleteConfirm':
+    'Delete this template? Shifts already created from it are kept.',
+  'tpl.errSave': 'Could not save the template.',
+  'tpl.errClaim': 'Could not claim the shift.',
+  'tpl.notInstalled': 'Shift templates are not set up yet.',
+  'tpl.notInstalledHint':
+    'Run supabase/002_shift_templates.sql in the Supabase SQL editor to enable them.',
+  'tpl.addAll': 'Add every template to this day',
+
+  // ---- claim date picker ----
+  'claim.title': 'Claim shift',
+  'claim.subtitle': 'Pick the days you want to work {{title}}.',
+  'claim.quick': 'Quick pick',
+  'claim.today': 'Today',
+  'claim.tomorrow': 'Tomorrow',
+  'claim.viewedDay': 'Day being viewed',
+  'claim.thisWeek': 'Repeat days this week',
+  'claim.nextWeek': 'Repeat days next week',
+  'claim.clear': 'Clear selection',
+  'claim.selected_one': '{{count}} day selected',
+  'claim.selected_other': '{{count}} days selected',
+  'claim.action_one': 'Claim {{count}} day',
+  'claim.action_other': 'Claim {{count}} days',
+  'claim.none': 'Pick at least one day.',
+  'claim.alreadyClaimed': 'Already claimed',
+  'claim.notRepeatDay': 'Not a repeat day for this template',
+  'claim.legendSelected': 'Selected',
+  'claim.legendClaimed': 'Already claimed',
+  'claim.legendOffDay': 'Outside the repeat days',
+  'claim.partialError':
+    'Some days were claimed before the error — reopen to check what is left.',
+
+  // ---- change password ----
+  'pwd.title': 'Change password',
+  'pwd.subtitle': 'Signed in as {{email}}',
+  'pwd.current': 'Current password',
+  'pwd.new': 'New password',
+  'pwd.confirm': 'Repeat new password',
+  'pwd.show': 'Show passwords',
+  'pwd.hide': 'Hide passwords',
+  'pwd.submit': 'Change password',
+  'pwd.saving': 'Changing…',
+  'pwd.success': 'Password changed. Use the new one next time you sign in.',
+  'pwd.errCurrent': 'Current password is incorrect.',
+  'pwd.errTooShort': 'The new password must be at least {{min}} characters.',
+  'pwd.errMismatch': 'The two new passwords do not match.',
+  'pwd.errSame': 'The new password must differ from the current one.',
+  'pwd.errGeneric': 'Could not change the password.',
+  'pwd.hint':
+    'You stay signed in on this device. Other devices keep their session until it expires.',
+
+  // ---- forgot password ----
+  'forgot.link': 'Forgot password?',
+  'forgot.title': 'Forgot password',
+  'forgot.body':
+    'This app has no self-service password reset. Ask an administrator to set a new password for your account.',
+  'forgot.after':
+    'Once you have the new password, you can change it yourself: sign in, then use the key button in the top-right corner.',
+  'forgot.ok': 'Got it',
+
+  // ---- footer greeting ----
+  'greeting.morning': 'Good morning, {{name}}!',
+  'greeting.noon': 'Good afternoon, {{name}}!',
+  'greeting.afternoon': 'Good afternoon, {{name}}!',
+  'greeting.evening': 'Good evening, {{name}}!',
+} as const
+
+/** Every key literally present in the dictionaries. */
+export type DictKey = keyof typeof en
+
+/**
+ * Base name of a plural pair: `timeline.shiftCount_one` -> `timeline.shiftCount`.
+ * Callers pass the base name and a count; the provider picks the variant.
+ */
+type PluralBase<K> = K extends `${infer Base}_one`
+  ? Base
+  : K extends `${infer Base}_other`
+    ? Base
+    : never
+
+/** What `t()` accepts: a literal key, or the base name of a plural pair. */
+export type TranslationKey = DictKey | PluralBase<DictKey>
+
+export const vi: Record<DictKey, string> = {
+  // ---- common ----
+  'common.cancel': 'Huỷ',
+  'common.save': 'Lưu',
+  'common.saving': 'Đang lưu…',
+  'common.delete': 'Xoá',
+  'common.deleting': 'Đang xoá…',
+  'common.edit': 'Sửa',
+  'common.close': 'Đóng',
+  'common.optional': '(không bắt buộc)',
+  'common.you': 'Bạn',
+  'common.staff': 'Nhân viên',
+  'common.from': 'Từ',
+  'common.to': 'Đến',
+  'common.status': 'Trạng thái',
+  'common.note': 'Ghi chú',
+  'common.title': 'Tiêu đề',
+  'common.date': 'Ngày',
+  'common.starts': 'Bắt đầu',
+  'common.ends': 'Kết thúc',
+  'common.unknownStaff': 'Không rõ nhân viên',
+
+  // ---- status ----
+  'status.pending': 'Chờ xác nhận',
+  'status.confirmed': 'Đã xác nhận',
+
+  // ---- auth ----
+  'auth.appName': 'Lịch Ca Làm Việc',
+  'auth.subtitle': 'Đăng nhập bằng tài khoản nhân viên để tiếp tục.',
+  'auth.email': 'Email',
+  'auth.password': 'Mật khẩu',
+  'auth.signIn': 'Đăng nhập',
+  'auth.signingIn': 'Đang đăng nhập…',
+  'auth.signOut': 'Đăng xuất',
+  'auth.invalidCredentials': 'Email hoặc mật khẩu không đúng.',
+  'auth.mockMode': 'Chế độ dữ liệu mẫu',
+  'auth.mockHint':
+    'Mọi email nhân viên mẫu đều dùng được với mật khẩu {{password}}:',
+  'auth.mockBanner': 'Đang chạy dữ liệu mẫu — chưa kết nối Supabase.',
+
+  // ---- nav ----
+  'nav.timeline': 'Lịch',
+  'nav.allShifts': 'Tất cả ca',
+  'nav.myShifts': 'Ca của tôi',
+  'nav.pending': 'Chờ xác nhận',
+  'nav.newShift': 'Tạo ca',
+  'nav.language': 'Ngôn ngữ',
+
+  // ---- schedule views ----
+  'view.day': 'Ngày',
+  'view.week': 'Tuần',
+  'view.month': 'Tháng',
+  'view.today': 'Hôm nay',
+  'view.thisWeek': 'Tuần này',
+  'view.thisMonth': 'Tháng này',
+  'view.prevDay': 'Ngày trước',
+  'view.nextDay': 'Ngày sau',
+  'view.prevWeek': 'Tuần trước',
+  'view.nextWeek': 'Tuần sau',
+  'view.prevMonth': 'Tháng trước',
+  'view.nextMonth': 'Tháng sau',
+
+  // ---- timeline / grids ----
+  'timeline.shiftCount_one': '{{count}} ca',
+  'timeline.shiftCount_other': '{{count}} ca',
+  'timeline.assignmentCount_one': '{{count}} lượt phân công',
+  'timeline.assignmentCount_other': '{{count}} lượt phân công',
+  'timeline.onlyStaffWorking': 'Chỉ nhân viên có ca',
+  'timeline.onlyMine': 'Chỉ ca của tôi',
+  'timeline.hourScale': 'Khung giờ',
+  'timeline.scale.fit': 'Vừa theo ngày',
+  'timeline.scale.work': '06:00 – 22:00',
+  'timeline.scale.business': '08:00 – 20:00',
+  'timeline.scale.full': 'Cả ngày',
+  'timeline.addShiftOnDay': 'Thêm ca vào ngày này',
+  'timeline.nobodyScheduled': 'Chưa có ai làm việc trong ngày này.',
+  'timeline.nobodyScheduledWeek': 'Chưa có ai làm việc trong tuần này.',
+  'timeline.noStaffMatch': 'Không có nhân viên nào khớp bộ lọc.',
+  'timeline.noStaffAccounts': 'Chưa có tài khoản nhân viên.',
+  'timeline.noStaffAccountsHint':
+    'Quản trị viên cần tạo tài khoản nhân viên trước khi phân ca.',
+  'timeline.clipped_one':
+    '{{count}} lượt phân công nằm ngoài khung giờ đang xem — chọn Cả ngày để xem.',
+  'timeline.clipped_other':
+    '{{count}} lượt phân công nằm ngoài khung giờ đang xem — chọn Cả ngày để xem.',
+  'timeline.staffCount_one': '{{count}} nhân viên',
+  'timeline.staffCount_other': '{{count}} nhân viên',
+  'timeline.weekTotal': 'Tổng',
+  'timeline.moreCount': '+{{count}} nữa',
+  'timeline.openDay': 'Mở ngày này',
+
+  // ---- shift modal ----
+  'shift.new': 'Tạo ca mới',
+  'shift.edit': 'Sửa ca',
+  'shift.createSubtitle':
+    'Tạo ca, sau đó phân công nhân viên với giờ riêng của từng người.',
+  'shift.assignedCount_one': 'Đã phân công {{count}} nhân viên',
+  'shift.assignedCount_other': 'Đã phân công {{count}} nhân viên',
+  'shift.titlePlaceholder': 'ví dụ: Trực trang',
+  'shift.notePlaceholder': 'Điều cả nhóm cần biết về ca này',
+  'shift.staffOnShift': 'Nhân viên trong ca',
+  'shift.addStaff': 'Thêm nhân viên',
+  'shift.noOneAssigned': 'Chưa phân công ai — thêm nhân viên đầu tiên',
+  'shift.removeStaff': 'Bỏ {{name}}',
+  'shift.personNotePlaceholder': 'Ghi chú cho người này (không bắt buộc)',
+  'shift.deleteConfirm': 'Xoá ca này và toàn bộ phân công của nó?',
+  'shift.deleteAction': 'Xoá ca',
+  'shift.create': 'Tạo ca',
+  'shift.saveChanges': 'Lưu thay đổi',
+  'shift.errTitleRequired': 'Vui lòng nhập tiêu đề.',
+  'shift.errShiftRange': 'Giờ kết thúc của ca phải sau giờ bắt đầu.',
+  'shift.errRowRange': 'Giờ kết thúc phải sau giờ bắt đầu.',
+  'shift.warnOutside': 'Nằm ngoài khung giờ của ca.',
+  'shift.errSave': 'Không lưu được ca.',
+  'shift.errDelete': 'Không xoá được ca.',
+  'shift.everyoneAssigned': 'Tất cả nhân viên đều đã có trong ca này.',
+  'shift.noStaffAccounts':
+    'Chưa có tài khoản nhân viên nào — quản trị viên cần tạo trước khi phân công.',
+
+  // ---- lists ----
+  'list.today': 'Hôm nay',
+  'list.tomorrow': 'Ngày mai',
+  'list.yesterday': 'Hôm qua',
+  'list.noStaffAssigned': 'Chưa phân công nhân viên.',
+  'list.confirm': 'Xác nhận',
+  'list.searchPlaceholder': 'Tìm theo tiêu đề, ghi chú hoặc nhân viên',
+  'list.window.upcoming': 'Sắp tới',
+  'list.window.past': 'Đã qua',
+  'list.window.all': 'Tất cả',
+  'allShifts.title': 'Tất cả ca',
+  'allShifts.shown_one': 'Hiển thị {{count}} ca',
+  'allShifts.shown_other': 'Hiển thị {{count}} ca',
+  'allShifts.empty': 'Không có ca nào khớp bộ lọc.',
+  'allShifts.emptyHint': 'Thử từ khoá hoặc khoảng thời gian khác, hoặc tạo ca mới.',
+  'myShifts.title': 'Ca của tôi',
+  'myShifts.subtitle': 'Phân công của {{name}}',
+  'myShifts.stat.assignments': 'Lượt phân công',
+  'myShifts.stat.upcoming': 'Sắp tới',
+  'myShifts.stat.pending': 'Chờ xác nhận',
+  'myShifts.stat.hours': 'Số giờ sắp tới',
+  'myShifts.empty': 'Bạn chưa có ca nào.',
+  'myShifts.emptyHint': 'Các ca bạn được phân công sẽ hiện ở đây.',
+  'pending.title': 'Phân công chờ xác nhận',
+  'pending.subtitle_one': '{{count}} lượt phân công cần xác nhận',
+  'pending.subtitle_other': '{{count}} lượt phân công cần xác nhận',
+  'pending.empty': 'Không có gì chờ xác nhận.',
+  'pending.emptyHint': 'Mọi phân công đều đã được xác nhận.',
+
+  // ---- shift templates ----
+  'tpl.section': 'Ca mẫu',
+  'tpl.sectionHint': 'Nhận ca lặp lại chỉ với một cú nhấp.',
+  'tpl.manage': 'Quản lý ca mẫu',
+  'tpl.claim': 'Nhận ca',
+  'tpl.claiming': 'Đang nhận…',
+  'tpl.claimed': 'Đã nhận',
+  'tpl.claimTitle': 'Nhận ca {{title}} trong ngày này',
+  'tpl.claimedTitle': 'Bạn đã có ca này trong ngày này',
+  'tpl.empty': 'Chưa có ca mẫu nào.',
+  'tpl.emptyHint':
+    'Ca mẫu là những ca lặp lại mà nhân viên có thể nhận mà không cần điền biểu mẫu.',
+  'tpl.noneToday': 'Không có ca mẫu nào lặp vào ngày này.',
+  'tpl.new': 'Tạo ca mẫu',
+  'tpl.editTitle': 'Sửa ca mẫu',
+  'tpl.titlePlaceholder': 'ví dụ: Trực muộn',
+  'tpl.repeatOn': 'Lặp vào',
+  'tpl.everyDay': 'Mọi ngày',
+  'tpl.active': 'Đang dùng',
+  'tpl.inactiveHint': 'Ca mẫu ngừng dùng vẫn được lưu nhưng không thể nhận.',
+  'tpl.deleteConfirm': 'Xoá ca mẫu này? Các ca đã tạo từ nó vẫn được giữ lại.',
+  'tpl.errSave': 'Không lưu được ca mẫu.',
+  'tpl.errClaim': 'Không nhận được ca.',
+  'tpl.notInstalled': 'Chưa cài đặt tính năng ca mẫu.',
+  'tpl.notInstalledHint':
+    'Chạy supabase/002_shift_templates.sql trong SQL Editor của Supabase để bật tính năng này.',
+  'tpl.addAll': 'Thêm mọi ca mẫu vào ngày này',
+
+  // ---- claim date picker ----
+  'claim.title': 'Nhận ca',
+  'claim.subtitle': 'Chọn (các) ngày bạn muốn làm ca {{title}}.',
+  'claim.quick': 'Chọn nhanh',
+  'claim.today': 'Hôm nay',
+  'claim.tomorrow': 'Ngày mai',
+  'claim.viewedDay': 'Ngày đang xem',
+  'claim.thisWeek': 'Các ngày lặp tuần này',
+  'claim.nextWeek': 'Các ngày lặp tuần sau',
+  'claim.clear': 'Bỏ chọn hết',
+  'claim.selected_one': 'Đã chọn {{count}} ngày',
+  'claim.selected_other': 'Đã chọn {{count}} ngày',
+  'claim.action_one': 'Nhận {{count}} ngày',
+  'claim.action_other': 'Nhận {{count}} ngày',
+  'claim.none': 'Hãy chọn ít nhất một ngày.',
+  'claim.alreadyClaimed': 'Đã nhận',
+  'claim.notRepeatDay': 'Không phải ngày lặp của ca mẫu này',
+  'claim.legendSelected': 'Đang chọn',
+  'claim.legendClaimed': 'Đã nhận',
+  'claim.legendOffDay': 'Ngoài ngày lặp',
+  'claim.partialError':
+    'Một số ngày đã được nhận trước khi xảy ra lỗi — mở lại để xem còn thiếu ngày nào.',
+
+  // ---- change password ----
+  'pwd.title': 'Đổi mật khẩu',
+  'pwd.subtitle': 'Đang đăng nhập với {{email}}',
+  'pwd.current': 'Mật khẩu hiện tại',
+  'pwd.new': 'Mật khẩu mới',
+  'pwd.confirm': 'Nhập lại mật khẩu mới',
+  'pwd.show': 'Hiện mật khẩu',
+  'pwd.hide': 'Ẩn mật khẩu',
+  'pwd.submit': 'Đổi mật khẩu',
+  'pwd.saving': 'Đang đổi…',
+  'pwd.success': 'Đã đổi mật khẩu. Lần đăng nhập sau hãy dùng mật khẩu mới.',
+  'pwd.errCurrent': 'Mật khẩu hiện tại không đúng.',
+  'pwd.errTooShort': 'Mật khẩu mới phải có ít nhất {{min}} ký tự.',
+  'pwd.errMismatch': 'Hai ô mật khẩu mới không khớp nhau.',
+  'pwd.errSame': 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+  'pwd.errGeneric': 'Không đổi được mật khẩu.',
+  'pwd.hint':
+    'Bạn vẫn đăng nhập trên thiết bị này. Các thiết bị khác giữ phiên cho tới khi hết hạn.',
+
+  // ---- forgot password ----
+  'forgot.link': 'Quên mật khẩu?',
+  'forgot.title': 'Quên mật khẩu',
+  'forgot.body':
+    'Ứng dụng không có chức năng tự đặt lại mật khẩu. Vui lòng liên hệ quản trị viên để được cấp lại mật khẩu mới.',
+  'forgot.after':
+    'Khi đã có mật khẩu mới, bạn có thể tự đổi lại: đăng nhập rồi bấm nút chìa khoá ở góc phải trên cùng.',
+  'forgot.ok': 'Đã hiểu',
+
+  // ---- footer greeting ----
+  'greeting.morning': 'Chào buổi sáng, {{name}}!',
+  'greeting.noon': 'Chào buổi trưa, {{name}}!',
+  'greeting.afternoon': 'Chào buổi chiều, {{name}}!',
+  'greeting.evening': 'Chào buổi tối, {{name}}!',
+}
+
+export const DICTIONARIES = { en, vi }
+export type Lang = keyof typeof DICTIONARIES

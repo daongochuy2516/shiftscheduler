@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/*
+ * Tailwind v4's preflight sets `cursor: default` on buttons (v3 used
+ * `pointer`), so hovering a button no longer shows the hand cursor.
+ * Put it back for anything actually clickable — disabled controls are
+ * excluded so they keep the plain arrow.
+ */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  label:has(> input[type='checkbox']:not(:disabled)),
+  input[type='checkbox']:not(:disabled),
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 antialiased;
+}
+
+/* Thin scrollbars for the timeline scroll area */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-300);
+  border-radius: 9999px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}

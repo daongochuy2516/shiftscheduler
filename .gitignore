@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Local environment (khoá Supabase) — không bao giờ commit
+.env
+.env.*
+!.env.example
+
+# Local files
+*.local
+.DS_Store
+Thumbs.db
+
+# Editor / tooling
+.claude/
+.vscode/*
+!.vscode/extensions.json
+.idea/
