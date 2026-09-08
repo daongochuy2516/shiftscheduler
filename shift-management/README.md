@@ -134,7 +134,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | 🔑 | Đổi mật khẩu |
 | ↪ | Đăng xuất |
 
-> Con số màu vàng cạnh chữ "Chờ xác nhận" là tổng số lượt phân công đang chờ **của cả nhóm**, không riêng bạn.
+> Con số màu vàng cạnh chữ "Chờ xác nhận" chỉ đếm **các lượt phân công của riêng bạn** đang chờ xác nhận. Ca của người khác không tính vào đây — mở trang *Chờ xác nhận* rồi bỏ tích *Chỉ ca của tôi* để xem của cả nhóm.
 
 ---
 
@@ -350,7 +350,7 @@ Bốn ô số ở đầu trang:
 
 Chỉ hiện các lượt phân công đang chờ.
 
-- Ô tích **"Chỉ ca của tôi"** để lọc riêng phần của bạn.
+- Ô tích **"Chỉ ca của tôi"** **được tích sẵn** khi mở trang, nên mặc định bạn thấy đúng phần của mình — khớp với con số vàng trên thanh điều hướng. Bỏ tích để xem của cả nhóm.
 - Bấm **✓ Xác nhận** trên từng dòng để duyệt.
 - Khi mọi thứ đã duyệt xong, trang hiện *"Không có gì chờ xác nhận."*
 
@@ -391,7 +391,7 @@ Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp
 | Viền indigo (chế độ Tháng) | Ca bạn có tham gia |
 | Vạch đỏ dọc | Thời điểm hiện tại |
 | Dải vàng dưới timeline | Có phân công ngoài khung giờ đang xem |
-| Số vàng cạnh "Chờ xác nhận" | Tổng số lượt chờ của cả nhóm |
+| Số vàng cạnh "Chờ xác nhận" | Số lượt chờ xác nhận của riêng bạn |
 
 ### Phím và thao tác
 

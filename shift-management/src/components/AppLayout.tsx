@@ -67,8 +67,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return () => clearInterval(id)
   }, [])
 
+  // Only the signed-in user's own pending assignments — a badge counting the
+  // whole team's is noise you can't act on.
   const pendingCount = shifts.reduce(
-    (n, s) => n + s.assignments.filter((a) => a.status === 'pending').length,
+    (n, s) =>
+      n +
+      s.assignments.filter(
+        (a) => a.status === 'pending' && a.user_id === user?.id,
+      ).length,
     0,
   )
 

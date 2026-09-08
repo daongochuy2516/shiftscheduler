@@ -9,7 +9,9 @@ export function PendingPage() {
   const { user } = useAuth()
   const { shifts, loading } = useSchedule()
   const { t } = useI18n()
-  const [onlyMine, setOnlyMine] = useState(false)
+  // Opens filtered to your own assignments, matching what the nav badge
+  // counts. Untick to see the whole team's.
+  const [onlyMine, setOnlyMine] = useState(true)
 
   const matches = useMemo(() => {
     const keep = (userId: string) => !onlyMine || userId === user?.id
