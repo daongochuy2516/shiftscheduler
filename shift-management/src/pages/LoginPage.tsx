@@ -112,32 +112,36 @@ export function LoginPage() {
             />
           </div>
 
-          <div>
-            <div className="mb-1 flex items-baseline justify-between gap-2">
-              <label
-                className="block text-xs font-medium text-slate-600"
-                htmlFor="password"
-              >
-                {t('auth.password')}
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowForgot(true)}
-                className="text-xs font-medium text-indigo-600 transition hover:text-indigo-800 hover:underline"
-              >
-                {t('forgot.link')}
-              </button>
-            </div>
+          {/*
+            Grid rather than a label row + input: it keeps "Quên mật khẩu?"
+            visually beside the label while placing it *after* the input in
+            the DOM. Tab order follows the DOM, so tabbing out of the email
+            field lands on the password box instead of snagging on the link.
+          */}
+          <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-2">
+            <label
+              className="col-start-1 row-start-1 mb-1 block text-xs font-medium text-slate-600"
+              htmlFor="password"
+            >
+              {t('auth.password')}
+            </label>
             <input
               id="password"
               type="password"
               autoComplete="current-password"
               required
-              className={inputClass}
+              className={`col-span-2 row-start-2 ${inputClass}`}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
+            <button
+              type="button"
+              onClick={() => setShowForgot(true)}
+              className="col-start-2 row-start-1 mb-1 justify-self-end text-xs font-medium text-indigo-600 transition hover:text-indigo-800 hover:underline"
+            >
+              {t('forgot.link')}
+            </button>
           </div>
 
           {error && (
