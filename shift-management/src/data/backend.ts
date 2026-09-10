@@ -1,4 +1,6 @@
 import type {
+  ActionLogPage,
+  ActionLogQuery,
   AssignmentInput,
   Profile,
   ShiftInput,
@@ -67,6 +69,17 @@ export interface SchedulerBackend {
    * person is a no-op.
    */
   claimTemplate(templateId: UUID, date: string, userId: UUID): Promise<void>
+
+  // ---- action log (chỉ đọc) ----
+
+  /**
+   * Một trang nhật ký thao tác, hoặc `null` khi migration 003 chưa được chạy.
+   *
+   * Cố ý chỉ có phương thức đọc: nhật ký do trigger trong database sinh ra và
+   * vai trò `authenticated` không có quyền ghi, nên một hàm createActionLog
+   * trong tầng này sẽ là lời hứa suông.
+   */
+  listActionLogs(query: ActionLogQuery): Promise<ActionLogPage | null>
 
   /**
    * Calls `onChange` whenever shifts or assignments change elsewhere.

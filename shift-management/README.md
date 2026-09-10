@@ -24,6 +24,7 @@ Ca: Trực trang, 08:00–18:00
 - [7. Ca mẫu và nhận ca nhanh](#7-ca-mẫu-và-nhận-ca-nhanh)
 - [8. Ba trang lọc](#8-ba-trang-lọc)
 - [9. Đa ngôn ngữ và cập nhật thời gian thực](#9-đa-ngôn-ngữ-và-cập-nhật-thời-gian-thực)
+- [9b. Nhật ký thao tác](#9b-nhật-ký-thao-tác)
 - [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
 - [11. Dành cho quản trị viên](#11-dành-cho-quản-trị-viên)
 - [12. Cấu trúc mã nguồn](#12-cấu-trúc-mã-nguồn)
@@ -61,8 +62,9 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | --- | --- |
 | `supabase/schema.sql` | 3 bảng `profiles` / `shifts` / `shift_assignments`, RLS, trigger tạo profile tự động, Realtime |
 | `supabase/002_shift_templates.sql` | Bảng `shift_templates` + cột `shifts.template_id` cho tính năng ca mẫu |
+| `supabase/003_action_logs.sql` | Bảng `action_logs` + trigger ghi nhật ký, quyền chỉ-đọc |
 
-Nếu chưa chạy file 002, ứng dụng **vẫn chạy bình thường**, chỉ hiện thông báo vàng ở khu vực ca mẫu.
+Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký.
 
 ### Chế độ dữ liệu mẫu
 
@@ -128,6 +130,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Tất cả ca** | Danh sách mọi ca, có tìm kiếm |
 | **Ca của tôi** | Chỉ những ca bạn được phân công |
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
+| **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
 | **VI / EN** | Đổi ngôn ngữ giao diện |
 | **Tạo ca** (nút xanh) | Mở form tạo ca mới, mặc định là **hôm nay** |
 | Avatar + tên | Tài khoản đang đăng nhập |
@@ -364,6 +367,70 @@ Chỉ hiện các lượt phân công đang chờ.
 
 ---
 
+## 9b. Nhật ký thao tác
+
+Trang **Nhật ký** ghi lại mọi thay đổi dữ liệu: tạo/sửa/xoá ca, thêm/gỡ nhân viên, nhận ca, đổi trạng thái, và tạo/sửa/xoá/bật-tắt ca mẫu.
+
+Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem `old_data` / `new_data` / ngữ cảnh dạng JSON — đủ để đối chiếu chính xác đã đổi trường nào.
+
+### Một thao tác = một dòng
+
+Nguyên tắc: một cú bấm của người dùng cho ra đúng một dòng nhật ký, kể cả khi dưới database nó là nhiều lệnh.
+
+**Xoá ca** — chỉ một dòng *Xoá ca*, không sinh thêm dòng *Gỡ nhân viên* nào. Danh sách người đang trong ca được chụp lại ngay trong dòng đó:
+
+| Nơi ghi | Nội dung |
+| --- | --- |
+| Câu mô tả | `Xoá ca Trực trang (2026-09-12 08:00-18:00) — gỡ 3 nhân viên: Huy, Thiên, An` |
+| `metadata.staff_count` | Số người đang trong ca |
+| `metadata.staff_removed` | Mảng đầy đủ: tên, giờ riêng, trạng thái, ghi chú của từng người |
+
+Ngược lại, gỡ một người **trong form sửa ca** vẫn sinh dòng *Gỡ nhân viên* riêng — vì đó mới là thao tác người dùng chủ động làm.
+
+Cách phân biệt: trigger kiểm tra ca cha còn tồn tại không. Không còn nghĩa là dòng đó bị cascade xoá theo khi xoá cả ca, và bỏ qua.
+
+> Riêng trigger xoá ca phải chạy ở `BEFORE DELETE` chứ không phải `AFTER`: chỉ lúc đó các phân công mới còn tồn tại để liệt kê. Vẫn an toàn vì log nằm chung transaction — xoá thất bại thì log cũng rollback theo.
+
+
+
+Bấm **Nhận ca** dưới database là hai lệnh: tạo ca rồi thêm phân công. Nhật ký **gộp lại thành một dòng duy nhất là "Nhận ca"** — tách đôi sẽ khiến một cú bấm trông như hai sự kiện rời rạc.
+
+Câu mô tả chỉ ghi gọn `Nhận ca <tên ca> ngày <ngày> (giờ)`. Không cần nói ca đến từ ca mẫu, vì đã là *Nhận ca* thì chắc chắn từ ca mẫu. Phần còn lại nằm trong chi tiết:
+
+| Trường | Nội dung |
+| --- | --- |
+| `metadata.shift_created` | `true` nếu ca được tạo bởi chính lần nhận này, `false` nếu vào ca người khác đã mở |
+| `metadata.shift_snapshot` | Toàn bộ dòng `shifts` tương ứng |
+| `metadata.template_id` | Ca mẫu đã dùng |
+
+Cách làm: trigger trên bảng `shifts` **cố ý bỏ qua** những ca có `template_id`, vì dòng "Nhận ca" ngay sau đó đã ghi việc tạo ca. Trigger xác định ca có phải vừa tạo hay không bằng cách kiểm tra người nhận có phải người đầu tiên trong ca.
+
+> Kèm theo đó, nếu bước thêm phân công thất bại sau khi ca đã được tạo, ứng dụng **xoá luôn ca vừa tạo**. Nếu để lại thì sẽ có một ca không nằm trong bất kỳ dòng nhật ký nào.
+
+**Bộ lọc**: từ ngày, đến ngày, người thực hiện, hành động, loại đối tượng, và tìm kiếm trong phần mô tả. Phân trang 50 dòng mỗi trang, không tải toàn bộ.
+
+### Vì sao nhật ký đáng tin
+
+Dự án cho **mọi nhân viên đăng nhập sửa được toàn bộ ca**, nên nhật ký chỉ có giá trị nếu nhân viên không thể can thiệp vào nó. Tính bất biến được đặt ở **database**, không phải ở giao diện:
+
+| Lớp | Cơ chế |
+| --- | --- |
+| Sinh log | Trigger `record_action_log` trên cả ba bảng. Thao tác thành công là log được ghi, không phụ thuộc frontend gọi đúng hay không |
+| Quyền SQL | `revoke all`, chỉ `grant select` cho `authenticated` |
+| RLS | Chỉ có policy cho `SELECT`. **Không có** policy `INSERT`/`UPDATE`/`DELETE` |
+| Ghi được nhờ đâu | Hàm trigger là `SECURITY DEFINER`, chạy dưới quyền chủ sở hữu bảng |
+
+Hệ quả:
+
+- Nhân viên **không** sửa/xoá được log, kể cả khi gọi thẳng Supabase API và bỏ qua frontend.
+- Nhân viên **không** tạo được log giả — không có quyền `INSERT`.
+- Trên web **không tồn tại** chức năng sửa/xoá nhật ký. Đây là chủ ý, không phải thiếu sót.
+- Chỉ `service_role` hoặc người quản trị database trực tiếp mới can thiệp được.
+
+Muốn tự kiểm chứng, mục 5 trong `supabase/003_action_logs.sql` có sẵn bốn câu lệnh: một câu `select` phải chạy được, ba câu `insert`/`update`/`delete` phải báo *permission denied*.
+
+> Trang Nhật ký **không** dùng Realtime — log sinh ra ở mọi thao tác nên sẽ khiến màn hình nhảy liên tục và phá phân trang. Bấm **Tải lại** khi cần xem dòng mới.
+
 ## 10. Tra cứu nhanh
 
 ### Đường dẫn
@@ -377,6 +444,7 @@ Chỉ hiện các lượt phân công đang chờ.
 | `/shifts` | Tất cả ca |
 | `/my-shifts` | Ca của tôi |
 | `/pending` | Chờ xác nhận |
+| `/logs` | Nhật ký thao tác |
 | `/login` | Đăng nhập |
 
 Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình bạn đang xem**.

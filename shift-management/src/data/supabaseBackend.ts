@@ -1,5 +1,8 @@
 import type { PostgrestError } from '@supabase/supabase-js'
 import type {
+  ActionLog,
+  ActionLogPage,
+  ActionLogQuery,
   AssignmentInput,
   Profile,
   Shift,
@@ -263,6 +266,11 @@ export const supabaseBackend: SchedulerBackend = {
     if (findError) fail('Could not look up the shift', findError)
 
     let shiftId = existing?.id as UUID | undefined
+    // Ca do chính lần nhận này tạo ra. Nếu bước thêm phân công thất bại thì
+    // phải xoá đi: trigger cố ý không ghi log cho ca sinh từ ca mẫu (dòng
+    // "Nhận ca" mới là dòng ghi việc đó), nên một ca mồ côi sẽ nằm ngoài
+    // nhật ký. Xoá luôn vừa giữ dữ liệu sạch vừa không tạo lỗ hổng audit.
+    let createdShiftId: UUID | null = null
 
     if (!shiftId) {
       const { data: created, error: createError } = await supabase
@@ -291,6 +299,7 @@ export const supabaseBackend: SchedulerBackend = {
         shiftId = raced.id as UUID
       } else {
         shiftId = created.id as UUID
+        createdShiftId = shiftId
       }
     }
 
@@ -313,7 +322,61 @@ export const supabaseBackend: SchedulerBackend = {
         status: 'pending',
         note: null,
       })
-    if (assignError) fail('Could not claim the shift', assignError)
+
+    if (assignError) {
+      // Dọn ca vừa tạo — xem ghi chú ở chỗ khai báo createdShiftId.
+      if (createdShiftId) {
+        await supabase.from('shifts').delete().eq('id', createdShiftId)
+      }
+      fail('Không nhận được ca', assignError)
+    }
+  },
+
+  // ---- action log ----
+
+  async listActionLogs(query: ActionLogQuery): Promise<ActionLogPage | null> {
+    const supabase = getSupabase()
+
+    // `count: 'exact'` để biết tổng số dòng khớp bộ lọc mà không phải tải hết.
+    let q = supabase
+      .from('action_logs')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    // Ngày người dùng nhập là giờ máy họ; đổi sang mốc tuyệt đối để so sánh
+    // với cột timestamptz cho đúng, kể cả khi máy chủ ở múi giờ khác.
+    if (query.from) {
+      q = q.gte('created_at', new Date(`${query.from}T00:00:00`).toISOString())
+    }
+    if (query.to) {
+      q = q.lte('created_at', new Date(`${query.to}T23:59:59.999`).toISOString())
+    }
+    if (query.actorId) q = q.eq('actor_id', query.actorId)
+    if (query.action) q = q.eq('action', query.action)
+    if (query.entityType) q = q.eq('entity_type', query.entityType)
+    if (query.search) {
+      // Dấu % và _ trong chuỗi tìm kiếm phải được thoát, nếu không người dùng
+      // gõ '%' sẽ khớp mọi dòng.
+      const escaped = query.search.replace(/[%_\\]/g, (c) => `\\${c}`)
+      q = q.ilike('summary', `%${escaped}%`)
+    }
+
+    const start = query.page * query.pageSize
+    q = q.range(start, start + query.pageSize - 1)
+
+    const { data, error, count } = await q
+    if (error) {
+      if (isMissingTable(error)) return null
+      fail('Không tải được nhật ký thao tác', error)
+    }
+
+    return {
+      rows: ((data ?? []) as ActionLog[]).map((row) => ({
+        ...row,
+        metadata: row.metadata ?? {},
+      })),
+      total: count ?? 0,
+    }
   },
 
   subscribe(onChange: () => void) {

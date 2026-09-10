@@ -7,6 +7,7 @@ import { TimelinePage } from './pages/TimelinePage'
 import { AllShiftsPage } from './pages/AllShiftsPage'
 import { MyShiftsPage } from './pages/MyShiftsPage'
 import { PendingPage } from './pages/PendingPage'
+import { ActionLogPage } from './pages/ActionLogPage'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
               <Route path="shifts" element={<AllShiftsPage />} />
               <Route path="my-shifts" element={<MyShiftsPage />} />
               <Route path="pending" element={<PendingPage />} />
+              <Route path="logs" element={<ActionLogPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,6 +8,7 @@ import {
   LayoutList,
   LogOut,
   Plus,
+  ScrollText,
   User,
 } from 'lucide-react'
 import { ChangePasswordModal } from './ChangePasswordModal'
@@ -30,6 +31,7 @@ const NAV: {
   { to: '/shifts', label: 'nav.allShifts', icon: LayoutList, end: false },
   { to: '/my-shifts', label: 'nav.myShifts', icon: User, end: false },
   { to: '/pending', label: 'nav.pending', icon: Clock3, end: false },
+  { to: '/logs', label: 'nav.actionLog', icon: ScrollText, end: false },
 ]
 
 const LANGS: { id: Lang; label: string }[] = [

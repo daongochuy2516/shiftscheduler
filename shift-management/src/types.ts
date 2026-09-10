@@ -54,6 +54,51 @@ export interface ShiftTemplate {
   updated_at: string
 }
 
+/**
+ * Một dòng nhật ký thao tác. Bảng chỉ cho đọc: log do trigger trong database
+ * sinh ra, không có đường nào để client tạo/sửa/xoá.
+ */
+export interface ActionLog {
+  id: UUID
+  /** ISO timestamp */
+  created_at: string
+  actor_id: UUID | null
+  /** Ảnh chụp tại thời điểm ghi log — còn đọc được sau khi tài khoản bị xoá. */
+  actor_email: string | null
+  actor_name: string | null
+  /** 'shift.created', 'assignment.claimed', 'template.toggled', … */
+  action: string
+  entity_type: string
+  entity_id: UUID | null
+  summary: string | null
+  old_data: Record<string, unknown> | null
+  new_data: Record<string, unknown> | null
+  metadata: Record<string, unknown>
+}
+
+export interface ActionLogFilters {
+  /** yyyy-MM-dd, tính từ 00:00 ngày đó theo giờ máy người dùng. */
+  from: string | null
+  /** yyyy-MM-dd, tính tới hết 23:59 ngày đó. */
+  to: string | null
+  actorId: UUID | null
+  action: string | null
+  entityType: string | null
+  /** Khớp trong summary. */
+  search: string | null
+}
+
+export interface ActionLogQuery extends ActionLogFilters {
+  page: number
+  pageSize: number
+}
+
+export interface ActionLogPage {
+  rows: ActionLog[]
+  /** Tổng số dòng khớp bộ lọc, dùng để phân trang. */
+  total: number
+}
+
 export interface TemplateInput {
   title: string
   start_time: string

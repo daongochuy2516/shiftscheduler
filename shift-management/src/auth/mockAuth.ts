@@ -19,6 +19,14 @@ function readSession(): Profile | null {
   }
 }
 
+/**
+ * Người đang đăng nhập ở chế độ mock — bản sao của `auth.uid()` phía server,
+ * để mock backend ghi được người thực hiện vào nhật ký thao tác.
+ */
+export function currentMockProfile(): Profile | null {
+  return readSession()
+}
+
 /** Passwords changed during this demo, keyed by profile id. */
 function readPasswords(): Record<string, string> {
   try {
