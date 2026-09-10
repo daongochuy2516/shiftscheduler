@@ -60,7 +60,12 @@ export function MonthGrid({
   )
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+    <div className="thin-scrollbar overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+      {/* Bảy cột trên màn 360px cho ra ô rộng chừng 48px, chip ca thành không
+          đọc được. Đặt bề rộng tối thiểu rồi cho cuộn ngang — lịch là loại nội
+          dung được phép cuộn ngang. Từ 640px trở lên vừa màn hình nên không
+          xuất hiện thanh cuộn. */}
+      <div className="min-w-[36rem] sm:min-w-0">
       <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
         {weekdayLabels.map((label) => (
           <div
@@ -149,6 +154,7 @@ export function MonthGrid({
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )

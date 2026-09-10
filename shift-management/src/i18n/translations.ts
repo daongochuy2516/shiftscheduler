@@ -54,6 +54,8 @@ export const en = {
   'nav.pending': 'Pending',
   'nav.newShift': 'New shift',
   'nav.language': 'Language',
+  'nav.account': 'Account',
+  'nav.filters': 'Filters',
 
   // ---- schedule views ----
   'view.day': 'Day',
@@ -358,6 +360,8 @@ export const vi: Record<DictKey, string> = {
   'nav.pending': 'Chờ xác nhận',
   'nav.newShift': 'Tạo ca',
   'nav.language': 'Ngôn ngữ',
+  'nav.account': 'Tài khoản',
+  'nav.filters': 'Bộ lọc',
 
   // ---- schedule views ----
   'view.day': 'Ngày',

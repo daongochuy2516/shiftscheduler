@@ -10,7 +10,14 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  SlidersHorizontal,
+} from 'lucide-react'
+import { Modal } from '../components/Modal'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -48,6 +55,7 @@ export function TimelinePage() {
   const { openCreate, openEdit } = useShiftEditor()
   const [scale, setScale] = useState<ScaleId>('fit')
   const [hideEmptyStaff, setHideEmptyStaff] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const view = ((): ViewMode => {
     const raw = params.get('view')
@@ -194,14 +202,14 @@ export function TimelinePage() {
             onClick={() => step(-1)}
             aria-label={prevLabel}
             title={prevLabel}
-            className="rounded-l-md px-2 py-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+            className="flex min-h-10 items-center rounded-l-md px-3 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 sm:min-h-0 sm:px-2 sm:py-1.5"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={() => navigate(new Date())}
-            className="border-x border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+            className="min-h-10 border-x border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 sm:min-h-0 sm:py-1.5"
           >
             {jumpLabel}
           </button>
@@ -210,7 +218,7 @@ export function TimelinePage() {
             onClick={() => step(1)}
             aria-label={nextLabel}
             title={nextLabel}
-            className="rounded-r-md px-2 py-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+            className="flex min-h-10 items-center rounded-r-md px-3 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 sm:min-h-0 sm:px-2 sm:py-1.5"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -227,14 +235,16 @@ export function TimelinePage() {
           </p>
         </div>
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md bg-white p-0.5 shadow-xs ring-1 ring-slate-200">
+        {/* Ngày/Tuần/Tháng là lựa chọn chính nên luôn hiện. Trên mobile nó
+            chiếm cả hàng, mỗi nút đủ 44px chiều cao. */}
+        <div className="order-3 ml-auto flex w-full items-center gap-2 sm:order-none sm:w-auto">
+          <div className="flex flex-1 rounded-md bg-white p-0.5 shadow-xs ring-1 ring-slate-200 sm:flex-none">
             {VIEWS.map((v) => (
               <button
                 key={v.id}
                 type="button"
                 onClick={() => navigate(date, v.id)}
-                className={`rounded px-2.5 py-1 text-sm font-medium transition ${
+                className={`min-h-10 flex-1 rounded px-2.5 text-sm font-medium transition sm:min-h-0 sm:flex-none sm:py-1 ${
                   view === v.id
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-slate-600 hover:text-slate-900'
@@ -245,8 +255,20 @@ export function TimelinePage() {
             ))}
           </div>
 
+          {/* Mobile: các tuỳ chọn phụ gom vào một sheet, giữ hàng này gọn. */}
           {view !== 'month' && (
-            <label className="flex items-center gap-1.5 text-sm text-slate-600">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              aria-label={t('nav.filters')}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-slate-600 shadow-xs ring-1 ring-slate-200 sm:hidden"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+          )}
+
+          {view !== 'month' && (
+            <label className="hidden items-center gap-1.5 text-sm text-slate-600 sm:flex">
               <input
                 type="checkbox"
                 className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
@@ -263,7 +285,7 @@ export function TimelinePage() {
                 aria-label={t('timeline.hourScale')}
                 value={scale}
                 onChange={(e) => setScale(e.target.value as ScaleId)}
-                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                className="hidden rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:block"
               >
                 {SCALES.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -272,10 +294,12 @@ export function TimelinePage() {
                 ))}
               </select>
 
+              {/* Trên mobile việc này do nút nổi đảm nhiệm, và nút nổi cũng tạo
+                  theo đúng ngày đang xem. */}
               <button
                 type="button"
                 onClick={() => openCreate(dateKey)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50"
+                className="hidden items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 sm:inline-flex"
               >
                 <Plus className="h-4 w-4" />
                 {t('timeline.addShiftOnDay')}
@@ -284,6 +308,51 @@ export function TimelinePage() {
           )}
         </div>
       </div>
+
+      {filtersOpen && (
+        <Modal
+          title={t('nav.filters')}
+          width="max-w-md"
+          onClose={() => setFiltersOpen(false)}
+        >
+          <div className="space-y-4">
+            <label className="flex min-h-12 items-center gap-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                checked={hideEmptyStaff}
+                onChange={(e) => setHideEmptyStaff(e.target.checked)}
+              />
+              {t('timeline.onlyStaffWorking')}
+            </label>
+
+            {view === 'day' && (
+              <div>
+                <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                  {t('timeline.hourScale')}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {SCALES.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setScale(s.id)}
+                      aria-pressed={scale === s.id}
+                      className={`min-h-11 rounded-md border px-3 text-sm font-medium transition ${
+                        scale === s.id
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-slate-300 bg-white text-slate-700'
+                      }`}
+                    >
+                      {t(s.label)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
 
       {/* ---- quick-claim templates (day view only) ---- */}
       {view === 'day' && <TemplateBar date={date} />}

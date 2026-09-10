@@ -14,8 +14,10 @@ const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'English' },
 ]
 
+// min-h-11 = 44px, mức tối thiểu để bấm chính xác bằng ngón tay. text-base
+// trên mobile cũng ngăn Safari iOS tự phóng to trang khi focus vào ô nhập.
 const inputClass =
-  'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+  'w-full min-h-11 rounded-md border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
 
 export function LoginPage() {
   const { user, loading, signIn } = useAuth()
@@ -153,7 +155,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:opacity-60"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:opacity-60"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {submitting ? t('auth.signingIn') : t('auth.signIn')}

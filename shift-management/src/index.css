@@ -23,11 +23,56 @@
 html,
 body,
 #root {
-  height: 100%;
+  /* dvh chứ không phải vh: thanh địa chỉ của trình duyệt mobile co giãn, vh
+     tính theo lúc thanh bị ẩn nên nội dung bị tràn xuống dưới màn hình. */
+  min-height: 100dvh;
+}
+
+/* Chiều cao thanh điều hướng dưới, cộng vùng an toàn của máy (thanh gạt về
+   home trên iPhone). Dùng để chừa chỗ cho nội dung và đặt nút nổi. */
+:root {
+  --bottom-nav-h: 3.5rem;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+/* Chừa hai bên cho máy có màn hình bo hoặc tai thỏ khi xoay ngang. */
+.safe-x {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+@media (min-width: 640px) {
+  .safe-x {
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+}
+
+/* Chừa chỗ cho thanh điều hướng dưới và nút nổi, nếu không dòng cuối của mỗi
+   trang sẽ bị che. Từ 640px trở lên không có thanh dưới nên trả về khoảng
+   đệm bình thường — giao diện PC không đổi. */
+.pb-mobile-nav {
+  padding-bottom: calc(var(--bottom-nav-h) + var(--safe-b) + 4.5rem);
+}
+
+@media (min-width: 640px) {
+  .pb-mobile-nav {
+    padding-bottom: 1.25rem;
+  }
 }
 
 body {
   @apply bg-slate-100 text-slate-900 antialiased;
+}
+
+/* Nút trong chân hộp thoại phải đủ 44px trên mobile. Đặt một luật chung ở đây
+   thay vì sửa từng nút trong sáu modal — và không nút nào bị bỏ sót. Từ 640px
+   trở lên luật này không áp dụng, bản PC giữ nguyên. */
+@media (max-width: 639px) {
+  [role='dialog'] footer button {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+  }
 }
 
 /* Thin scrollbars for the timeline scroll area */

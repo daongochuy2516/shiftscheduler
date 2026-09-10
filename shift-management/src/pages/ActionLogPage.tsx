@@ -7,6 +7,7 @@ import {
   RotateCw,
   ScrollText,
   Search,
+  SlidersHorizontal,
 } from 'lucide-react'
 import type { ActionLog, ActionLogFilters, ActionLogQuery } from '../types'
 import { useSchedule } from '../data/ScheduleContext'
@@ -61,7 +62,7 @@ const emptyFilters: ActionLogFilters = {
 }
 
 const controlClass =
-  'w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+  'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
 export function ActionLogPage() {
@@ -71,6 +72,7 @@ export function ActionLogPage() {
   const [filters, setFilters] = useState<ActionLogFilters>(emptyFilters)
   const [searchInput, setSearchInput] = useState('')
   const [pageIndex, setPageIndex] = useState(0)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Gõ tới đâu gọi API tới đó thì quá tốn; chờ người dùng ngừng gõ.
   useEffect(() => {
@@ -101,13 +103,15 @@ export function ActionLogPage() {
     setSearchInput('')
   }
 
-  const hasFilters =
-    filters.from !== null ||
-    filters.to !== null ||
-    filters.actorId !== null ||
-    filters.action !== null ||
-    filters.entityType !== null ||
-    filters.search !== null
+  const activeFilterCount = [
+    filters.from,
+    filters.to,
+    filters.actorId,
+    filters.action,
+    filters.entityType,
+    filters.search,
+  ].filter((v) => v !== null).length
+  const hasFilters = activeFilterCount > 0
 
   if (loading && page === null) return <PageSkeleton />
 
@@ -150,7 +154,33 @@ export function ActionLogPage() {
       )}
 
       {/* ---- bộ lọc ---- */}
-      <section className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-900/5">
+      {/* Mobile: gập bộ lọc lại, mở ra khi cần. Sáu ô luôn hiện sẽ đẩy danh
+          sách log — thứ người ta thật sự vào đây để đọc — xuống dưới màn hình. */}
+      <button
+        type="button"
+        onClick={() => setFiltersOpen((v) => !v)}
+        aria-expanded={filtersOpen}
+        className="flex min-h-11 w-full items-center gap-2 rounded-xl bg-white px-3 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-900/5 sm:hidden"
+      >
+        <SlidersHorizontal className="h-4 w-4 text-slate-400" />
+        {t('nav.filters')}
+        {hasFilters && (
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+            {activeFilterCount}
+          </span>
+        )}
+        <ChevronDown
+          className={`ml-auto h-4 w-4 text-slate-400 transition-transform ${
+            filtersOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      <section
+        className={`rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-900/5 ${
+          filtersOpen ? '' : 'hidden sm:block'
+        }`}
+      >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div>
             <label className={labelClass} htmlFor="log-from">
@@ -340,42 +370,51 @@ function LogRow({ row }: { row: ActionLog }) {
 
   return (
     <li>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-        <time
-          dateTime={row.created_at}
-          className="w-36 shrink-0 text-xs text-slate-500 tabular-nums"
-          title={format(at, 'PPPPp', { locale: dateLocale })}
-        >
-          {format(at, 'dd/MM/yyyy HH:mm:ss')}
-        </time>
+      {/* Mobile: mô tả là thứ quan trọng nhất nên được một hàng riêng, đủ chỗ
+          xuống dòng. Thời gian, người làm và các nhãn lùi xuống làm dữ liệu
+          phụ. Trên PC vẫn là một hàng ngang như cũ. */}
+      <div className="px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:contents">
+          <time
+            dateTime={row.created_at}
+            className="shrink-0 text-xs text-slate-500 tabular-nums sm:w-36"
+            title={format(at, 'PPPPp', { locale: dateLocale })}
+          >
+            {format(at, 'dd/MM/yyyy HH:mm:ss')}
+          </time>
 
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Avatar name={actorName} seed={row.actor_id ?? 'system'} size="sm" />
-          <span className="truncate text-sm font-medium text-slate-800">
-            {actorName}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Avatar name={actorName} seed={row.actor_id ?? 'system'} size="sm" />
+            <span className="truncate text-sm font-medium text-slate-800">
+              {actorName}
+            </span>
           </span>
-        </span>
+        </div>
 
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${actionTone(row.action)}`}
-        >
-          {actionLabel}
-        </span>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:mt-0 sm:contents">
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${actionTone(row.action)}`}
+          >
+            {actionLabel}
+          </span>
 
-        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-          {entityLabel}
-        </span>
+          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+            {entityLabel}
+          </span>
+        </div>
 
-        <span className="min-w-0 flex-1 text-sm text-slate-700">
+        {/* break-words: mô tả chứa tên ca do người dùng đặt, có thể là một
+            chuỗi dài không dấu cách và sẽ làm tràn ngang cả trang. */}
+        <p className="mt-1.5 min-w-0 text-sm break-words text-slate-700 sm:mt-0 sm:flex-1">
           {row.summary}
-        </span>
+        </p>
 
         {hasDetails && (
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            className="mt-1.5 inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:mt-0 sm:min-h-0 sm:py-1"
           >
             {t('log.details')}
             <ChevronDown

@@ -45,8 +45,10 @@ function toRows(shift: ShiftWithAssignments | null): Row[] {
     }))
 }
 
+// min-h-11 = 44px cho ngón tay; text-base ngăn Safari iOS phóng to trang khi
+// focus. Từ 640px trở lên trả về kích thước cũ của bản PC.
 const inputClass =
-  'w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+  'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
 
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
@@ -482,7 +484,7 @@ export function ShiftModal({
                           aria-label={t('shift.removeStaff', {
                             name: profile?.display_name ?? '',
                           })}
-                          className="mb-0.5 rounded-md p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                          className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 sm:h-9 sm:w-9"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

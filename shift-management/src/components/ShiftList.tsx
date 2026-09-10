@@ -120,7 +120,7 @@ export function ShiftList({
                     <button
                       type="button"
                       onClick={() => openEdit(shift)}
-                      className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50"
+                      className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 sm:min-h-0 sm:px-2.5 sm:py-1"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       {t('common.edit')}
@@ -144,62 +144,71 @@ export function ShiftList({
                       const profile = profilesById.get(assignment.user_id)
                       const isMine = assignment.user_id === highlightUserId
                       return (
+                        // Mobile: xếp dọc thành thẻ — tên và giờ ở hàng đầu,
+                        // trạng thái và nút xác nhận ở hàng dưới. Nhồi sáu thứ
+                        // vào một hàng ngang trên màn 360px sẽ xuống dòng lộn
+                        // xộn và nút bấm bị bóp nhỏ.
                         <li
                           key={assignment.id}
-                          className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 ${
+                          className={`px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2 sm:py-2.5 ${
                             isMine ? 'bg-indigo-50/40' : ''
                           }`}
                         >
-                          <Avatar
-                            name={profile?.display_name ?? '?'}
-                            seed={assignment.user_id}
-                            size="sm"
-                          />
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-slate-800">
-                              {profile?.display_name ??
-                                t('common.unknownStaff')}
-                              {isMine && (
-                                <span className="ml-1.5 text-[11px] font-medium text-indigo-600">
-                                  {t('common.you')}
-                                </span>
-                              )}
-                            </p>
-                            {assignment.note && (
-                              <p className="truncate text-xs text-slate-500">
-                                {assignment.note}
+                          <div className="flex items-center gap-3 sm:contents">
+                            <Avatar
+                              name={profile?.display_name ?? '?'}
+                              seed={assignment.user_id}
+                              size="sm"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-slate-800">
+                                {profile?.display_name ??
+                                  t('common.unknownStaff')}
+                                {isMine && (
+                                  <span className="ml-1.5 text-[11px] font-medium text-indigo-600">
+                                    {t('common.you')}
+                                  </span>
+                                )}
                               </p>
-                            )}
+                              {assignment.note && (
+                                <p className="truncate text-xs text-slate-500">
+                                  {assignment.note}
+                                </p>
+                              )}
+                            </div>
+
+                            <span className="shrink-0 text-sm tabular-nums text-slate-700 sm:ml-auto">
+                              {formatRange(
+                                assignment.start_time,
+                                assignment.end_time,
+                              )}
+                            </span>
                           </div>
 
-                          <span className="ml-auto text-sm tabular-nums text-slate-700">
-                            {formatRange(
-                              assignment.start_time,
-                              assignment.end_time,
-                            )}
-                          </span>
-                          <span className="w-16 text-right text-xs text-slate-400">
-                            {formatDuration(
-                              assignment.start_time,
-                              assignment.end_time,
-                            )}
-                          </span>
+                          <div className="mt-2 flex items-center gap-3 pl-9 sm:mt-0 sm:contents sm:pl-0">
+                            <span className="text-xs text-slate-400 sm:w-16 sm:text-right">
+                              {formatDuration(
+                                assignment.start_time,
+                                assignment.end_time,
+                              )}
+                            </span>
 
-                          <StatusBadge status={assignment.status} size="sm" />
+                            <StatusBadge status={assignment.status} size="sm" />
 
-                          {assignment.status === 'pending' && (
-                            <button
-                              type="button"
-                              onClick={() => confirm(assignment.id)}
-                              disabled={busyId === assignment.id}
-                              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60"
-                            >
-                              <Check className="h-3 w-3" />
-                              {busyId === assignment.id
-                                ? t('common.saving')
-                                : t('list.confirm')}
-                            </button>
-                          )}
+                            {assignment.status === 'pending' && (
+                              <button
+                                type="button"
+                                onClick={() => confirm(assignment.id)}
+                                disabled={busyId === assignment.id}
+                                className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:ml-0 sm:min-h-0 sm:px-2 sm:py-1"
+                              >
+                                <Check className="h-3 w-3" />
+                                {busyId === assignment.id
+                                  ? t('common.saving')
+                                  : t('list.confirm')}
+                              </button>
+                            )}
+                          </div>
                         </li>
                       )
                     })}
