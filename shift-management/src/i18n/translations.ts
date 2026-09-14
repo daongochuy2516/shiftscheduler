@@ -122,6 +122,8 @@ export const en = {
   'shift.errShiftRange': 'Shift end time must be after the start time.',
   'shift.errRowRange': 'End time must be after start time.',
   'shift.warnOutside': 'Outside the shift window.',
+  'shift.lockedByTemplate':
+    'Fixed by the shift template. Adjust each person’s own hours below instead.',
   'shift.errSave': 'Could not save the shift.',
   'shift.errDelete': 'Could not delete the shift.',
   'shift.everyoneAssigned': 'Every staff member is already on this shift.',
@@ -428,6 +430,8 @@ export const vi: Record<DictKey, string> = {
   'shift.errShiftRange': 'Giờ kết thúc của ca phải sau giờ bắt đầu.',
   'shift.errRowRange': 'Giờ kết thúc phải sau giờ bắt đầu.',
   'shift.warnOutside': 'Nằm ngoài khung giờ của ca.',
+  'shift.lockedByTemplate':
+    'Không thể sửa giờ của ca được tạo từ ca mẫu, chỉ có thể sửa giờ của từng nhân viên bên dưới.',
   'shift.errSave': 'Không lưu được ca.',
   'shift.errDelete': 'Không xoá được ca.',
   'shift.everyoneAssigned': 'Tất cả nhân viên đều đã có trong ca này.',

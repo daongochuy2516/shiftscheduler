@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Plus, Trash2, UserPlus } from 'lucide-react'
+import { AlertTriangle, Lock, Plus, Trash2, UserPlus } from 'lucide-react'
 import type {
   AssignmentInput,
   AssignmentStatus,
@@ -50,6 +50,9 @@ function toRows(shift: ShiftWithAssignments | null): Row[] {
 const inputClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
 
+const lockedInputClass =
+  'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-base sm:text-sm text-slate-500 outline-none cursor-not-allowed'
+
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
 export function ShiftModal({
@@ -68,6 +71,11 @@ export function ShiftModal({
   const { profiles, createShift, updateShift, deleteShift } = useSchedule()
   const { t } = useI18n()
   const isEdit = shift !== null
+  /**
+   * Ca sinh ra từ ca mẫu: khung giờ tổng do mẫu quy định nên khoá lại.
+   * Nhân viên vẫn sửa được giờ riêng của từng người bên dưới.
+   */
+  const lockedWindow = shift?.template_id != null
 
   const [form, setForm] = useState<ShiftInput>(() => ({
     title: shift?.title ?? '',
@@ -161,6 +169,13 @@ export function ShiftModal({
       ...form,
       title: form.title.trim(),
       note: form.note?.trim() ? form.note.trim() : null,
+      // Khoá ở UI thôi chưa đủ: chốt lại giờ gốc trước khi gửi đi.
+      ...(lockedWindow && shift
+        ? {
+            start_time: normalizeTime(shift.start_time),
+            end_time: normalizeTime(shift.end_time),
+          }
+        : {}),
     }
     const assignments: AssignmentInput[] = rows.map(({ key: _key, ...rest }) => ({
       ...rest,
@@ -307,8 +322,10 @@ export function ShiftModal({
               <input
                 id="shift-start"
                 type="time"
-                className={inputClass}
+                className={lockedWindow ? lockedInputClass : inputClass}
                 value={form.start_time}
+                disabled={lockedWindow}
+                aria-describedby={lockedWindow ? 'shift-window-lock' : undefined}
                 onChange={(e) =>
                   setForm({ ...form, start_time: e.target.value })
                 }
@@ -321,12 +338,24 @@ export function ShiftModal({
               <input
                 id="shift-end"
                 type="time"
-                className={inputClass}
+                className={lockedWindow ? lockedInputClass : inputClass}
                 value={form.end_time}
+                disabled={lockedWindow}
+                aria-describedby={lockedWindow ? 'shift-window-lock' : undefined}
                 onChange={(e) => setForm({ ...form, end_time: e.target.value })}
               />
             </div>
           </div>
+
+          {lockedWindow && (
+            <p
+              id="shift-window-lock"
+              className="inline-flex items-start gap-1.5 text-xs text-slate-500 sm:col-span-2"
+            >
+              <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+              {t('shift.lockedByTemplate')}
+            </p>
+          )}
 
           {shiftRangeError && (
             <p className="text-xs text-rose-600 sm:col-span-2">
