@@ -39,8 +39,11 @@ export function LoginPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="flex items-center gap-2.5 text-slate-500">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          <span className="text-sm font-medium">{t('common.loading')}</span>
+        </div>
       </div>
     )
   }

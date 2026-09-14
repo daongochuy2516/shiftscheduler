@@ -29,6 +29,7 @@ export const en = {
   'common.starts': 'Starts',
   'common.ends': 'Ends',
   'common.unknownStaff': 'Unknown staff',
+  'common.loading': 'Loading…',
 
   // ---- status ----
   'status.pending': 'Pending',
@@ -336,6 +337,7 @@ export const vi: Record<DictKey, string> = {
   'common.starts': 'Bắt đầu',
   'common.ends': 'Kết thúc',
   'common.unknownStaff': 'Không rõ nhân viên',
+  'common.loading': 'Đang tải…',
 
   // ---- status ----
   'status.pending': 'Chờ xác nhận',

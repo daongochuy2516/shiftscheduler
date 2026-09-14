@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 import { ScheduleProvider } from '../data/ScheduleContext'
 import { ShiftEditorProvider } from './ShiftEditorProvider'
 import { AppLayout } from './AppLayout'
@@ -12,12 +13,16 @@ import { AppLayout } from './AppLayout'
  */
 export function ProtectedRoute() {
   const { user, loading } = useAuth()
+  const { t } = useI18n()
   const location = useLocation()
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="flex items-center gap-2.5 text-slate-500">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          <span className="text-sm font-medium">{t('common.loading')}</span>
+        </div>
       </div>
     )
   }
