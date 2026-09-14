@@ -51,6 +51,7 @@ export const en = {
   // ---- nav ----
   'nav.timeline': 'Schedule',
   'nav.allShifts': 'All shifts',
+  'nav.summary': 'Summary',
   'nav.myShifts': 'My shifts',
   'nav.pending': 'Pending',
   'nav.newShift': 'New shift',
@@ -100,6 +101,21 @@ export const en = {
   'timeline.weekTotal': 'Total',
   'timeline.moreCount': '+{{count}} more',
   'timeline.openDay': 'Open this day',
+
+  // ---- summary ----
+  'summary.title': 'Shift summary',
+  'summary.rule':
+    'A shift is counted once the staff member has confirmed it and their own end time has passed.',
+  'summary.stat.staff': 'Staff counted',
+  'summary.stat.shifts': 'Shifts worked',
+  'summary.stat.hours': 'Total hours',
+  'summary.stat.notCounted': 'Not counted yet',
+  'summary.showAllStaff': 'Show staff with no shifts',
+  'summary.showAllStaffShort': 'Show everyone',
+  'summary.dayTotal': 'Per day',
+  'summary.empty': 'Nothing recorded in this range yet.',
+  'summary.emptyHint':
+    'A shift shows up here once it is confirmed and its end time has passed.',
 
   // ---- shift modal ----
   'shift.new': 'New shift',
@@ -360,6 +376,7 @@ export const vi: Record<DictKey, string> = {
   // ---- nav ----
   'nav.timeline': 'Lịch',
   'nav.allShifts': 'Tất cả ca',
+  'nav.summary': 'Tổng kết',
   'nav.myShifts': 'Ca của tôi',
   'nav.pending': 'Chờ xác nhận',
   'nav.newShift': 'Tạo ca',
@@ -409,6 +426,21 @@ export const vi: Record<DictKey, string> = {
   'timeline.weekTotal': 'Tổng',
   'timeline.moreCount': '+{{count}} nữa',
   'timeline.openDay': 'Mở ngày này',
+
+  // ---- summary ----
+  'summary.title': 'Tổng kết ca',
+  'summary.rule':
+    'Một ca chỉ vào tổng kết sau khi nhân viên đã xác nhận và đã qua giờ kết thúc của riêng người đó.',
+  'summary.stat.staff': 'Nhân viên được tính',
+  'summary.stat.shifts': 'Lượt đã trực',
+  'summary.stat.hours': 'Tổng giờ',
+  'summary.stat.notCounted': 'Chưa ghi nhận',
+  'summary.showAllStaff': 'Hiện cả nhân viên không có ca',
+  'summary.showAllStaffShort': 'Hiện tất cả',
+  'summary.dayTotal': 'Theo ngày',
+  'summary.empty': 'Chưa ghi nhận được ca nào trong khoảng này.',
+  'summary.emptyHint':
+    'Một ca hiện ra ở đây sau khi được xác nhận và đã qua giờ kết thúc.',
 
   // ---- shift modal ----
   'shift.new': 'Tạo ca mới',

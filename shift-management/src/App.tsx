@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
 import { TimelinePage } from './pages/TimelinePage'
 import { AllShiftsPage } from './pages/AllShiftsPage'
+import { SummaryPage } from './pages/SummaryPage'
 import { MyShiftsPage } from './pages/MyShiftsPage'
 import { PendingPage } from './pages/PendingPage'
 import { ActionLogPage } from './pages/ActionLogPage'
@@ -21,6 +22,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route index element={<TimelinePage />} />
               <Route path="shifts" element={<AllShiftsPage />} />
+              <Route path="summary" element={<SummaryPage />} />
               <Route path="my-shifts" element={<MyShiftsPage />} />
               <Route path="pending" element={<PendingPage />} />
               <Route path="logs" element={<ActionLogPage />} />

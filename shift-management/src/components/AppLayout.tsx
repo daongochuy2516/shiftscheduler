@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CalendarClock,
   CalendarDays,
+  ClipboardCheck,
   Clock3,
   KeyRound,
   LayoutList,
@@ -31,6 +32,7 @@ const NAV: {
 }[] = [
   { to: '/', label: 'nav.timeline', icon: CalendarDays, end: true },
   { to: '/shifts', label: 'nav.allShifts', icon: LayoutList, end: false },
+  { to: '/summary', label: 'nav.summary', icon: ClipboardCheck, end: false },
   { to: '/my-shifts', label: 'nav.myShifts', icon: User, end: false },
   { to: '/pending', label: 'nav.pending', icon: Clock3, end: false },
   { to: '/logs', label: 'nav.actionLog', icon: ScrollText, end: false },
@@ -262,6 +264,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <p className="px-1 pb-2 text-center text-xs text-slate-400 select-none">
               {t(greeting, { name: user.display_name })}
             </p>
+
+            <NavLink
+              to="/summary"
+              onClick={() => setAccountOpen(false)}
+              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <ClipboardCheck className="h-5 w-5 text-slate-400" />
+              {t('nav.summary')}
+            </NavLink>
 
             <NavLink
               to="/logs"
