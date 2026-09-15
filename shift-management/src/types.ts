@@ -81,7 +81,12 @@ export interface ActionLogFilters {
   from: string | null
   /** yyyy-MM-dd, tính tới hết 23:59 ngày đó. */
   to: string | null
-  actorId: UUID | null
+  /**
+   * Nhân viên liên quan, AND: dòng phải dính tới **tất cả** người được chọn —
+   * là người thực hiện, người bị tác động (`metadata.target_user_id`), hoặc
+   * nằm trong danh sách bị gỡ khi xoá ca (`metadata.staff_removed`).
+   */
+  staffIds: UUID[]
   action: string | null
   entityType: string | null
   /** Khớp trong summary. */
@@ -129,7 +134,7 @@ export interface ShiftAssignment {
  * đúng phần nó hiển thị.
  *
  * - `range`: theo ngày (`from`/`to` là yyyy-MM-dd, bỏ trống một đầu = mở),
- *   có thể lọc thêm những ca có một nhân viên (`userId`).
+ *   có thể lọc thêm những ca có **tất cả** các nhân viên trong `userIds` (AND).
  * - `user`: mọi ca có người này.
  * - `pending`: mọi ca còn ít nhất một lượt chờ xác nhận.
  */
@@ -138,7 +143,7 @@ export type ShiftQuery =
       kind: 'range'
       from: string | null
       to: string | null
-      userId?: UUID | null
+      userIds?: UUID[]
     }
   | { kind: 'user'; userId: UUID }
   | { kind: 'pending' }

@@ -22,7 +22,7 @@ type Field = keyof ShiftFilters
 const FIELDS: { id: Field; label: TranslationKey; icon: typeof User }[] = [
   { id: 'from', label: 'allShifts.filter.from', icon: CalendarDays },
   { id: 'to', label: 'allShifts.filter.to', icon: CalendarDays },
-  { id: 'staffId', label: 'allShifts.filter.staff', icon: User },
+  { id: 'staffIds', label: 'allShifts.filter.staff', icon: User },
   { id: 'order', label: 'allShifts.filter.sort', icon: ArrowDownUp },
 ]
 
@@ -32,6 +32,14 @@ const SORTS: { id: SortOrder; label: TranslationKey }[] = [
 ]
 
 type Popover = { step: 'fields' } | { step: 'edit'; field: Field } | null
+
+interface Chip {
+  key: string
+  field: Field
+  value: string
+  /** Bản vá bộ lọc khi bỏ chip này. */
+  clear: Partial<ShiftFilters>
+}
 
 /**
  * Ô tìm kiếm có bộ lọc nằm ngay bên trong, kiểu thanh lọc của Supabase: mỗi
@@ -88,25 +96,58 @@ export function ShiftSearchBar({
     }
   }, [popover])
 
-  /** Chip chỉ hiện cho bộ lọc khác mặc định. */
-  const isActive = (field: Field) =>
-    filters[field] !== DEFAULT_SHIFT_FILTERS[field]
-  const activeFields = FIELDS.filter((f) => isActive(f.id))
-  const availableFields = FIELDS.filter((f) => !isActive(f.id))
+  const fmtDate = (key: string) =>
+    format(fromDateKey(key), 'd MMM yyyy', { locale: dateLocale })
+  const staffName = (id: string) =>
+    profiles.find((p) => p.id === id)?.display_name ?? t('common.unknownStaff')
 
-  function valueLabel(field: Field): string {
-    if (field === 'from' || field === 'to') {
-      const key = filters[field]
-      return key ? format(fromDateKey(key), 'd MMM yyyy', { locale: dateLocale }) : ''
-    }
-    if (field === 'staffId') {
-      return (
-        profiles.find((p) => p.id === filters.staffId)?.display_name ??
-        t('common.unknownStaff')
-      )
-    }
-    return t(filters.order === 'asc' ? 'allShifts.sort.asc' : 'allShifts.sort.desc')
+  /**
+   * Chip cho từng bộ lọc khác mặc định. Mỗi nhân viên là một chip riêng, để
+   * bỏ được từng người mà không mất cả nhóm.
+   */
+  const chips: Chip[] = []
+  if (filters.from) {
+    chips.push({
+      key: 'from',
+      field: 'from',
+      value: fmtDate(filters.from),
+      clear: { from: null },
+    })
   }
+  if (filters.to) {
+    chips.push({
+      key: 'to',
+      field: 'to',
+      value: fmtDate(filters.to),
+      clear: { to: null },
+    })
+  }
+  for (const id of filters.staffIds) {
+    chips.push({
+      key: `staff-${id}`,
+      field: 'staffIds',
+      value: staffName(id),
+      clear: { staffIds: filters.staffIds.filter((x) => x !== id) },
+    })
+  }
+  if (filters.order !== DEFAULT_SHIFT_FILTERS.order) {
+    chips.push({
+      key: 'order',
+      field: 'order',
+      value: t('allShifts.sort.desc'),
+      clear: { order: DEFAULT_SHIFT_FILTERS.order },
+    })
+  }
+
+  /** Loại bộ lọc còn thêm được. Nhân viên thì còn chừng nào chưa chọn hết. */
+  const availableFields = FIELDS.filter(({ id }) => {
+    if (id === 'from') return !filters.from
+    if (id === 'to') return !filters.to
+    if (id === 'order') return filters.order === DEFAULT_SHIFT_FILTERS.order
+    return filters.staffIds.length < profiles.length
+  })
+  const labelOf = (field: Field) =>
+    t(FIELDS.find((f) => f.id === field)!.label)
 
   function openEditor(field: Field) {
     if (field === 'from' || field === 'to') setDraftDate(filters[field] ?? '')
@@ -119,19 +160,28 @@ export function ShiftSearchBar({
     inputRef.current?.focus()
   }
 
-  function remove(field: Field) {
-    onFiltersChange({ [field]: DEFAULT_SHIFT_FILTERS[field] })
+  function remove(chip: Chip) {
+    onFiltersChange(chip.clear)
     inputRef.current?.focus()
   }
 
+  function toggleStaff(id: string) {
+    // Không đóng danh sách: chọn liền nhiều người cho nhanh.
+    onFiltersChange({
+      staffIds: filters.staffIds.includes(id)
+        ? filters.staffIds.filter((x) => x !== id)
+        : [...filters.staffIds, id],
+    })
+  }
+
   function onInputKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Backspace' && query === '' && activeFields.length > 0) {
+    if (e.key === 'Backspace' && query === '' && chips.length > 0) {
       e.preventDefault()
-      remove(activeFields[activeFields.length - 1].id)
+      remove(chips[chips.length - 1])
     }
   }
 
-  const hasAnything = activeFields.length > 0 || query !== ''
+  const hasAnything = chips.length > 0 || query !== ''
   const editing = popover?.step === 'edit' ? popover.field : null
 
   return (
@@ -146,23 +196,25 @@ export function ShiftSearchBar({
       >
         <Search className="h-4 w-4 shrink-0 text-slate-400" />
 
-        {activeFields.map(({ id, label }) => (
+        {chips.map((chip) => (
           <span
-            key={id}
+            key={chip.key}
             className="inline-flex max-w-full items-center rounded bg-indigo-50 text-xs text-indigo-800 ring-1 ring-indigo-200"
           >
             <button
               type="button"
-              onClick={() => openEditor(id)}
+              onClick={() => openEditor(chip.field)}
               className="truncate py-1 pl-1.5 text-left"
             >
-              <span className="text-indigo-500">{t(label)}:</span>{' '}
-              <span className="font-medium">{valueLabel(id)}</span>
+              <span className="text-indigo-500">{labelOf(chip.field)}:</span>{' '}
+              <span className="font-medium">{chip.value}</span>
             </button>
             <button
               type="button"
-              onClick={() => remove(id)}
-              aria-label={t('allShifts.filter.remove', { name: t(label) })}
+              onClick={() => remove(chip)}
+              aria-label={t('allShifts.filter.remove', {
+                name: `${labelOf(chip.field)} ${chip.value}`,
+              })}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-indigo-500 transition hover:bg-indigo-100 hover:text-indigo-800 sm:h-6 sm:w-6"
             >
               <X className="h-3 w-3" />
@@ -176,7 +228,7 @@ export function ShiftSearchBar({
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={onInputKeyDown}
           placeholder={
-            activeFields.length === 0 ? t('list.searchPlaceholder') : t('allShifts.filter.searchMore')
+            chips.length === 0 ? t('list.searchPlaceholder') : t('allShifts.filter.searchMore')
           }
           aria-label={t('list.searchPlaceholder')}
           className="min-w-24 flex-1 bg-transparent py-1 text-base text-slate-900 outline-none placeholder:text-slate-400 sm:py-0.5 sm:text-sm"
@@ -285,15 +337,19 @@ export function ShiftSearchBar({
             </form>
           )}
 
-          {editing === 'staffId' && (
+          {editing === 'staffIds' && (
             <div className="max-h-64 overflow-y-auto">
+              <p className="px-2 pt-1 pb-1.5 text-xs text-slate-500">
+                {t('allShifts.filter.staffAndHint')}
+              </p>
               {profiles.map((p) => {
-                const selected = p.id === filters.staffId
+                const selected = filters.staffIds.includes(p.id)
                 return (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => apply({ staffId: p.id })}
+                    aria-pressed={selected}
+                    onClick={() => toggleStaff(p.id)}
                     className={`flex min-h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition hover:bg-slate-100 sm:min-h-9 ${
                       selected ? 'text-indigo-700' : 'text-slate-700'
                     }`}

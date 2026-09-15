@@ -40,8 +40,8 @@ interface ScheduleContextValue {
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
-  /** Ngày ca sớm nhất / muộn nhất, tuỳ chọn chỉ tính ca có một nhân viên. */
-  shiftDateBounds: (userId: UUID | null) => Promise<ShiftDateBounds>
+  /** Ngày ca sớm nhất / muộn nhất, tuỳ chọn chỉ tính ca có tất cả `userIds`. */
+  shiftDateBounds: (userIds: UUID[]) => Promise<ShiftDateBounds>
   /**
    * Tăng mỗi lần dữ liệu đổi (mình lưu, hoặc Realtime báo người khác vừa
    * sửa). Thứ gì tự hỏi backend ngoài bộ đệm ca thì dựa vào số này để biết
@@ -204,7 +204,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   )
 
   const shiftDateBounds = useCallback(
-    (userId: UUID | null) => backend.shiftDateBounds(userId),
+    (userIds: UUID[]) => backend.shiftDateBounds(userIds),
     [],
   )
 

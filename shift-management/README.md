@@ -339,7 +339,7 @@ Danh sách đầy đủ, **nhóm theo ngày**, tiêu đề nhóm ghi rõ *Hôm n
   | Bộ lọc | Ghi chú |
   | --- | --- |
   | **Từ ngày / Đến ngày** | Thu hẹp **bên trong** tab: tab *Sắp tới* không chọn được ngày đã qua, và ngược lại |
-  | **Nhân viên** | Chỉ ca có người đó, lọc ở database. Thẻ ca vẫn hiện đủ mọi người trong ca |
+  | **Nhân viên** | Chọn được nhiều người, mỗi người một chip. **AND**: ca phải có **tất cả** người đã chọn. Lọc ở database; thẻ ca vẫn hiện đủ mọi người trong ca |
   | **Sắp xếp** | Mặc định Cũ → mới; chỉ hiện chip khi chọn Mới → cũ |
 - **Cuộn vô hạn**: danh sách tải từng tháng một **theo chiều sắp xếp** — Cũ → mới thì tiến dần từ đầu khoảng, Mới → cũ thì lùi dần từ cuối khoảng. Tháng mới luôn nối vào cuối. Tới hết thì hiện *"Đã hết ca trong khoảng này."*
 - **Tìm kiếm** lọc trên phần đã tải. Nếu chưa khớp ca nào mà vẫn còn tháng chưa tải, danh sách tự tải tiếp cho tới hết — thu hẹp ngày trong bộ lọc để tìm nhanh hơn.
@@ -418,7 +418,17 @@ Cách làm: trigger trên bảng `shifts` **cố ý bỏ qua** những ca có `t
 
 > Kèm theo đó, nếu bước thêm phân công thất bại sau khi ca đã được tạo, ứng dụng **xoá luôn ca vừa tạo**. Nếu để lại thì sẽ có một ca không nằm trong bất kỳ dòng nhật ký nào.
 
-**Bộ lọc**: từ ngày, đến ngày, người thực hiện, hành động, loại đối tượng, và tìm kiếm trong phần mô tả. Phân trang 50 dòng mỗi trang, không tải toàn bộ.
+**Bộ lọc**: từ ngày, đến ngày, nhân viên liên quan, hành động, loại đối tượng, và tìm kiếm trong phần mô tả. Phân trang 50 dòng mỗi trang, không tải toàn bộ.
+
+**Nhân viên liên quan** chọn được nhiều người, theo **AND**: dòng phải dính tới **tất cả** người đã chọn. Một người được coi là liên quan tới một dòng khi họ là:
+
+| Vai trò | Trường |
+| --- | --- |
+| Người thực hiện | `actor_id` |
+| Người bị tác động (thêm, gỡ, nhận ca, đổi trạng thái) | `metadata.target_user_id` |
+| Người bị gỡ khi xoá cả ca | `metadata.staff_removed[].user_id` |
+
+Ví dụ chọn Huy + An là ra những lần Huy thêm / gỡ / đổi trạng thái của An, hoặc một ca có cả hai bị xoá.
 
 ### Vì sao nhật ký đáng tin
 

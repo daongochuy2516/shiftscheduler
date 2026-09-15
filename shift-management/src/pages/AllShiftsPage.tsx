@@ -8,7 +8,7 @@ import { ShiftSearchBar } from '../components/ShiftSearchBar'
 import { DEFAULT_SHIFT_FILTERS, type ShiftFilters } from '../lib/shiftFilters'
 import { planMonthChunks } from '../lib/shiftChunks'
 import { fromDateKey, toDateKey } from '../lib/time'
-import type { ShiftDateBounds, ShiftQuery, UUID } from '../types'
+import type { ShiftDateBounds, ShiftQuery } from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -74,26 +74,29 @@ export function AllShiftsPage() {
     setChunkCount(1)
   }
 
+  /** Cùng một nhóm người luôn ra cùng một khoá, bất kể thứ tự chọn. */
+  const staffKey = [...filters.staffIds].sort().join('+')
+
   // ---- điểm dừng ----------------------------------------------------------
   // Ngày ca sớm nhất / muộn nhất (của người đang lọc). Hỏi lại mỗi khi dữ liệu
   // đổi, để ca mới tạo ngoài mốc cũ vẫn hiện ra.
   const [bounds, setBounds] = useState<{
-    staffId: UUID | null
+    staffKey: string
     value: ShiftDateBounds
     error: string | null
   } | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const staffId = filters.staffId
-    shiftDateBounds(staffId).then(
+    const ids = staffKey ? staffKey.split('+') : []
+    shiftDateBounds(ids).then(
       (value) => {
-        if (!cancelled) setBounds({ staffId, value, error: null })
+        if (!cancelled) setBounds({ staffKey, value, error: null })
       },
       (err: unknown) => {
         if (cancelled) return
         setBounds({
-          staffId,
+          staffKey,
           value: { earliest: null, latest: null },
           error: err instanceof Error ? err.message : String(err),
         })
@@ -102,12 +105,12 @@ export function AllShiftsPage() {
     return () => {
       cancelled = true
     }
-  }, [filters.staffId, dataVersion, shiftDateBounds])
+  }, [staffKey, dataVersion, shiftDateBounds])
 
   // Mốc của người khác thì chưa dùng được; còn mốc cũ của cùng người thì cứ
   // dùng trong lúc hỏi lại, để Realtime không làm danh sách nháy.
   const readyBounds =
-    bounds !== null && bounds.staffId === filters.staffId ? bounds : null
+    bounds !== null && bounds.staffKey === staffKey ? bounds : null
 
   const plan = useMemo(
     () =>
@@ -130,9 +133,9 @@ export function AllShiftsPage() {
         kind: 'range',
         from: c.from,
         to: c.to,
-        userId: filters.staffId,
+        userIds: filters.staffIds,
       })),
-    [plan, filters.staffId],
+    [plan, filters.staffIds],
   )
 
   const loaded = useShiftChunks(queries)

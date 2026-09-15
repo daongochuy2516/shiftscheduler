@@ -16,6 +16,7 @@ import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { Avatar } from '../components/Avatar'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { StaffMultiSelect } from '../components/StaffMultiSelect'
 
 const PAGE_SIZE = 50
 
@@ -55,7 +56,7 @@ function actionTone(action: string): string {
 const emptyFilters: ActionLogFilters = {
   from: null,
   to: null,
-  actorId: null,
+  staffIds: [],
   action: null,
   entityType: null,
   search: null,
@@ -106,7 +107,7 @@ export function ActionLogPage() {
   const activeFilterCount = [
     filters.from,
     filters.to,
-    filters.actorId,
+    filters.staffIds.length > 0 ? filters.staffIds : null,
     filters.action,
     filters.entityType,
     filters.search,
@@ -209,22 +210,16 @@ export function ActionLogPage() {
           </div>
 
           <div>
-            <label className={labelClass} htmlFor="log-actor">
-              {t('log.actor')}
+            <label className={labelClass} htmlFor="log-staff">
+              {t('log.staff')}
             </label>
-            <select
-              id="log-actor"
+            <StaffMultiSelect
+              id="log-staff"
               className={controlClass}
-              value={filters.actorId ?? ''}
-              onChange={(e) => patch({ actorId: e.target.value || null })}
-            >
-              <option value="">{t('log.allActors')}</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.display_name}
-                </option>
-              ))}
-            </select>
+              profiles={profiles}
+              value={filters.staffIds}
+              onChange={(staffIds) => patch({ staffIds })}
+            />
           </div>
 
           <div>

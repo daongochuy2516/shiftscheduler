@@ -28,10 +28,11 @@ export interface SchedulerBackend {
   listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]>
 
   /**
-   * Ngày ca sớm nhất và muộn nhất, tuỳ chọn chỉ tính ca có `userId`. Dùng làm
-   * điểm dừng khi cuộn tải dần, để không tải mãi những tháng rỗng.
+   * Ngày ca sớm nhất và muộn nhất, tuỳ chọn chỉ tính ca có **tất cả** người
+   * trong `userIds`. Dùng làm điểm dừng khi cuộn tải dần, để không tải mãi
+   * những tháng rỗng.
    */
-  shiftDateBounds(userId: UUID | null): Promise<ShiftDateBounds>
+  shiftDateBounds(userIds: UUID[]): Promise<ShiftDateBounds>
 
   /**
    * Creates a shift and its roster in one call.

@@ -209,6 +209,21 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
   }
 }
 
+/**
+ * Cùng cách hiểu "liên quan" như bản Supabase. Log phân công của mock không
+ * ghi `target_user_id`, nên đọc thêm user_id trong dữ liệu cũ/mới.
+ */
+function involves(row: ActionLog, id: UUID): boolean {
+  if (row.actor_id === id) return true
+  const meta = row.metadata as {
+    target_user_id?: UUID
+    staff_removed?: { user_id?: UUID }[]
+  }
+  if (meta.target_user_id === id) return true
+  if (row.new_data?.user_id === id || row.old_data?.user_id === id) return true
+  return (meta.staff_removed ?? []).some((r) => r.user_id === id)
+}
+
 export const mockBackend: SchedulerBackend = {
   listProfiles(): Promise<Profile[]> {
     return delay(
@@ -228,18 +243,19 @@ export const mockBackend: SchedulerBackend = {
       }
       if (query.from && s.date < query.from) return false
       if (query.to && s.date > query.to) return false
-      if (query.userId) {
-        return s.assignments.some((a) => a.user_id === query.userId)
-      }
-      return true
+      return (query.userIds ?? []).every((id) =>
+        s.assignments.some((a) => a.user_id === id),
+      )
     })
     return delay(rows)
   },
 
-  shiftDateBounds(userId: UUID | null): Promise<ShiftDateBounds> {
+  shiftDateBounds(userIds: UUID[]): Promise<ShiftDateBounds> {
     const dates = state.shifts
       .map(withAssignments)
-      .filter((s) => !userId || s.assignments.some((a) => a.user_id === userId))
+      .filter((s) =>
+        userIds.every((id) => s.assignments.some((a) => a.user_id === id)),
+      )
       .map((s) => s.date)
       .sort()
     return delay({
@@ -548,7 +564,7 @@ export const mockBackend: SchedulerBackend = {
       const at = new Date(row.created_at).getTime()
       if (fromMs !== null && at < fromMs) return false
       if (toMs !== null && at > toMs) return false
-      if (query.actorId && row.actor_id !== query.actorId) return false
+      if (!query.staffIds.every((id) => involves(row, id))) return false
       if (query.action && row.action !== query.action) return false
       if (query.entityType && row.entity_type !== query.entityType) return false
       if (search && !(row.summary ?? '').toLowerCase().includes(search)) {

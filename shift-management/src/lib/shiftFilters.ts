@@ -6,13 +6,14 @@ export interface ShiftFilters {
   /** yyyy-MM-dd, `null` = không giới hạn đầu này. */
   from: string | null
   to: string | null
-  staffId: UUID | null
+  /** AND: ca phải có tất cả những người này. */
+  staffIds: UUID[]
   order: SortOrder
 }
 
 export const DEFAULT_SHIFT_FILTERS: ShiftFilters = {
   from: null,
   to: null,
-  staffId: null,
+  staffIds: [],
   order: 'asc',
 }

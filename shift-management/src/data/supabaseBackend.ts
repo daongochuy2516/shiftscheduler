@@ -41,6 +41,38 @@ function normalizeShift(
   }
 }
 
+/**
+ * Lọc ca có **tất cả** các nhân viên (AND): mỗi người là một lần nhúng
+ * shift_assignments riêng với !inner, đặt tên match_0, match_1… Mỗi lần nhúng
+ * lọc độc lập nên ca phải khớp hết. Lọc thẳng trên `assignments` thì sẽ cắt
+ * mất những người còn lại trong ca.
+ */
+function staffMatchColumns(userIds: UUID[]): string {
+  return userIds
+    .map((_, i) => `, match_${i}:shift_assignments!inner(user_id)`)
+    .join('')
+}
+
+/** Bỏ các cột match_* chỉ dùng để lọc, không để lọt vào dữ liệu trả về. */
+function withoutMatches<T extends object>(row: T): T {
+  return Object.fromEntries(
+    Object.entries(row).filter(([key]) => !key.startsWith('match_')),
+  ) as T
+}
+
+/**
+ * Nhóm điều kiện "liên quan tới một người" cho nhật ký, theo cú pháp or() của
+ * PostgREST. Giá trị JSON có dấu hai chấm nên phải bọc trong ngoặc kép.
+ */
+function involvesStaff(id: UUID): string {
+  const removed = JSON.stringify(JSON.stringify([{ user_id: id }]))
+  return [
+    `actor_id.eq.${id}`,
+    `metadata->>target_user_id.eq.${id}`,
+    `metadata->staff_removed.cs.${removed}`,
+  ].join(',')
+}
+
 function fail(context: string, error: PostgrestError): never {
   throw new Error(`${context}: ${error.message}`)
 }
@@ -155,50 +187,50 @@ export const supabaseBackend: SchedulerBackend = {
     if (query.kind === 'user') {
       request = supabase
         .from('shifts')
-        .select(`${all}, match:shift_assignments!inner(user_id)`)
-        .eq('match.user_id', query.userId)
+        .select(`${all}${staffMatchColumns([query.userId])}`)
+        .eq('match_0.user_id', query.userId)
     } else if (query.kind === 'pending') {
       request = supabase
         .from('shifts')
-        .select(`${all}, match:shift_assignments!inner(status)`)
-        .eq('match.status', 'pending')
+        .select(`${all}, match_0:shift_assignments!inner(status)`)
+        .eq('match_0.status', 'pending')
     } else {
-      request = query.userId
-        ? supabase
-            .from('shifts')
-            .select(`${all}, match:shift_assignments!inner(user_id)`)
-            .eq('match.user_id', query.userId)
-        : supabase.from('shifts').select(all)
+      const userIds = query.userIds ?? []
+      request = supabase
+        .from('shifts')
+        .select(`${all}${staffMatchColumns(userIds)}`)
+      for (const [i, id] of userIds.entries()) {
+        request = request.eq(`match_${i}.user_id`, id)
+      }
       if (query.from) request = request.gte('date', query.from)
       if (query.to) request = request.lte('date', query.to)
     }
 
     const { data, error } = await request.order('date').order('start_time')
     if (error) fail('Could not load shifts', error)
-    return (
-      (data ?? []) as (Shift & { assignments: ShiftAssignment[]; match?: unknown })[]
-    ).map(({ match: _match, ...row }) => normalizeShift(row))
+    return ((data ?? []) as (Shift & { assignments: ShiftAssignment[] })[]).map(
+      (row) => normalizeShift(withoutMatches(row)),
+    )
   },
 
-  async shiftDateBounds(userId: UUID | null): Promise<ShiftDateBounds> {
+  async shiftDateBounds(userIds: UUID[]): Promise<ShiftDateBounds> {
     const supabase = getSupabase()
     // Có index shifts_date_idx nên mỗi đầu chỉ là một lần đọc đầu index.
     const edge = (ascending: boolean) => {
-      const base = userId
-        ? supabase
-            .from('shifts')
-            .select('date, match:shift_assignments!inner(user_id)')
-            .eq('match.user_id', userId)
-        : supabase.from('shifts').select('date')
+      let base = supabase
+        .from('shifts')
+        .select(`date${staffMatchColumns(userIds)}`)
+      userIds.forEach((id, i) => {
+        base = base.eq(`match_${i}.user_id`, id)
+      })
       return base.order('date', { ascending }).limit(1).maybeSingle()
     }
     const [first, last] = await Promise.all([edge(true), edge(false)])
     if (first.error) fail('Could not load the earliest shift', first.error)
     if (last.error) fail('Could not load the latest shift', last.error)
-    return {
-      earliest: (first.data?.date as string | undefined) ?? null,
-      latest: (last.data?.date as string | undefined) ?? null,
-    }
+    const dateOf = (row: unknown) =>
+      (row as { date?: string } | null)?.date ?? null
+    return { earliest: dateOf(first.data), latest: dateOf(last.data) }
   },
 
   async createShift(input: ShiftInput, assignments: AssignmentInput[]) {
@@ -397,7 +429,14 @@ export const supabaseBackend: SchedulerBackend = {
     if (query.to) {
       q = q.lte('created_at', new Date(`${query.to}T23:59:59.999`).toISOString())
     }
-    if (query.actorId) q = q.eq('actor_id', query.actorId)
+    // AND giữa các nhân viên: mỗi người một nhóm or(), gộp trong and().
+    if (query.staffIds.length === 1) {
+      q = q.or(involvesStaff(query.staffIds[0]))
+    } else if (query.staffIds.length > 1) {
+      q = q.or(
+        `and(${query.staffIds.map((id) => `or(${involvesStaff(id)})`).join(',')})`,
+      )
+    }
     if (query.action) q = q.eq('action', query.action)
     if (query.entityType) q = q.eq('entity_type', query.entityType)
     if (query.search) {
