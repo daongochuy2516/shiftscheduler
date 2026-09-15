@@ -73,14 +73,10 @@ export function StaffMultiSelect({
         onClick={() => setOpen((o) => !o)}
         className={`${className} flex items-center gap-2 text-left`}
       >
-        <span
-          className={`min-w-0 flex-1 truncate ${
-            value.length === 0 ? 'text-slate-500' : ''
-          }`}
-        >
-          {summary}
-        </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+        {/* Cùng màu chữ và mũi tên với các ô select gốc bên cạnh: "Tất cả
+            nhân viên" là một giá trị thật, không phải chữ gợi ý mờ. */}
+        <span className="min-w-0 flex-1 truncate">{summary}</span>
+        <ChevronDown className="-mr-1.5 h-3.5 w-3.5 shrink-0 text-slate-900" />
       </button>
 
       {open && (
