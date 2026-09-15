@@ -18,9 +18,13 @@ import {
   Info,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import {
+  usePrefetchShifts,
+  useSchedule,
+  useShifts,
+} from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
-import { PageSkeleton } from '../components/PageSkeleton'
+import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { SummaryGrid } from '../components/SummaryGrid'
 import { buildSummary } from '../lib/summary'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
@@ -35,6 +39,29 @@ const VIEWS: { id: ViewMode; label: TranslationKey }[] = [
 ]
 
 /**
+ * Các ngày làm cột. Tháng lấy đúng tháng đó, không đệm cho tròn tuần như
+ * lưới tháng bên Lịch: bảng tổng kết tháng 9 không nên cộng cả ngày 31/8.
+ */
+function daysFor(view: ViewMode, d: Date): Date[] {
+  if (view === 'day') return [d]
+  if (view === 'week') {
+    const start = startOfWeek(d, { weekStartsOn: 1 })
+    return eachDayOfInterval({ start, end: addDays(start, 6) })
+  }
+  return eachDayOfInterval({ start: startOfMonth(d), end: endOfMonth(d) })
+}
+
+function stepDate(view: ViewMode, d: Date, direction: 1 | -1): Date {
+  if (view === 'day') return addDays(d, direction)
+  if (view === 'week') return addDays(d, direction * 7)
+  return addMonths(d, direction)
+}
+
+function rangeOf(days: Date[]): { from: string; to: string } {
+  return { from: toDateKey(days[0]), to: toDateKey(days[days.length - 1]) }
+}
+
+/**
  * Tổng kết ca — ai đã trực ca nào, tổng bao nhiêu giờ.
  *
  * Khác trang Lịch ở chỗ nó chỉ đếm việc **đã trực xong**: một lượt phân công
@@ -43,7 +70,7 @@ const VIEWS: { id: ViewMode; label: TranslationKey }[] = [
  */
 export function SummaryPage() {
   const [params, setParams] = useSearchParams()
-  const { shifts, profiles, loading, error } = useSchedule()
+  const { profiles, loading, error } = useSchedule()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
   const [includeEmptyStaff, setIncludeEmptyStaff] = useState(false)
@@ -78,29 +105,18 @@ export function SummaryPage() {
     setParams(query, { replace: true })
   }
 
-  /**
-   * Các ngày làm cột. Tháng lấy đúng tháng đó, không đệm cho tròn tuần như
-   * lưới tháng bên Lịch: bảng tổng kết tháng 9 không nên cộng cả ngày 31/8.
-   */
-  const days = useMemo(() => {
-    if (view === 'day') return [date]
-    if (view === 'week') {
-      const start = startOfWeek(date, { weekStartsOn: 1 })
-      return eachDayOfInterval({ start, end: addDays(start, 6) })
-    }
-    return eachDayOfInterval({
-      start: startOfMonth(date),
-      end: endOfMonth(date),
-    })
-  }, [view, date])
+  const days = useMemo(() => daysFor(view, date), [view, date])
+  const { from, to } = rangeOf(days)
 
-  const rangeStartKey = toDateKey(days[0])
-  const rangeEndKey = toDateKey(days[days.length - 1])
-
-  const visibleShifts = useMemo(
-    () =>
-      shifts.filter((s) => s.date >= rangeStartKey && s.date <= rangeEndKey),
-    [shifts, rangeStartKey, rangeEndKey],
+  // Chỉ tải đúng khoảng đang tổng kết, rồi tải trước khoảng liền kề.
+  const shiftsState = useShifts({ kind: 'range', from, to })
+  const visibleShifts = shiftsState.shifts
+  usePrefetchShifts(
+    [
+      { kind: 'range', ...rangeOf(daysFor(view, stepDate(view, date, -1))) },
+      { kind: 'range', ...rangeOf(daysFor(view, stepDate(view, date, 1))) },
+    ],
+    shiftsState.loaded,
   )
 
   const { rows, totals, minutesByDate } = useMemo(
@@ -116,11 +132,7 @@ export function SummaryPage() {
   )
 
   // ---- nhãn điều hướng ----------------------------------------------------
-  const step = (direction: 1 | -1) => {
-    if (view === 'day') return navigate(addDays(date, direction))
-    if (view === 'week') return navigate(addDays(date, direction * 7))
-    return navigate(addMonths(date, direction))
-  }
+  const step = (direction: 1 | -1) => navigate(stepDate(view, date, direction))
 
   const weekStart = startOfWeek(date, { weekStartsOn: 1 })
   const headingText =
@@ -158,9 +170,9 @@ export function SummaryPage() {
 
   return (
     <div className="space-y-4">
-      {error && (
+      {(error ?? shiftsState.error) && (
         <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
-          {error}
+          {error ?? shiftsState.error}
         </p>
       )}
 
@@ -201,7 +213,9 @@ export function SummaryPage() {
           </h1>
           <p className="text-sm text-slate-500">
             {t('summary.title')} ·{' '}
-            {t('timeline.assignmentCount', { count: totals.count })}
+            {shiftsState.loaded
+              ? t('timeline.assignmentCount', { count: totals.count })
+              : t('common.loading')}
           </p>
         </div>
 
@@ -236,38 +250,44 @@ export function SummaryPage() {
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label={t('summary.stat.staff')} value={String(totals.staff)} />
-        <Stat label={t('summary.stat.shifts')} value={String(totals.count)} />
-        <Stat
-          label={t('summary.stat.hours')}
-          value={
-            totals.minutes > 0 ? formatMinutesDuration(totals.minutes) : '—'
-          }
-        />
-        <Stat
-          label={t('summary.stat.notCounted')}
-          value={String(totals.notCounted)}
-          muted
-        />
-      </dl>
+      {!shiftsState.loaded ? (
+        <GridSkeleton />
+      ) : (
+        <>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label={t('summary.stat.staff')} value={String(totals.staff)} />
+            <Stat label={t('summary.stat.shifts')} value={String(totals.count)} />
+            <Stat
+              label={t('summary.stat.hours')}
+              value={
+                totals.minutes > 0 ? formatMinutesDuration(totals.minutes) : '—'
+              }
+            />
+            <Stat
+              label={t('summary.stat.notCounted')}
+              value={String(totals.notCounted)}
+              muted
+            />
+          </dl>
 
-      {/* Luật ghi nhận phải nói thẳng ra, nếu không con số "Chưa ghi nhận"
-          trông như dữ liệu bị mất. */}
-      <p className="flex items-start gap-1.5 text-xs text-slate-500">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-        {t('summary.rule')}
-      </p>
+          {/* Luật ghi nhận phải nói thẳng ra, nếu không con số "Chưa ghi nhận"
+              trông như dữ liệu bị mất. */}
+          <p className="flex items-start gap-1.5 text-xs text-slate-500">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+            {t('summary.rule')}
+          </p>
 
-      <SummaryGrid
-        days={days}
-        rows={rows}
-        minutesByDate={minutesByDate}
-        totalMinutes={totals.minutes}
-        profileCount={profiles.length}
-        currentUserId={user?.id ?? null}
-        dense={view === 'month'}
-      />
+          <SummaryGrid
+            days={days}
+            rows={rows}
+            minutesByDate={minutesByDate}
+            totalMinutes={totals.minutes}
+            profileCount={profiles.length}
+            currentUserId={user?.id ?? null}
+            dense={view === 'month'}
+          />
+        </>
+      )}
     </div>
   )
 }

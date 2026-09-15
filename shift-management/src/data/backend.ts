@@ -3,7 +3,9 @@ import type {
   ActionLogQuery,
   AssignmentInput,
   Profile,
+  ShiftDateBounds,
   ShiftInput,
+  ShiftQuery,
   ShiftTemplate,
   ShiftWithAssignments,
   TemplateInput,
@@ -19,8 +21,17 @@ export interface SchedulerBackend {
   /** Everyone who can be rostered. */
   listProfiles(): Promise<Profile[]>
 
-  /** Every shift with its assignments attached. */
-  listShifts(): Promise<ShiftWithAssignments[]>
+  /**
+   * Các ca khớp `query`, kèm toàn bộ phân công của từng ca (kể cả khi lọc
+   * theo người hay trạng thái, ca trả về vẫn đủ người).
+   */
+  listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]>
+
+  /**
+   * Ngày ca sớm nhất và muộn nhất, tuỳ chọn chỉ tính ca có `userId`. Dùng làm
+   * điểm dừng khi cuộn tải dần, để không tải mãi những tháng rỗng.
+   */
+  shiftDateBounds(userId: UUID | null): Promise<ShiftDateBounds>
 
   /**
    * Creates a shift and its roster in one call.

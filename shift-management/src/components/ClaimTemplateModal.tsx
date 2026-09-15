@@ -15,7 +15,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ShiftTemplate } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { formatRange, toDateKey } from '../lib/time'
 import { shiftColor } from '../lib/colors'
 import { Modal } from './Modal'
@@ -38,7 +38,7 @@ export function ClaimTemplateModal({
 }) {
   const { t, dateLocale } = useI18n()
   const { user } = useAuth()
-  const { shifts, claimTemplate } = useSchedule()
+  const { claimTemplate } = useSchedule()
 
   const [mode, setMode] = useState<PickerMode>('month')
   const [cursor, setCursor] = useState<Date>(viewedDate)
@@ -50,18 +50,6 @@ export function ClaimTemplateModal({
 
   const todayKey = toDateKey(new Date())
   const color = shiftColor(template.id)
-
-  /** Days this template is already claimed by the signed-in user. */
-  const claimedKeys = useMemo(() => {
-    const keys = new Set<string>()
-    for (const shift of shifts) {
-      if (shift.template_id !== template.id) continue
-      if (shift.assignments.some((a) => a.user_id === user?.id)) {
-        keys.add(shift.date)
-      }
-    }
-    return keys
-  }, [shifts, template.id, user?.id])
 
   /** Empty weekdays means the template repeats every day. */
   const isRepeatDay = (day: Date) =>
@@ -77,6 +65,27 @@ export function ClaimTemplateModal({
       end: endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 }),
     })
   }, [mode, cursor])
+
+  // Chỉ tải những ngày đang hiện trên lịch chọn. Chưa tải xong thì ô "đã
+  // nhận" chưa kịp tô, nhưng không sao: nhận trùng một ngày là no-op ở
+  // backend, không tạo ca hay phân công thừa.
+  const { shifts } = useShifts({
+    kind: 'range',
+    from: toDateKey(days[0]),
+    to: toDateKey(days[days.length - 1]),
+  })
+
+  /** Days this template is already claimed by the signed-in user. */
+  const claimedKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const shift of shifts) {
+      if (shift.template_id !== template.id) continue
+      if (shift.assignments.some((a) => a.user_id === user?.id)) {
+        keys.add(shift.date)
+      }
+    }
+    return keys
+  }, [shifts, template.id, user?.id])
 
   const weekdayLabels = useMemo(() => {
     const monday = startOfWeek(new Date(), { weekStartsOn: 1 })

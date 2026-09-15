@@ -6,7 +6,9 @@ import type {
   Profile,
   Shift,
   ShiftAssignment,
+  ShiftDateBounds,
   ShiftInput,
+  ShiftQuery,
   ShiftTemplate,
   ShiftWithAssignments,
   TemplateInput,
@@ -216,8 +218,34 @@ export const mockBackend: SchedulerBackend = {
     )
   },
 
-  listShifts(): Promise<ShiftWithAssignments[]> {
-    return delay(state.shifts.map(withAssignments))
+  listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]> {
+    const rows = state.shifts.map(withAssignments).filter((s) => {
+      if (query.kind === 'user') {
+        return s.assignments.some((a) => a.user_id === query.userId)
+      }
+      if (query.kind === 'pending') {
+        return s.assignments.some((a) => a.status === 'pending')
+      }
+      if (query.from && s.date < query.from) return false
+      if (query.to && s.date > query.to) return false
+      if (query.userId) {
+        return s.assignments.some((a) => a.user_id === query.userId)
+      }
+      return true
+    })
+    return delay(rows)
+  },
+
+  shiftDateBounds(userId: UUID | null): Promise<ShiftDateBounds> {
+    const dates = state.shifts
+      .map(withAssignments)
+      .filter((s) => !userId || s.assignments.some((a) => a.user_id === userId))
+      .map((s) => s.date)
+      .sort()
+    return delay({
+      earliest: dates[0] ?? null,
+      latest: dates[dates.length - 1] ?? null,
+    })
   },
 
   async createShift(input: ShiftInput, assignments: AssignmentInput[]) {

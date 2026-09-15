@@ -124,9 +124,37 @@ export interface ShiftAssignment {
   updated_at: string
 }
 
+/**
+ * Một lát cắt ca cần tải. Không bao giờ có "tải tất cả": mỗi màn hình xin
+ * đúng phần nó hiển thị.
+ *
+ * - `range`: theo ngày (`from`/`to` là yyyy-MM-dd, bỏ trống một đầu = mở),
+ *   có thể lọc thêm những ca có một nhân viên (`userId`).
+ * - `user`: mọi ca có người này.
+ * - `pending`: mọi ca còn ít nhất một lượt chờ xác nhận.
+ */
+export type ShiftQuery =
+  | {
+      kind: 'range'
+      from: string | null
+      to: string | null
+      userId?: UUID | null
+    }
+  | { kind: 'user'; userId: UUID }
+  | { kind: 'pending' }
+
 /** A shift together with its assignments — the shape the UI works with. */
 export interface ShiftWithAssignments extends Shift {
   assignments: ShiftAssignment[]
+}
+
+/**
+ * Ngày ca sớm nhất và muộn nhất — điểm dừng của cuộn vô hạn. Cả hai `null`
+ * khi không có ca nào.
+ */
+export interface ShiftDateBounds {
+  earliest: string | null
+  latest: string | null
 }
 
 /**

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { ChangePasswordModal } from './ChangePasswordModal'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import { useShifts } from '../data/ScheduleContext'
 import { IS_MOCK_BACKEND } from '../data'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang, TranslationKey } from '../i18n/translations'
@@ -58,7 +58,8 @@ function greetingKey(): TranslationKey {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
-  const { shifts } = useSchedule()
+  // Cùng lát cắt với trang Chờ xác nhận: mở trang đó không phải tải lại.
+  const { shifts } = useShifts(user ? { kind: 'pending' } : null)
   const { openCreate } = useShiftEditor()
   const { t, lang, setLang } = useI18n()
   const navigate = useNavigate()

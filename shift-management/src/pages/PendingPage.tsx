@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ShiftList } from '../components/ShiftList'
 import { PageSkeleton } from '../components/PageSkeleton'
 
 export function PendingPage() {
   const { user } = useAuth()
-  const { shifts, loading } = useSchedule()
+  const { loading } = useSchedule()
+  // Chỉ ca còn ít nhất một lượt chờ, không phải toàn bộ lịch sử.
+  const pending = useShifts({ kind: 'pending' })
+  const { shifts } = pending
   const { t } = useI18n()
   // Opens filtered to your own assignments, matching what the nav badge
   // counts. Untick to see the whole team's.
@@ -29,7 +32,7 @@ export function PendingPage() {
     0,
   )
 
-  if (loading) return <PageSkeleton />
+  if (loading || !pending.loaded) return <PageSkeleton />
 
   return (
     <div className="space-y-4">

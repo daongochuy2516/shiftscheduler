@@ -3,7 +3,7 @@ import { Check, Layers, Plus, Settings2 } from 'lucide-react'
 import type { ShiftTemplate, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { shiftColor } from '../lib/colors'
 import { formatRange, toDateKey } from '../lib/time'
 import { ClaimTemplateModal } from './ClaimTemplateModal'
@@ -17,12 +17,14 @@ import { TemplateManagerModal } from './TemplateManagerModal'
 export function TemplateBar({ date }: { date: Date }) {
   const { t } = useI18n()
   const { user } = useAuth()
-  const { templates, templatesAvailable, shifts } = useSchedule()
+  const { templates, templatesAvailable } = useSchedule()
   const [managing, setManaging] = useState(false)
   const [claimTarget, setClaimTarget] = useState<ShiftTemplate | null>(null)
 
   const dateKey = toDateKey(date)
   const weekday = date.getDay()
+  // Cùng khoá với lát cắt ngày của trang Lịch, nên không tải thêm lần nào.
+  const { shifts } = useShifts({ kind: 'range', from: dateKey, to: dateKey })
 
   /** Active templates that repeat on this weekday (empty list = every day). */
   const todays = useMemo(

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ShiftList } from '../components/ShiftList'
 import { PageSkeleton } from '../components/PageSkeleton'
@@ -8,16 +8,16 @@ import { formatMinutesDuration, toDateKey, toMinutes } from '../lib/time'
 
 export function MyShiftsPage() {
   const { user } = useAuth()
-  const { shifts, loading } = useSchedule()
+  const { loading } = useSchedule()
   const { t } = useI18n()
   const today = toDateKey(new Date())
 
-  /** Shifts where the signed-in user has at least one assignment. */
-  const mine = useMemo(
-    () =>
-      shifts.filter((s) => s.assignments.some((a) => a.user_id === user?.id)),
-    [shifts, user?.id],
-  )
+  /**
+   * Chỉ ca có mình, lọc ngay ở database. Vẫn là toàn bộ lịch sử của một
+   * người — cần cho ô "Lượt phân công" — nhưng không còn kéo cả nhóm về.
+   */
+  const mineState = useShifts(user ? { kind: 'user', userId: user.id } : null)
+  const mine = mineState.shifts
 
   const stats = useMemo(() => {
     const own = mine.flatMap((s) =>
@@ -38,7 +38,7 @@ export function MyShiftsPage() {
     }
   }, [mine, user?.id, today])
 
-  if (loading) return <PageSkeleton />
+  if (loading || !mineState.loaded) return <PageSkeleton />
 
   return (
     <div className="space-y-4">

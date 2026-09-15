@@ -22,12 +22,19 @@ export function ShiftList({
   /** When set, only these assignments are listed inside each shift. */
   assignmentFilter,
   highlightUserId,
+  order = 'asc',
 }: {
   shifts: ShiftWithAssignments[]
   emptyTitle: string
   emptyHint?: string
   assignmentFilter?: (assignment: ShiftAssignment) => boolean
   highlightUserId?: UUID | null
+  /**
+   * Thứ tự các ngày. `desc` cho danh sách cuộn về quá khứ: ca cũ hơn phải
+   * nối vào cuối, không chèn lên đầu làm màn hình giật. Trong một ngày ca
+   * vẫn xếp theo giờ tăng dần.
+   */
+  order?: 'asc' | 'desc'
 }) {
   const { profilesById, setAssignmentStatus } = useSchedule()
   const { t, dateLocale } = useI18n()
@@ -52,14 +59,16 @@ export function ShiftList({
       byDate.set(shift.date, list)
     }
     return [...byDate.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
+      .sort((a, b) =>
+        order === 'asc' ? a[0].localeCompare(b[0]) : b[0].localeCompare(a[0]),
+      )
       .map(([date, items]) => ({
         date,
         shifts: items.sort(
           (a, b) => toMinutes(a.start_time) - toMinutes(b.start_time),
         ),
       }))
-  }, [shifts])
+  }, [shifts, order])
 
   async function confirm(assignmentId: UUID) {
     setBusyId(assignmentId)

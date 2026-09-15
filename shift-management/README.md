@@ -330,8 +330,19 @@ Nghĩa là file `supabase/002_shift_templates.sql` chưa được chạy. Mọi 
 
 Danh sách đầy đủ, **nhóm theo ngày**, tiêu đề nhóm ghi rõ *Hôm nay / Ngày mai / Hôm qua* khi phù hợp.
 
-- **Ô tìm kiếm**: lọc theo tiêu đề ca, ghi chú, **và tên nhân viên**.
 - **Sắp tới / Đã qua / Tất cả**: lọc theo mốc hôm nay.
+- **Ô tìm kiếm**: lọc theo tiêu đề ca, ghi chú, **và tên nhân viên**. Bộ lọc nằm **ngay trong ô này**, kiểu thanh lọc của Supabase:
+  - Bấm **Lọc** ở cuối ô → chọn loại → chọn giá trị. Mỗi bộ lọc đang bật thành một **chip** trong ô, ô dài ra theo số chip (hết chỗ thì chip xuống dòng).
+  - Bấm chip để sửa, bấm **×** trên chip để bỏ. Ô chữ đang trống mà bấm **Backspace** thì bỏ chip cuối.
+  - Nút **×** lớn ở cuối ô xoá cả chữ lẫn mọi chip. Tab giữ nguyên.
+
+  | Bộ lọc | Ghi chú |
+  | --- | --- |
+  | **Từ ngày / Đến ngày** | Thu hẹp **bên trong** tab: tab *Sắp tới* không chọn được ngày đã qua, và ngược lại |
+  | **Nhân viên** | Chỉ ca có người đó, lọc ở database. Thẻ ca vẫn hiện đủ mọi người trong ca |
+  | **Sắp xếp** | Mặc định Cũ → mới; chỉ hiện chip khi chọn Mới → cũ |
+- **Cuộn vô hạn**: danh sách tải từng tháng một **theo chiều sắp xếp** — Cũ → mới thì tiến dần từ đầu khoảng, Mới → cũ thì lùi dần từ cuối khoảng. Tháng mới luôn nối vào cuối. Tới hết thì hiện *"Đã hết ca trong khoảng này."*
+- **Tìm kiếm** lọc trên phần đã tải. Nếu chưa khớp ca nào mà vẫn còn tháng chưa tải, danh sách tự tải tiếp cho tới hết — thu hẹp ngày trong bộ lọc để tìm nhanh hơn.
 - Mỗi thẻ ca liệt kê toàn bộ nhân viên kèm giờ, thời lượng và trạng thái.
 - Dòng của bạn có nền indigo nhạt và nhãn *"Bạn"*.
 - Dòng đang **chờ xác nhận** có nút **✓ Xác nhận** để duyệt ngay tại chỗ, không cần mở form.
@@ -532,8 +543,24 @@ Hai file quyết định backend nào đang chạy:
 
 Cả hai tự động dựa vào việc `.env` có được cấu hình hay không. Giao diện không import trực tiếp bất kỳ backend nào, nên đổi backend không phải sửa component.
 
+### Tải ca theo lát cắt
+
+Ứng dụng **không bao giờ tải toàn bộ ca**. Mỗi màn hình xin đúng phần nó hiển thị qua `useShifts(query)` trong `src/data/ScheduleContext.tsx`:
+
+| Màn hình | Lát cắt |
+| --- | --- |
+| Lịch, Tổng kết | Đúng ngày / tuần / tháng đang xem (tháng của Lịch đệm cho tròn tuần) |
+| Thanh ca mẫu | Ngày đang xem — trùng khoá với Lịch nên không tải thêm |
+| Hộp thoại nhận ca | Các ngày đang hiện trên lịch chọn |
+| Tất cả ca | Từng tháng trong khoảng của tab (thu hẹp thêm bởi bộ lọc), theo chiều sắp xếp, tải khi cuộn tới đáy |
+| Ca của tôi | Ca có mình (lọc ở database) |
+| Chờ xác nhận + số đếm trên nav | Ca còn lượt chờ (lọc ở database), dùng chung một lát |
+
+Bộ đệm nằm ở `src/data/shiftStore.ts`: lát cắt đang xem được làm tươi khi có thay đổi (giữ dữ liệu cũ trên màn hình trong lúc chờ), lát không ai xem thì bị bỏ. Lịch và Tổng kết tải trước khoảng liền trước/sau để bấm `‹ ›` không phải chờ.
+
 ### Giới hạn đã biết
 
-- `listShifts()` tải **toàn bộ** ca, chưa giới hạn theo khoảng thời gian. Phù hợp giai đoạn đầu, nhưng cần thêm bộ lọc khi dữ liệu tích luỹ qua nhiều tháng.
+- Khi đã cuộn sâu nhiều tháng ở trang Tất cả ca, mỗi thay đổi qua Realtime làm tươi lại **từng tháng đang hiển thị** (mỗi tháng một truy vấn nhỏ có index). Đổi tab hoặc bộ lọc thì quay về một tháng.
+- **Ca của tôi** tải toàn bộ lịch sử của *một* người (cần cho ô tổng số lượt). Nhẹ hơn nhiều so với cả nhóm, nhưng vẫn tăng dần theo thời gian.
 - Bundle khoảng 590 KB (chủ yếu là `supabase-js`), chưa tách code.
 - Ca qua nửa đêm (22:00 → 02:00) chưa được hỗ trợ: ràng buộc `end_time > start_time` yêu cầu ca nằm gọn trong một ngày.

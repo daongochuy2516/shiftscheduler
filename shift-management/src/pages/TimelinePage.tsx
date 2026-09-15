@@ -19,14 +19,18 @@ import {
 } from 'lucide-react'
 import { Modal } from '../components/Modal'
 import { useAuth } from '../auth/AuthContext'
-import { useSchedule } from '../data/ScheduleContext'
+import {
+  usePrefetchShifts,
+  useSchedule,
+  useShifts,
+} from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useShiftEditor } from '../components/ShiftEditorProvider'
 import { Timeline, type HourRange } from '../components/Timeline'
 import { WeekGrid } from '../components/WeekGrid'
 import { MonthGrid } from '../components/MonthGrid'
 import { TemplateBar } from '../components/TemplateBar'
-import { PageSkeleton } from '../components/PageSkeleton'
+import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { shiftColor } from '../lib/colors'
 import { formatRange, fromDateKey, toDateKey, toMinutes } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
@@ -47,9 +51,37 @@ const SCALES: { id: ScaleId; label: TranslationKey }[] = [
   { id: 'full', label: 'timeline.scale.full' },
 ]
 
+/**
+ * Khoảng ngày cần tải cho một chế độ xem. Tháng đệm cho tròn tuần vì lưới
+ * tháng hiển thị cả những ngày đầu/cuối của tháng liền kề.
+ */
+function rangeFor(view: ViewMode, d: Date): { from: string; to: string } {
+  if (view === 'day') {
+    const key = toDateKey(d)
+    return { from: key, to: key }
+  }
+  if (view === 'week') {
+    return {
+      from: toDateKey(startOfWeek(d, { weekStartsOn: 1 })),
+      to: toDateKey(endOfWeek(d, { weekStartsOn: 1 })),
+    }
+  }
+  return {
+    from: toDateKey(startOfWeek(startOfMonth(d), { weekStartsOn: 1 })),
+    to: toDateKey(endOfWeek(endOfMonth(d), { weekStartsOn: 1 })),
+  }
+}
+
+/** Lùi/tới một đơn vị của chế độ xem. */
+function stepDate(view: ViewMode, d: Date, direction: 1 | -1): Date {
+  if (view === 'day') return addDays(d, direction)
+  if (view === 'week') return addDays(d, direction * 7)
+  return addMonths(d, direction)
+}
+
 export function TimelinePage() {
   const [params, setParams] = useSearchParams()
-  const { shifts, profiles, loading, error } = useSchedule()
+  const { profiles, loading, error } = useSchedule()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
   const { openCreate, openEdit } = useShiftEditor()
@@ -87,22 +119,25 @@ export function TimelinePage() {
     [date],
   )
 
-  const { rangeStartKey, rangeEndKey } = useMemo(() => {
-    if (view === 'day') return { rangeStartKey: dateKey, rangeEndKey: dateKey }
-    if (view === 'week') {
-      return {
-        rangeStartKey: toDateKey(weekStart),
-        rangeEndKey: toDateKey(endOfWeek(date, { weekStartsOn: 1 })),
-      }
-    }
-    // The month grid shows whole weeks, so it spills past the month itself.
-    return {
-      rangeStartKey: toDateKey(
-        startOfWeek(startOfMonth(date), { weekStartsOn: 1 }),
-      ),
-      rangeEndKey: toDateKey(endOfWeek(endOfMonth(date), { weekStartsOn: 1 })),
-    }
-  }, [view, dateKey, weekStart, date])
+  const { from: rangeStartKey, to: rangeEndKey } = rangeFor(view, date)
+
+  // Chỉ tải đúng khoảng đang xem. Có dữ liệu rồi thì tải trước khoảng liền
+  // trước và liền sau, để bấm ‹ › không phải chờ.
+  const shiftsState = useShifts({
+    kind: 'range',
+    from: rangeStartKey,
+    to: rangeEndKey,
+  })
+  const { shifts } = shiftsState
+  const prevRange = rangeFor(view, stepDate(view, date, -1))
+  const nextRange = rangeFor(view, stepDate(view, date, 1))
+  usePrefetchShifts(
+    [
+      { kind: 'range', ...prevRange },
+      { kind: 'range', ...nextRange },
+    ],
+    shiftsState.loaded,
+  )
 
   const visibleShifts = useMemo(
     () =>
@@ -141,11 +176,7 @@ export function TimelinePage() {
   }, [scale, dayShifts])
 
   // ---- header labels ------------------------------------------------------
-  const step = (direction: 1 | -1) => {
-    if (view === 'day') return navigate(addDays(date, direction))
-    if (view === 'week') return navigate(addDays(date, direction * 7))
-    return navigate(addMonths(date, direction))
-  }
+  const step = (direction: 1 | -1) => navigate(stepDate(view, date, direction))
 
   const headingText =
     view === 'day'
@@ -188,9 +219,9 @@ export function TimelinePage() {
 
   return (
     <div className="space-y-4">
-      {error && (
+      {(error ?? shiftsState.error) && (
         <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
-          {error}
+          {error ?? shiftsState.error}
         </p>
       )}
 
@@ -230,8 +261,14 @@ export function TimelinePage() {
             <span className="truncate capitalize">{headingText}</span>
           </h1>
           <p className="text-sm text-slate-500">
-            {t('timeline.shiftCount', { count: countedShifts.length })} ·{' '}
-            {t('timeline.assignmentCount', { count: assignmentCount })}
+            {shiftsState.loaded ? (
+              <>
+                {t('timeline.shiftCount', { count: countedShifts.length })} ·{' '}
+                {t('timeline.assignmentCount', { count: assignmentCount })}
+              </>
+            ) : (
+              t('common.loading')
+            )}
           </p>
         </div>
 
@@ -358,7 +395,9 @@ export function TimelinePage() {
       {view === 'day' && <TemplateBar date={date} />}
 
       {/* ---- the view itself ---- */}
-      {view === 'day' && (
+      {!shiftsState.loaded && <GridSkeleton />}
+
+      {shiftsState.loaded && view === 'day' && (
         <Timeline
           date={date}
           shifts={dayShifts}
@@ -372,7 +411,7 @@ export function TimelinePage() {
         />
       )}
 
-      {view === 'week' && (
+      {shiftsState.loaded && view === 'week' && (
         <WeekGrid
           weekStart={weekStart}
           shifts={visibleShifts}
@@ -386,7 +425,7 @@ export function TimelinePage() {
         />
       )}
 
-      {view === 'month' && (
+      {shiftsState.loaded && view === 'month' && (
         <MonthGrid
           month={date}
           shifts={visibleShifts}

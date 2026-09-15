@@ -7,7 +7,9 @@ import type {
   Profile,
   Shift,
   ShiftAssignment,
+  ShiftDateBounds,
   ShiftInput,
+  ShiftQuery,
   ShiftTemplate,
   ShiftWithAssignments,
   TemplateInput,
@@ -142,17 +144,61 @@ export const supabaseBackend: SchedulerBackend = {
     return (data ?? []) as Profile[]
   },
 
-  async listShifts(): Promise<ShiftWithAssignments[]> {
+  async listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]> {
     const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('shifts')
-      .select('*, assignments:shift_assignments(*)')
-      .order('date')
-      .order('start_time')
+    const all = '*, assignments:shift_assignments(*)'
+
+    // Lọc theo người / trạng thái: nhúng shift_assignments lần thứ hai dưới
+    // tên `match` với !inner để lọc ca, còn `assignments` vẫn trả đủ người.
+    // Lọc thẳng trên `assignments` sẽ cắt mất những người còn lại trong ca.
+    let request
+    if (query.kind === 'user') {
+      request = supabase
+        .from('shifts')
+        .select(`${all}, match:shift_assignments!inner(user_id)`)
+        .eq('match.user_id', query.userId)
+    } else if (query.kind === 'pending') {
+      request = supabase
+        .from('shifts')
+        .select(`${all}, match:shift_assignments!inner(status)`)
+        .eq('match.status', 'pending')
+    } else {
+      request = query.userId
+        ? supabase
+            .from('shifts')
+            .select(`${all}, match:shift_assignments!inner(user_id)`)
+            .eq('match.user_id', query.userId)
+        : supabase.from('shifts').select(all)
+      if (query.from) request = request.gte('date', query.from)
+      if (query.to) request = request.lte('date', query.to)
+    }
+
+    const { data, error } = await request.order('date').order('start_time')
     if (error) fail('Could not load shifts', error)
-    return ((data ?? []) as (Shift & { assignments: ShiftAssignment[] })[]).map(
-      normalizeShift,
-    )
+    return (
+      (data ?? []) as (Shift & { assignments: ShiftAssignment[]; match?: unknown })[]
+    ).map(({ match: _match, ...row }) => normalizeShift(row))
+  },
+
+  async shiftDateBounds(userId: UUID | null): Promise<ShiftDateBounds> {
+    const supabase = getSupabase()
+    // Có index shifts_date_idx nên mỗi đầu chỉ là một lần đọc đầu index.
+    const edge = (ascending: boolean) => {
+      const base = userId
+        ? supabase
+            .from('shifts')
+            .select('date, match:shift_assignments!inner(user_id)')
+            .eq('match.user_id', userId)
+        : supabase.from('shifts').select('date')
+      return base.order('date', { ascending }).limit(1).maybeSingle()
+    }
+    const [first, last] = await Promise.all([edge(true), edge(false)])
+    if (first.error) fail('Could not load the earliest shift', first.error)
+    if (last.error) fail('Could not load the latest shift', last.error)
+    return {
+      earliest: (first.data?.date as string | undefined) ?? null,
+      latest: (last.data?.date as string | undefined) ?? null,
+    }
   },
 
   async createShift(input: ShiftInput, assignments: AssignmentInput[]) {
