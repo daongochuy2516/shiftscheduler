@@ -2,7 +2,7 @@ import { format, isSameDay } from 'date-fns'
 import { CalendarOff } from 'lucide-react'
 import type { UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
-import { shiftColor } from '../lib/colors'
+import { useShiftColor } from '../data/useShiftColor'
 import { formatMinutesDuration, formatRange, toDateKey } from '../lib/time'
 import type { SummaryRow } from '../lib/summary'
 import { Avatar } from './Avatar'
@@ -173,6 +173,7 @@ function StaffRow({
   isMe: boolean
   youLabel: string
 }) {
+  const shiftColor = useShiftColor()
   return (
     <div
       className={`grid border-b border-slate-100 last:border-b-0 ${
@@ -227,7 +228,10 @@ function StaffRow({
               </span>
             ) : (
               entries.map((entry) => {
-                const color = shiftColor(entry.shiftId)
+                const color = shiftColor({
+                  id: entry.shiftId,
+                  template_id: entry.templateId,
+                })
                 return (
                   <div
                     key={entry.assignmentId}

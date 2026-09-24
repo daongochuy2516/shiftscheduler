@@ -10,7 +10,7 @@ import {
 } from 'date-fns'
 import type { ShiftWithAssignments, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
-import { shiftColor } from '../lib/colors'
+import { useShiftColor } from '../data/useShiftColor'
 import { normalizeTime, toDateKey, toMinutes } from '../lib/time'
 
 /** Chips shown per day cell before collapsing into a "+N more" line. */
@@ -31,6 +31,7 @@ export function MonthGrid({
   onSelectDay: (date: Date) => void
 }) {
   const { t, dateLocale } = useI18n()
+  const shiftColor = useShiftColor()
   const todayKey = toDateKey(new Date())
 
   // The grid always shows whole weeks, so it spills into the neighbouring
@@ -109,7 +110,7 @@ export function MonthGrid({
 
               <div className="space-y-1">
                 {dayShifts.slice(0, MAX_CHIPS).map((shift) => {
-                  const color = shiftColor(shift.id)
+                  const color = shiftColor(shift)
                   const mine = shift.assignments.some(
                     (a) => a.user_id === currentUserId,
                   )

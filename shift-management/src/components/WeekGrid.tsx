@@ -3,7 +3,7 @@ import { addDays, format, isSameDay } from 'date-fns'
 import { CalendarOff, Clock3 } from 'lucide-react'
 import type { Profile, ShiftWithAssignments, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
-import { shiftColor } from '../lib/colors'
+import { useShiftColor } from '../data/useShiftColor'
 import {
   formatMinutesDuration,
   formatRange,
@@ -45,6 +45,7 @@ export function WeekGrid({
   onSelectDay: (date: Date) => void
 }) {
   const { t, dateLocale } = useI18n()
+  const shiftColor = useShiftColor()
   const today = toDateKey(new Date())
 
   const days = useMemo(
@@ -210,7 +211,7 @@ export function WeekGrid({
                         }`}
                       >
                         {cells.map((cell) => {
-                          const color = shiftColor(cell.shift.id)
+                          const color = shiftColor(cell.shift)
                           return (
                             <button
                               key={cell.assignmentId}

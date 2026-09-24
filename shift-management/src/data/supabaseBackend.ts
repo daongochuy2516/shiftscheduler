@@ -296,6 +296,7 @@ export const supabaseBackend: SchedulerBackend = {
       start_time: normalizeTime(row.start_time),
       end_time: normalizeTime(row.end_time),
       weekdays: row.weekdays ?? [],
+      color: row.color ?? null,
     }))
   },
 

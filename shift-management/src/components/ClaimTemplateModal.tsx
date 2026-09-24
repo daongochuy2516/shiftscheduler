@@ -17,7 +17,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { formatRange, toDateKey } from '../lib/time'
-import { shiftColor } from '../lib/colors'
+import { templateColor } from '../lib/colors'
 import { Modal } from './Modal'
 
 type PickerMode = 'week' | 'month'
@@ -49,7 +49,7 @@ export function ClaimTemplateModal({
   const [error, setError] = useState<string | null>(null)
 
   const todayKey = toDateKey(new Date())
-  const color = shiftColor(template.id)
+  const color = templateColor(template)
 
   /** Empty weekdays means the template repeats every day. */
   const isRepeatDay = (day: Date) =>

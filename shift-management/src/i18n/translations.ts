@@ -211,6 +211,9 @@ export const en = {
   'tpl.titlePlaceholder': 'e.g. Late Desk',
   'tpl.repeatOn': 'Repeats on',
   'tpl.everyDay': 'Every day',
+  'tpl.color': 'Colour',
+  'tpl.colorHint':
+    'Every shift claimed from this template uses this colour on the calendar.',
   'tpl.active': 'Active',
   'tpl.inactiveHint': 'Inactive templates stay saved but cannot be claimed.',
   'tpl.deleteConfirm':
@@ -556,6 +559,8 @@ export const vi: Record<DictKey, string> = {
   'tpl.titlePlaceholder': 'ví dụ: Trực muộn',
   'tpl.repeatOn': 'Lặp vào',
   'tpl.everyDay': 'Mọi ngày',
+  'tpl.color': 'Màu',
+  'tpl.colorHint': 'Mọi ca nhận từ ca mẫu này đều hiện đúng màu này trên lịch.',
   'tpl.active': 'Đang dùng',
   'tpl.inactiveHint': 'Ca mẫu ngừng dùng vẫn được lưu nhưng không thể nhận.',
   'tpl.deleteConfirm': 'Xoá ca mẫu này? Các ca đã tạo từ nó vẫn được giữ lại.',

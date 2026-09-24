@@ -49,6 +49,8 @@ export interface ShiftTemplate {
   /** 0 = Sunday … 6 = Saturday. Empty means it repeats every day. */
   weekdays: number[]
   is_active: boolean
+  /** Khoá trong bảng màu (lib/colors.ts). `null` = chưa chọn, tự hash theo id. */
+  color: string | null
   created_by: UUID | null
   created_at: string
   updated_at: string
@@ -111,6 +113,7 @@ export interface TemplateInput {
   note: string | null
   weekdays: number[]
   is_active: boolean
+  color: string
 }
 
 export type AssignmentStatus = 'pending' | 'confirmed'

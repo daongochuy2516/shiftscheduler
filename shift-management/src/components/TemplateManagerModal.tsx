@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react'
 import { addDays, format, startOfWeek } from 'date-fns'
-import { CalendarPlus, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CalendarPlus, Check, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { ShiftTemplate, TemplateInput, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useSchedule } from '../data/ScheduleContext'
-import { shiftColor } from '../lib/colors'
+import {
+  colorByKey,
+  SHIFT_COLOR_KEYS,
+  templateColor,
+  templateColorKey,
+  type ShiftColorKey,
+} from '../lib/colors'
 import { formatRange, isInvalidRange } from '../lib/time'
 import { Modal } from './Modal'
 
@@ -14,9 +20,11 @@ const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
 interface Draft extends TemplateInput {
   id?: UUID
+  color: ShiftColorKey
 }
 
-function emptyDraft(): Draft {
+function emptyDraft(templates: ShiftTemplate[]): Draft {
+  const used = new Set(templates.map(templateColorKey))
   return {
     title: '',
     start_time: '09:00',
@@ -24,6 +32,7 @@ function emptyDraft(): Draft {
     note: null,
     weekdays: [],
     is_active: true,
+    color: SHIFT_COLOR_KEYS.find((key) => !used.has(key)) ?? SHIFT_COLOR_KEYS[0],
   }
 }
 
@@ -83,6 +92,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
       note: draft.note?.trim() ? draft.note.trim() : null,
       weekdays: draft.weekdays,
       is_active: draft.is_active,
+      color: draft.color,
     }
     try {
       if (draft.id) await updateTemplate(draft.id, payload)
@@ -117,6 +127,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
       note: template.note,
       weekdays: template.weekdays,
       is_active: template.is_active,
+      color: templateColorKey(template),
     }
   }
 
@@ -151,7 +162,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="mr-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50"
-              onClick={() => setDraft(emptyDraft())}
+              onClick={() => setDraft(emptyDraft(templates))}
             >
               <Plus className="h-4 w-4" />
               {t('tpl.new')}
@@ -255,6 +266,47 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
+            <span className={labelClass}>{t('tpl.color')}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {SHIFT_COLOR_KEYS.map((key) => {
+                const selected = draft.color === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setDraft({ ...draft, color: key })}
+                    aria-label={key}
+                    aria-pressed={selected}
+                    title={key}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                      colorByKey(key).dot
+                    } ${
+                      selected
+                        ? 'ring-2 ring-slate-900 ring-offset-2'
+                        : 'hover:scale-110'
+                    }`}
+                  >
+                    {selected && <Check className="h-4 w-4 text-white" />}
+                  </button>
+                )
+              })}
+            </div>
+            <div
+              className={`mt-2 inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-sm ${
+                colorByKey(draft.color).block
+              }`}
+            >
+              <span className="font-medium">
+                {draft.title.trim() || t('tpl.titlePlaceholder')}
+              </span>
+              <span className="opacity-70">
+                {formatRange(draft.start_time, draft.end_time)}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">{t('tpl.colorHint')}</p>
+          </div>
+
+          <div>
             <label className={labelClass} htmlFor="tpl-note">
               {t('common.note')}{' '}
               <span className="font-normal text-slate-400">
@@ -289,7 +341,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
         // ---- empty state ----
         <button
           type="button"
-          onClick={() => setDraft(emptyDraft())}
+          onClick={() => setDraft(emptyDraft(templates))}
           className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 px-4 py-10 text-sm text-slate-500 transition hover:border-indigo-400 hover:bg-indigo-50/40 hover:text-indigo-700"
         >
           <CalendarPlus className="h-5 w-5" />
@@ -302,7 +354,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
         // ---- list ----
         <ul className="space-y-2">
           {templates.map((template) => {
-            const color = shiftColor(template.id)
+            const color = templateColor(template)
             const isConfirming = confirmingDelete === template.id
             return (
               <li

@@ -31,7 +31,7 @@ import { WeekGrid } from '../components/WeekGrid'
 import { MonthGrid } from '../components/MonthGrid'
 import { TemplateBar } from '../components/TemplateBar'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
-import { shiftColor } from '../lib/colors'
+import { useShiftColor } from '../data/useShiftColor'
 import { formatRange, fromDateKey, toDateKey, toMinutes } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
 
@@ -82,6 +82,7 @@ function stepDate(view: ViewMode, d: Date, direction: 1 | -1): Date {
 export function TimelinePage() {
   const [params, setParams] = useSearchParams()
   const { profiles, loading, error } = useSchedule()
+  const shiftColor = useShiftColor()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
   const { openCreate, openEdit } = useShiftEditor()
@@ -439,7 +440,7 @@ export function TimelinePage() {
       {view === 'day' && dayShifts.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {dayShifts.map((shift) => {
-            const color = shiftColor(shift.id)
+            const color = shiftColor(shift)
             return (
               <button
                 key={shift.id}

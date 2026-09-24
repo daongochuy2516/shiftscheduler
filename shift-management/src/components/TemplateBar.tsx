@@ -4,7 +4,7 @@ import type { ShiftTemplate, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
-import { shiftColor } from '../lib/colors'
+import { templateColor } from '../lib/colors'
 import { formatRange, toDateKey } from '../lib/time'
 import { ClaimTemplateModal } from './ClaimTemplateModal'
 import { TemplateManagerModal } from './TemplateManagerModal'
@@ -95,7 +95,7 @@ export function TemplateBar({ date }: { date: Date }) {
         ) : (
           <ul className="flex flex-wrap gap-2">
             {todays.map((tpl) => {
-              const color = shiftColor(tpl.id)
+              const color = templateColor(tpl)
               const isClaimed = claimedToday.has(tpl.id)
               return (
                 <li key={tpl.id}>

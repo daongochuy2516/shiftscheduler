@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CalendarOff, Clock3 } from 'lucide-react'
 import type { Profile, ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { formatRange, normalizeTime, toDateKey, toMinutes } from '../lib/time'
-import { shiftColor } from '../lib/colors'
+import { useShiftColor } from '../data/useShiftColor'
 import { useI18n } from '../i18n/I18nContext'
 import { Avatar } from './Avatar'
 
@@ -78,6 +78,7 @@ export function Timeline({
   onSelectAssignment: (shift: ShiftWithAssignments, assignmentId: UUID) => void
 }) {
   const { t } = useI18n()
+  const shiftColor = useShiftColor()
   const rangeStart = range.startHour * 60
   const rangeEnd = range.endHour * 60
   const span = Math.max(60, rangeEnd - rangeStart)
@@ -260,7 +261,7 @@ export function Timeline({
                       const clampedEnd = Math.min(end, rangeEnd)
                       const left = ((clampedStart - rangeStart) / span) * 100
                       const width = ((clampedEnd - clampedStart) / span) * 100
-                      const color = shiftColor(shift.id)
+                      const color = shiftColor(shift)
                       const pending = assignment.status === 'pending'
 
                       return (

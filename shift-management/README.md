@@ -63,6 +63,7 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/schema.sql` | 3 bảng `profiles` / `shifts` / `shift_assignments`, RLS, trigger tạo profile tự động, Realtime |
 | `supabase/002_shift_templates.sql` | Bảng `shift_templates` + cột `shifts.template_id` cho tính năng ca mẫu |
 | `supabase/003_action_logs.sql` | Bảng `action_logs` + trigger ghi nhật ký, quyền chỉ-đọc |
+| `supabase/004_template_colors.sql` | Cột `shift_templates.color` — màu cho ca mẫu |
 
 Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký.
 
@@ -315,6 +316,7 @@ Bấm **Quản lý ca mẫu** ở góc phải thanh ca mẫu.
 
 - **Tạo ca mẫu**: tiêu đề, giờ bắt đầu/kết thúc, ghi chú.
 - **Lặp vào**: chọn các thứ trong tuần. **Không chọn thứ nào = lặp mọi ngày.**
+- **Màu**: mọi ca nhận từ ca mẫu này hiện đúng màu đã chọn ở mọi chế độ xem. Ca tạo bằng nút **Tạo ca** thì có màu ngẫu nhiên (cố định theo từng ca).
 - **Đang dùng**: bỏ tích để tạm ngừng — mẫu vẫn được lưu nhưng không ai nhận được nữa.
 - **Xoá ca mẫu**: các ca đã tạo từ mẫu đó **vẫn được giữ nguyên**, chỉ mất liên kết với mẫu.
 

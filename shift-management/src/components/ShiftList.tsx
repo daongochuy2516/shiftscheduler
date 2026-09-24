@@ -5,7 +5,7 @@ import type { ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useShiftEditor } from './ShiftEditorProvider'
-import { shiftColor } from '../lib/colors'
+import { useShiftColor } from '../data/useShiftColor'
 import {
   formatDuration,
   formatRange,
@@ -38,6 +38,7 @@ export function ShiftList({
 }) {
   const { profilesById, setAssignmentStatus } = useSchedule()
   const { t, dateLocale } = useI18n()
+  const shiftColor = useShiftColor()
   const { openEdit } = useShiftEditor()
   const [busyId, setBusyId] = useState<UUID | null>(null)
 
@@ -99,7 +100,7 @@ export function ShiftList({
 
           <div className="space-y-3">
             {group.shifts.map((shift) => {
-              const color = shiftColor(shift.id)
+              const color = shiftColor(shift)
               const visible = assignmentFilter
                 ? shift.assignments.filter(assignmentFilter)
                 : shift.assignments

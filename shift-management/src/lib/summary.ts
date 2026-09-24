@@ -42,6 +42,7 @@ export function isRecorded(
 export interface RecordedEntry {
   assignmentId: UUID
   shiftId: UUID
+  templateId: UUID | null
   title: string
   /** yyyy-MM-dd */
   date: string
@@ -112,6 +113,7 @@ export function buildSummary({
       entries.push({
         assignmentId: a.id,
         shiftId: shift.id,
+        templateId: shift.template_id,
         title: shift.title,
         date: shift.date,
         start,
