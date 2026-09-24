@@ -104,7 +104,7 @@ export function WeekGrid({
 
   return (
     <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
-      <div className="thin-scrollbar overflow-x-auto">
+      <div className="overflow-x-auto">
         <div style={{ minWidth }}>
           {/* ---- day header ---- */}
           <div

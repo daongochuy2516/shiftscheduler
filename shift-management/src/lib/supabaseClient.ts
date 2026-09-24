@@ -15,6 +15,15 @@ const publishableKey = (
 /** True when `.env` carries both values — decides mock vs. real backend. */
 export const hasSupabaseConfig = Boolean(url && publishableKey)
 
+/** Tên máy chủ Supabase (không kèm khoá), để hiện ở trang Trạng thái. */
+export const supabaseHost: string | null = (() => {
+  try {
+    return url ? new URL(url).host : null
+  } catch {
+    return url ?? null
+  }
+})()
+
 let client: SupabaseClient | null = null
 
 /**

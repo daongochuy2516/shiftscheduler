@@ -150,7 +150,7 @@ export function Timeline({
 
   return (
     <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
-      <div className="thin-scrollbar overflow-x-auto">
+      <div className="overflow-x-auto">
         <div style={{ minWidth: LEFT_COL + trackWidth }}>
           {/* ---- hour header ---- */}
           <div className="flex border-b border-slate-200 bg-slate-50">

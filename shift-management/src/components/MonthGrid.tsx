@@ -61,7 +61,7 @@ export function MonthGrid({
   )
 
   return (
-    <div className="thin-scrollbar overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+    <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
       {/* Bảy cột trên màn 360px cho ra ô rộng chừng 48px, chip ca thành không
           đọc được. Đặt bề rộng tối thiểu rồi cho cuộn ngang — lịch là loại nội
           dung được phép cuộn ngang. Từ 640px trở lên vừa màn hình nên không

@@ -1,9 +1,22 @@
-import { format, isToday, isTomorrow, isYesterday } from 'date-fns'
-import { Check, CalendarOff, NotebookPen, Pencil } from 'lucide-react'
+import {
+  addMinutes,
+  format,
+  isToday,
+  isTomorrow,
+  isYesterday,
+} from 'date-fns'
+import {
+  Check,
+  CalendarOff,
+  NotebookPen,
+  Pencil,
+  ScrollText,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
+import { useAuth } from '../auth/AuthContext'
 import { useShiftEditor } from './ShiftEditorProvider'
 import { useShiftColor } from '../data/useShiftColor'
 import {
@@ -13,7 +26,20 @@ import {
   toMinutes,
 } from '../lib/time'
 import { Avatar } from './Avatar'
+import { Modal } from './Modal'
 import { StatusBadge } from './StatusBadge'
+
+/** Xác nhận cần hỏi lại: ca của người khác, hoặc ca của mình chưa tới giờ. */
+interface ConfirmTarget {
+  kind: 'other' | 'early'
+  assignment: ShiftAssignment
+  shift: ShiftWithAssignments
+  name: string
+}
+
+function hasStarted(date: string, startTime: string): boolean {
+  return addMinutes(fromDateKey(date), toMinutes(startTime)) <= new Date()
+}
 
 export function ShiftList({
   shifts,
@@ -40,7 +66,11 @@ export function ShiftList({
   const { t, dateLocale } = useI18n()
   const shiftColor = useShiftColor()
   const { openEdit } = useShiftEditor()
+  const { user } = useAuth()
   const [busyId, setBusyId] = useState<UUID | null>(null)
+  const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(
+    null,
+  )
 
   /** "Today · Monday, 8 September 2026", localised. */
   function dateHeading(dateKey: string): string {
@@ -208,7 +238,29 @@ export function ShiftList({
                             {assignment.status === 'pending' && (
                               <button
                                 type="button"
-                                onClick={() => confirm(assignment.id)}
+                                onClick={() => {
+                                  const kind =
+                                    assignment.user_id !== user?.id
+                                      ? 'other'
+                                      : !hasStarted(
+                                            shift.date,
+                                            assignment.start_time,
+                                          )
+                                        ? 'early'
+                                        : null
+                                  if (!kind) {
+                                    void confirm(assignment.id)
+                                    return
+                                  }
+                                  setConfirmTarget({
+                                    kind,
+                                    assignment,
+                                    shift,
+                                    name:
+                                      profile?.display_name ??
+                                      t('common.unknownStaff'),
+                                  })
+                                }}
                                 disabled={busyId === assignment.id}
                                 className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:ml-0 sm:min-h-0 sm:px-2 sm:py-1"
                               >
@@ -229,6 +281,74 @@ export function ShiftList({
           </div>
         </section>
       ))}
+
+      {confirmTarget && (
+        <Modal
+          title={t(
+            confirmTarget.kind === 'other'
+              ? 'list.confirmOther.title'
+              : 'list.confirmEarly.title',
+          )}
+          width="max-w-lg"
+          onClose={() => setConfirmTarget(null)}
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirmTarget(null)}
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void confirm(confirmTarget.assignment.id)
+                  setConfirmTarget(null)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500"
+              >
+                <Check className="h-4 w-4" />
+                {t('list.confirm')}
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-pretty text-slate-700">
+            {confirmTarget.kind === 'other'
+              ? t('list.confirmOther.body', { name: confirmTarget.name })
+              : t('list.confirmEarly.body')}
+          </p>
+          <div className="mt-3 flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+            <Avatar
+              name={confirmTarget.name}
+              seed={confirmTarget.assignment.user_id}
+              size="sm"
+            />
+            <div className="min-w-0 text-sm">
+              <p className="truncate font-medium text-slate-900">
+                {confirmTarget.name} · {confirmTarget.shift.title}
+              </p>
+              <p className="text-slate-500 capitalize">
+                {format(fromDateKey(confirmTarget.shift.date), 'EEEE, d/M', {
+                  locale: dateLocale,
+                })}{' '}
+                ·{' '}
+                {formatRange(
+                  confirmTarget.assignment.start_time,
+                  confirmTarget.assignment.end_time,
+                )}
+              </p>
+            </div>
+          </div>
+          {confirmTarget.kind === 'other' && (
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
+              <ScrollText className="h-3.5 w-3.5 shrink-0" />
+              {t('list.confirmOther.logged')}
+            </p>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }

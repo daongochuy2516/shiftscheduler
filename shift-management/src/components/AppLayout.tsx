@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import {
+  Activity,
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
@@ -18,6 +19,7 @@ import { useShifts } from '../data/ScheduleContext'
 import { IS_MOCK_BACKEND } from '../data'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang, TranslationKey } from '../i18n/translations'
+import { SCROLL_ROOT_ID } from '../lib/scrollRoot'
 import { toDateKey } from '../lib/time'
 import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
@@ -37,6 +39,7 @@ const NAV: {
   { to: '/my-shifts', label: 'nav.myShifts', icon: User, end: false },
   { to: '/pending', label: 'nav.pending', icon: Clock3, end: false },
   { to: '/logs', label: 'nav.actionLog', icon: ScrollText, end: false },
+  { to: '/status', label: 'nav.status', icon: Activity, end: false },
 ]
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -101,8 +104,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <div className="flex min-h-full flex-col sm:h-dvh sm:min-h-0 sm:overflow-hidden">
+      <header className="app-header sticky top-0 z-40 shrink-0 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div
           className="safe-x mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-2 py-3"
           style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
@@ -229,19 +232,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
         )}
       </header>
 
-      {/* padding-bottom chừa chỗ cho thanh dưới, nếu không dòng cuối của mọi
-          trang sẽ bị thanh đó che mất. */}
-      <main className="safe-x pb-mobile-nav mx-auto w-full max-w-[1600px] flex-1 pt-4 sm:pt-5">
-        {children}
-      </main>
+      {/* Từ 640px nội dung cuộn trong khung riêng dưới header, để thanh cuộn
+          không đè lên header. Mobile vẫn cuộn cả trang (thanh địa chỉ của
+          trình duyệt cần vậy mới tự thu gọn). */}
+      <div
+        id={SCROLL_ROOT_ID}
+        className="flex flex-1 flex-col sm:min-h-0 sm:overflow-y-auto"
+      >
+        {/* padding-bottom chừa chỗ cho thanh dưới, nếu không dòng cuối của mọi
+            trang sẽ bị thanh đó che mất. */}
+        <main className="safe-x pb-mobile-nav mx-auto w-full max-w-[1600px] flex-1 pt-4 sm:pt-5">
+          {children}
+        </main>
 
-      {/* Ẩn trên mobile: chỗ đó đã là thanh điều hướng và nút nổi. Lời chào
-          vẫn còn, nằm trong sheet tài khoản. */}
-      {user && (
-        <footer className="safe-x hidden pt-1 pb-6 text-center text-xs text-slate-400 select-none sm:block">
-          {t(greeting, { name: user.display_name })}
-        </footer>
-      )}
+        {/* Ẩn trên mobile: chỗ đó đã là thanh điều hướng và nút nổi. Lời chào
+            vẫn còn, nằm trong sheet tài khoản. */}
+        {user && (
+          <footer className="safe-x hidden pt-1 pb-6 text-center text-xs text-slate-400 select-none sm:block">
+            {t(greeting, { name: user.display_name })}
+          </footer>
+        )}
+      </div>
 
       {/* Nút nổi: hành động chính, đặt trong tầm ngón cái, chỉ có ở mobile. */}
       <button
@@ -284,6 +295,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
             >
               <ScrollText className="h-5 w-5 text-slate-400" />
               {t('nav.actionLog')}
+            </NavLink>
+
+            <NavLink
+              to="/status"
+              onClick={() => setAccountOpen(false)}
+              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <Activity className="h-5 w-5 text-slate-400" />
+              {t('nav.status')}
             </NavLink>
 
             <button

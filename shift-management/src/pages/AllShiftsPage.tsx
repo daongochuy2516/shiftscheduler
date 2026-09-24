@@ -7,6 +7,7 @@ import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { ShiftSearchBar } from '../components/ShiftSearchBar'
 import { DEFAULT_SHIFT_FILTERS, type ShiftFilters } from '../lib/shiftFilters'
 import { planMonthChunks } from '../lib/shiftChunks'
+import { scrollRoot } from '../lib/scrollRoot'
 import { fromDateKey, toDateKey } from '../lib/time'
 import type { ShiftDateBounds, ShiftQuery } from '../types'
 import { useAuth } from '../auth/AuthContext'
@@ -169,7 +170,9 @@ export function AllShiftsPage() {
         observer.disconnect()
         setChunkCount((n) => n + 1)
       },
-      { rootMargin: '0px 0px 600px 0px' },
+      // root phải là khung cuộn thật: với viewport, rootMargin không nới
+      // được qua phần bị khung cuộn nội dung cắt, nên mất tải trước 600px.
+      { root: scrollRoot(), rootMargin: '0px 0px 600px 0px' },
     )
     // Observer mới báo trạng thái hiện tại ngay khi observe: lát vừa tải ít
     // ca, đáy vẫn trong tầm nhìn, thì lát sau tự tải tiếp mà không cần cuộn.

@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { scrollRoot } from '../lib/scrollRoot'
 
 /**
  * Hộp thoại chung.
@@ -31,11 +32,16 @@ export function Modal({
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    // Khoá cả trang (mobile) lẫn khung cuộn nội dung (desktop). Khung đó có
+    // `scrollbar-gutter: stable` nên khoá lại không làm nội dung giật.
+    const locked = [document.documentElement, scrollRoot()].filter(
+      (el): el is HTMLElement => el !== null,
+    )
+    const previous = locked.map((el) => el.style.overflow)
+    locked.forEach((el) => (el.style.overflow = 'hidden'))
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previous
+      locked.forEach((el, i) => (el.style.overflow = previous[i]))
     }
   }, [onClose])
 
