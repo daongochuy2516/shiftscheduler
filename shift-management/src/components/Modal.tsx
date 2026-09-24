@@ -41,16 +41,23 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-900/40 backdrop-blur-[2px] sm:items-start sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto sm:items-start sm:p-6"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
+      {/* Lớp mờ tách riêng và dài quá đáy màn hình: `inset-0` chỉ tới đáy
+          vùng nhìn thấy, phần nằm dưới thanh công cụ của trình duyệt mobile
+          sẽ lộ nền trắng của trang. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 h-[calc(100lvh+10rem)] bg-slate-900/40 backdrop-blur-[2px] dark:bg-black/60"
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 sm:my-auto sm:max-h-[calc(100dvh-6rem)] sm:rounded-xl ${width}`}
+        className={`relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 sm:my-auto sm:max-h-[calc(100dvh-6rem)] sm:rounded-xl ${width}`}
       >
         {/* Tay nắm: dấu hiệu quen thuộc cho biết đây là tấm kéo từ đáy lên. */}
         <div className="flex justify-center pt-2 pb-1 sm:hidden">

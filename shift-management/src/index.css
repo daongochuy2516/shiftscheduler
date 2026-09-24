@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
 }
@@ -63,6 +65,180 @@ body,
 
 body {
   @apply bg-slate-100 text-slate-900 antialiased;
+}
+
+/*
+ * Chế độ tối, tông VS Code Dark Modern: định nghĩa lại biến màu của Tailwind
+ * thay vì rải `dark:` khắp các component. Slate thành xám trung tính (không
+ * ám xanh). Các bảng màu khác giữ sắc độ nhưng giảm độ rực: 50–300 là nền
+ * tint nhẹ, 700–950 là chữ sáng dịu, nên khối ca kiểu
+ * `bg-teal-50 text-teal-950` tự đổi đúng mà không chói.
+ *
+ * `--color-white` là màu bề mặt thẻ; `text-white` được giữ trắng riêng bên
+ * dưới vì nó luôn nằm trên nền màu (nút, badge).
+ */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-white: #1f1f1f;
+  --color-slate-50: #232323;
+  --color-slate-100: #2a2a2a;
+  --color-slate-200: #313131;
+  --color-slate-300: #3c3c3c;
+  --color-slate-400: #6b6b6b;
+  --color-slate-500: #9d9d9d;
+  --color-slate-600: #b4b4b4;
+  --color-slate-700: #c8c8c8;
+  --color-slate-800: #d4d4d4;
+  --color-slate-900: #dcdcdc;
+  --color-slate-950: #e6e6e6;
+
+  --color-indigo-50: oklch(25.5% 0.037 277.1);
+  --color-indigo-100: oklch(29% 0.051 277.1);
+  --color-indigo-200: oklch(34% 0.070 277.1);
+  --color-indigo-300: oklch(42% 0.093 277.1);
+  --color-indigo-400: oklch(52% 0.128 277.1);
+  --color-indigo-500: oklch(60% 0.163 277.1);
+  --color-indigo-600: oklch(57% 0.175 277.1);
+  --color-indigo-700: oklch(76% 0.128 277.1);
+  --color-indigo-800: oklch(82% 0.105 277.1);
+  --color-indigo-900: oklch(87% 0.082 277.1);
+  --color-indigo-950: oklch(90% 0.058 277.1);
+
+  --color-rose-50: oklch(25.5% 0.039 16.4);
+  --color-rose-100: oklch(29% 0.054 16.4);
+  --color-rose-200: oklch(34% 0.074 16.4);
+  --color-rose-300: oklch(42% 0.098 16.4);
+  --color-rose-400: oklch(52% 0.135 16.4);
+  --color-rose-500: oklch(60% 0.172 16.4);
+  --color-rose-600: oklch(57% 0.184 16.4);
+  --color-rose-700: oklch(76% 0.135 16.4);
+  --color-rose-800: oklch(82% 0.111 16.4);
+  --color-rose-900: oklch(87% 0.086 16.4);
+  --color-rose-950: oklch(90% 0.061 16.4);
+
+  --color-amber-50: oklch(25.5% 0.030 70.1);
+  --color-amber-100: oklch(29% 0.041 70.1);
+  --color-amber-200: oklch(34% 0.056 70.1);
+  --color-amber-300: oklch(42% 0.075 70.1);
+  --color-amber-400: oklch(52% 0.103 70.1);
+  --color-amber-500: oklch(60% 0.132 70.1);
+  --color-amber-600: oklch(57% 0.141 70.1);
+  --color-amber-700: oklch(76% 0.103 70.1);
+  --color-amber-800: oklch(82% 0.085 70.1);
+  --color-amber-900: oklch(87% 0.066 70.1);
+  --color-amber-950: oklch(90% 0.047 70.1);
+
+  --color-emerald-50: oklch(25.5% 0.027 162.5);
+  --color-emerald-100: oklch(29% 0.037 162.5);
+  --color-emerald-200: oklch(34% 0.051 162.5);
+  --color-emerald-300: oklch(42% 0.068 162.5);
+  --color-emerald-400: oklch(52% 0.094 162.5);
+  --color-emerald-500: oklch(60% 0.119 162.5);
+  --color-emerald-600: oklch(57% 0.128 162.5);
+  --color-emerald-700: oklch(76% 0.094 162.5);
+  --color-emerald-800: oklch(82% 0.077 162.5);
+  --color-emerald-900: oklch(87% 0.059 162.5);
+  --color-emerald-950: oklch(90% 0.043 162.5);
+
+  --color-sky-50: oklch(25.5% 0.027 237.3);
+  --color-sky-100: oklch(29% 0.037 237.3);
+  --color-sky-200: oklch(34% 0.051 237.3);
+  --color-sky-300: oklch(42% 0.068 237.3);
+  --color-sky-400: oklch(52% 0.093 237.3);
+  --color-sky-500: oklch(60% 0.118 237.3);
+  --color-sky-600: oklch(57% 0.127 237.3);
+  --color-sky-700: oklch(76% 0.093 237.3);
+  --color-sky-800: oklch(82% 0.076 237.3);
+  --color-sky-900: oklch(87% 0.059 237.3);
+  --color-sky-950: oklch(90% 0.042 237.3);
+
+  --color-violet-50: oklch(25.5% 0.040 292.7);
+  --color-violet-100: oklch(29% 0.055 292.7);
+  --color-violet-200: oklch(34% 0.075 292.7);
+  --color-violet-300: oklch(42% 0.100 292.7);
+  --color-violet-400: oklch(52% 0.138 292.7);
+  --color-violet-500: oklch(60% 0.175 292.7);
+  --color-violet-600: oklch(57% 0.188 292.7);
+  --color-violet-700: oklch(76% 0.138 292.7);
+  --color-violet-800: oklch(82% 0.113 292.7);
+  --color-violet-900: oklch(87% 0.087 292.7);
+  --color-violet-950: oklch(90% 0.063 292.7);
+
+  --color-teal-50: oklch(25.5% 0.022 182.5);
+  --color-teal-100: oklch(29% 0.031 182.5);
+  --color-teal-200: oklch(34% 0.042 182.5);
+  --color-teal-300: oklch(42% 0.056 182.5);
+  --color-teal-400: oklch(52% 0.077 182.5);
+  --color-teal-500: oklch(60% 0.098 182.5);
+  --color-teal-600: oklch(57% 0.105 182.5);
+  --color-teal-700: oklch(76% 0.077 182.5);
+  --color-teal-800: oklch(82% 0.063 182.5);
+  --color-teal-900: oklch(87% 0.049 182.5);
+  --color-teal-950: oklch(90% 0.035 182.5);
+
+  --color-orange-50: oklch(25.5% 0.034 47.6);
+  --color-orange-100: oklch(29% 0.047 47.6);
+  --color-orange-200: oklch(34% 0.064 47.6);
+  --color-orange-300: oklch(42% 0.085 47.6);
+  --color-orange-400: oklch(52% 0.117 47.6);
+  --color-orange-500: oklch(60% 0.149 47.6);
+  --color-orange-600: oklch(57% 0.160 47.6);
+  --color-orange-700: oklch(76% 0.117 47.6);
+  --color-orange-800: oklch(82% 0.096 47.6);
+  --color-orange-900: oklch(87% 0.075 47.6);
+  --color-orange-950: oklch(90% 0.053 47.6);
+
+  --color-lime-50: oklch(25.5% 0.037 130.8);
+  --color-lime-100: oklch(29% 0.051 130.8);
+  --color-lime-200: oklch(34% 0.070 130.8);
+  --color-lime-300: oklch(42% 0.093 130.8);
+  --color-lime-400: oklch(52% 0.128 130.8);
+  --color-lime-500: oklch(60% 0.163 130.8);
+  --color-lime-600: oklch(57% 0.175 130.8);
+  --color-lime-700: oklch(76% 0.128 130.8);
+  --color-lime-800: oklch(82% 0.105 130.8);
+  --color-lime-900: oklch(87% 0.082 130.8);
+  --color-lime-950: oklch(90% 0.058 130.8);
+
+  --color-fuchsia-50: oklch(25.5% 0.047 322.1);
+  --color-fuchsia-100: oklch(29% 0.065 322.1);
+  --color-fuchsia-200: oklch(34% 0.088 322.1);
+  --color-fuchsia-300: oklch(42% 0.118 322.1);
+  --color-fuchsia-400: oklch(52% 0.162 322.1);
+  --color-fuchsia-500: oklch(60% 0.206 322.1);
+  --color-fuchsia-600: oklch(57% 0.221 322.1);
+  --color-fuchsia-700: oklch(76% 0.162 322.1);
+  --color-fuchsia-800: oklch(82% 0.133 322.1);
+  --color-fuchsia-900: oklch(87% 0.103 322.1);
+  --color-fuchsia-950: oklch(90% 0.074 322.1);
+
+  --color-cyan-50: oklch(25.5% 0.023 215.2);
+  --color-cyan-100: oklch(29% 0.031 215.2);
+  --color-cyan-200: oklch(34% 0.043 215.2);
+  --color-cyan-300: oklch(42% 0.057 215.2);
+  --color-cyan-400: oklch(52% 0.079 215.2);
+  --color-cyan-500: oklch(60% 0.100 215.2);
+  --color-cyan-600: oklch(57% 0.107 215.2);
+  --color-cyan-700: oklch(76% 0.079 215.2);
+  --color-cyan-800: oklch(82% 0.064 215.2);
+  --color-cyan-900: oklch(87% 0.050 215.2);
+  --color-cyan-950: oklch(90% 0.036 215.2);
+}
+
+[data-theme='dark'] body {
+  background-color: #181818;
+}
+
+[data-theme='dark'] .text-white {
+  color: #fff;
+}
+
+/* Khe hở của ring-offset mặc định là #fff cứng, không theo biến màu. */
+@layer base {
+  [data-theme='dark'] * {
+    --tw-ring-offset-color: var(--color-white);
+  }
 }
 
 /* Nút trong chân hộp thoại phải đủ 44px trên mobile. Đặt một luật chung ở đây

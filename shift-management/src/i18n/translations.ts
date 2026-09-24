@@ -56,6 +56,11 @@ export const en = {
   'nav.pending': 'Pending',
   'nav.newShift': 'New shift',
   'nav.language': 'Language',
+  'theme.label': 'Theme',
+  'theme.system': 'Follow system',
+  'theme.systemShort': 'System',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
   'nav.account': 'Account',
   'nav.filters': 'Filters',
 
@@ -405,6 +410,11 @@ export const vi: Record<DictKey, string> = {
   'nav.pending': 'Chờ xác nhận',
   'nav.newShift': 'Tạo ca',
   'nav.language': 'Ngôn ngữ',
+  'theme.label': 'Giao diện',
+  'theme.system': 'Theo hệ thống',
+  'theme.systemShort': 'Hệ thống',
+  'theme.light': 'Sáng',
+  'theme.dark': 'Tối',
   'nav.account': 'Tài khoản',
   'nav.filters': 'Bộ lọc',
 

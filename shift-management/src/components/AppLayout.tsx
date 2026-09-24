@@ -23,6 +23,7 @@ import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
 import { Modal } from './Modal'
 import { useShiftEditor } from './ShiftEditorProvider'
+import { ThemeMenu, ThemeSegmented } from './ThemeMenu'
 
 const NAV: {
   to: string
@@ -195,6 +196,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     </p>
                     <p className="text-[11px] text-slate-500">{user.email}</p>
                   </div>
+                  <ThemeMenu />
                   <button
                     type="button"
                     onClick={() => setChangingPassword(true)}
@@ -321,6 +323,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="flex min-h-12 items-center gap-3 rounded-lg px-3">
+              <span className="text-sm font-medium text-slate-700">
+                {t('theme.label')}
+              </span>
+              <ThemeSegmented />
             </div>
 
             {/* Đăng xuất tách khỏi nhóm trên và dùng màu cảnh báo: nó đưa người
