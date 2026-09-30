@@ -146,6 +146,14 @@ export const en = {
   'shift.warnOutside': 'Outside the shift window.',
   'shift.lockedByTemplate':
     'Fixed by the shift template. Adjust each person’s own hours below instead.',
+  'shift.rowLocked':
+    'Checked in — only an admin can change the hours or remove this person.',
+  'shift.dateLocked':
+    'Someone has checked in — only an admin can move this shift to another day.',
+  'shift.deleteLockedConfirmed':
+    'Someone has checked in — only an admin can delete this shift.',
+  'shift.deleteLockedOld':
+    'Created more than 30 minutes ago — only an admin can delete it.',
   'shift.errSave': 'Could not save the shift.',
   'shift.errDelete': 'Could not delete the shift.',
   'shift.everyoneAssigned': 'Every staff member is already on this shift.',
@@ -166,6 +174,9 @@ export const en = {
   'list.confirmEarly.title': 'This shift hasn’t started yet',
   'list.confirmEarly.body':
     'It’s not time for this shift to start yet. Confirm anyway?',
+  'list.checkInOpens': 'Check-in opens {{time}}',
+  'list.checkInClosed': 'Check-in closed — ask an admin',
+  'list.checkedInAt': 'at {{time}}',
   'list.searchPlaceholder': 'Search title, note or staff',
   'list.window.upcoming': 'Upcoming',
   'list.window.past': 'Past',
@@ -553,6 +564,13 @@ export const vi: Record<DictKey, string> = {
   'shift.warnOutside': 'Nằm ngoài khung giờ của ca.',
   'shift.lockedByTemplate':
     'Không thể sửa giờ của ca được tạo từ ca mẫu, chỉ có thể sửa giờ của từng nhân viên bên dưới.',
+  'shift.rowLocked':
+    'Đã điểm danh — chỉ admin sửa được giờ hoặc gỡ người này.',
+  'shift.dateLocked':
+    'Ca đã có người điểm danh — chỉ admin dời được sang ngày khác.',
+  'shift.deleteLockedConfirmed':
+    'Ca đã có người điểm danh — chỉ admin xoá được.',
+  'shift.deleteLockedOld': 'Ca đã tạo quá 30 phút — chỉ admin xoá được.',
   'shift.errSave': 'Không lưu được ca.',
   'shift.errDelete': 'Không xoá được ca.',
   'shift.everyoneAssigned': 'Tất cả nhân viên đều đã có trong ca này.',
@@ -573,6 +591,9 @@ export const vi: Record<DictKey, string> = {
   'list.confirmEarly.title': 'Ca này chưa bắt đầu',
   'list.confirmEarly.body':
     'Chưa đến thời gian bắt đầu ca này. Bạn vẫn muốn xác nhận vào ca?',
+  'list.checkInOpens': 'Mở điểm danh lúc {{time}}',
+  'list.checkInClosed': 'Hết giờ điểm danh — nhắn admin',
+  'list.checkedInAt': 'lúc {{time}}',
   'list.searchPlaceholder': 'Tìm theo tiêu đề, ghi chú hoặc nhân viên',
   'list.window.upcoming': 'Sắp tới',
   'list.window.past': 'Đã qua',

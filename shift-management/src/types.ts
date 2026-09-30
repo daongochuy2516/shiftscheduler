@@ -13,6 +13,11 @@ export interface Profile {
   id: UUID
   email: string
   display_name: string
+  /**
+   * `null` = migration 005 chưa chạy: chưa có vai trò, không luật chấm công
+   * nào được áp (xem lib/attendance.ts).
+   */
+  role: 'staff' | 'admin' | null
   created_at: string
 }
 
@@ -127,6 +132,11 @@ export interface ShiftAssignment {
   /** HH:mm */
   end_time: string
   status: AssignmentStatus
+  /**
+   * Thời điểm điểm danh (ISO), do database ghi. `null` khi chưa xác nhận,
+   * hoặc đã xác nhận từ trước khi có migration 005.
+   */
+  confirmed_at: string | null
   note: string | null
   created_at: string
   updated_at: string

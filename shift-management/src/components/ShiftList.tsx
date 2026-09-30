@@ -12,13 +12,18 @@ import {
   Pencil,
   ScrollText,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { useShiftEditor } from './ShiftEditorProvider'
 import { useShiftColor } from '../data/useShiftColor'
+import {
+  checkInOpensAt,
+  checkInWindow,
+  isRestricted,
+} from '../lib/attendance'
 import {
   formatDuration,
   formatRange,
@@ -71,6 +76,16 @@ export function ShiftList({
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(
     null,
   )
+  const [confirmError, setConfirmError] = useState<string | null>(null)
+  /** Nhân viên thường: chỉ điểm danh lượt của mình, và chỉ trong giờ. */
+  const restricted = isRestricted(user)
+
+  // Nút điểm danh phải tự hiện ra khi tới giờ, không bắt người đang chờ F5.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   /** "Today · Monday, 8 September 2026", localised. */
   function dateHeading(dateKey: string): string {
@@ -103,8 +118,12 @@ export function ShiftList({
 
   async function confirm(assignmentId: UUID) {
     setBusyId(assignmentId)
+    setConfirmError(null)
     try {
       await setAssignmentStatus(assignmentId, 'confirmed')
+    } catch (err) {
+      // Database là nơi quyết định (đồng hồ máy chủ): câu từ chối hiện nguyên văn.
+      setConfirmError(err instanceof Error ? err.message : String(err))
     } finally {
       setBusyId(null)
     }
@@ -122,6 +141,15 @@ export function ShiftList({
 
   return (
     <div className="space-y-6">
+      {confirmError && (
+        <p
+          role="alert"
+          className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"
+        >
+          {confirmError}
+        </p>
+      )}
+
       {groups.map((group) => (
         <section key={group.date}>
           <h2 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
@@ -183,6 +211,18 @@ export function ShiftList({
                     {sorted.map((assignment) => {
                       const profile = profilesById.get(assignment.user_id)
                       const isMine = assignment.user_id === highlightUserId
+                      const isOwn = assignment.user_id === user?.id
+                      const pending = assignment.status === 'pending'
+                      const gate = checkInWindow(
+                        shift.date,
+                        assignment.start_time,
+                        assignment.end_time,
+                        now,
+                      )
+                      // Lượt của người khác: nhân viên không có nút nào để bấm.
+                      const blocked = restricted && isOwn && gate !== 'open'
+                      const canConfirm =
+                        pending && (!restricted || (isOwn && gate === 'open'))
                       return (
                         // Mobile: xếp dọc thành thẻ — tên và giờ ở hàng đầu,
                         // trạng thái và nút xác nhận ở hàng dưới. Nhồi sáu thứ
@@ -235,7 +275,34 @@ export function ShiftList({
 
                             <StatusBadge status={assignment.status} size="sm" />
 
-                            {assignment.status === 'pending' && (
+                            {assignment.confirmed_at && (
+                              <span className="text-xs text-slate-400 tabular-nums">
+                                {t('list.checkedInAt', {
+                                  time: format(
+                                    new Date(assignment.confirmed_at),
+                                    'HH:mm d/M',
+                                  ),
+                                })}
+                              </span>
+                            )}
+
+                            {pending && blocked && (
+                              <span className="ml-auto text-xs text-slate-500 sm:ml-0">
+                                {gate === 'early'
+                                  ? t('list.checkInOpens', {
+                                      time: format(
+                                        checkInOpensAt(
+                                          shift.date,
+                                          assignment.start_time,
+                                        ),
+                                        'HH:mm d/M',
+                                      ),
+                                    })
+                                  : t('list.checkInClosed')}
+                              </span>
+                            )}
+
+                            {canConfirm && (
                               <button
                                 type="button"
                                 onClick={() => {

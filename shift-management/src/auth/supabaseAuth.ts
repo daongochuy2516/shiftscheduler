@@ -12,17 +12,19 @@ async function loadProfile(user: User): Promise<Profile> {
   const supabase = getSupabase()
   const { data } = await supabase
     .from('profiles')
-    .select('id, email, display_name, created_at')
+    // `*`: cột `role` chỉ có sau migration 005.
+    .select('*')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (data) return data as Profile
+  if (data) return { ...(data as Profile), role: data.role ?? null }
 
   const email = user.email ?? ''
   return {
     id: user.id,
     email,
     display_name: email.split('@')[0] || 'Unknown',
+    role: null,
     created_at: user.created_at,
   }
 }

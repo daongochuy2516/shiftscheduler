@@ -7,8 +7,10 @@ import type {
   ShiftWithAssignments,
   UUID,
 } from '../types'
+import { useAuth } from '../auth/AuthContext'
 import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
+import { deleteBlock, isRestricted } from '../lib/attendance'
 import {
   formatDuration,
   isInvalidRange,
@@ -76,6 +78,28 @@ export function ShiftModal({
    * Nhân viên vẫn sửa được giờ riêng của từng người bên dưới.
    */
   const lockedWindow = shift?.template_id != null
+
+  /**
+   * Luật chấm công cho nhân viên thường (admin được miễn): lượt đã điểm danh
+   * bị khoá, và ca đã có người điểm danh thì không đổi ngày, không xoá.
+   * Database chặn thật (005_attendance.sql); ở đây chỉ khoá sẵn những gì nó
+   * sẽ từ chối, kèm lý do.
+   */
+  const { user } = useAuth()
+  const restricted = isRestricted(user)
+  const confirmedIds = useMemo(
+    () =>
+      new Set(
+        (shift?.assignments ?? [])
+          .filter((a) => a.status === 'confirmed')
+          .map((a) => a.id),
+      ),
+    [shift],
+  )
+  const dateLocked = restricted && confirmedIds.size > 0
+  const [deleteLock] = useState(() =>
+    restricted && shift ? deleteBlock(shift, new Date()) : null,
+  )
 
   const [form, setForm] = useState<ShiftInput>(() => ({
     title: shift?.title ?? '',
@@ -241,7 +265,17 @@ export function ShiftModal({
           </>
         ) : (
           <>
-            {isEdit && (
+            {isEdit && deleteLock && (
+              <span className="mr-auto inline-flex items-start gap-1.5 text-xs text-slate-500">
+                <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+                {t(
+                  deleteLock === 'confirmed'
+                    ? 'shift.deleteLockedConfirmed'
+                    : 'shift.deleteLockedOld',
+                )}
+              </span>
+            )}
+            {isEdit && !deleteLock && (
               <button
                 type="button"
                 className="mr-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
@@ -308,8 +342,10 @@ export function ShiftModal({
             <input
               id="shift-date"
               type="date"
-              className={inputClass}
+              className={dateLocked ? lockedInputClass : inputClass}
               value={form.date}
+              disabled={dateLocked}
+              aria-describedby={dateLocked ? 'shift-date-lock' : undefined}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
             />
           </div>
@@ -354,6 +390,16 @@ export function ShiftModal({
             >
               <Lock className="mt-0.5 h-3 w-3 shrink-0" />
               {t('shift.lockedByTemplate')}
+            </p>
+          )}
+
+          {dateLocked && (
+            <p
+              id="shift-date-lock"
+              className="inline-flex items-start gap-1.5 text-xs text-slate-500 sm:col-span-2"
+            >
+              <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+              {t('shift.dateLocked')}
             </p>
           )}
 
@@ -416,6 +462,10 @@ export function ShiftModal({
                 const profile = profiles.find((p) => p.id === row.user_id)
                 const isHighlighted =
                   !!highlightAssignmentId && row.id === highlightAssignmentId
+                // Đã điểm danh: nhân viên chỉ còn sửa được ghi chú.
+                const rowLocked =
+                  restricted && !!row.id && confirmedIds.has(row.id)
+                const rowInputClass = rowLocked ? lockedInputClass : inputClass
                 return (
                   <li key={row.key}>
                     <div
@@ -440,8 +490,9 @@ export function ShiftModal({
                               size="sm"
                             />
                             <select
-                              className={inputClass}
+                              className={rowInputClass}
                               value={row.user_id}
+                              disabled={rowLocked}
                               onChange={(e) =>
                                 patchRow(row.key, { user_id: e.target.value })
                               }
@@ -467,8 +518,9 @@ export function ShiftModal({
                           </label>
                           <input
                             type="time"
-                            className={inputClass}
+                            className={rowInputClass}
                             value={row.start_time}
+                            disabled={rowLocked}
                             onChange={(e) =>
                               patchRow(row.key, { start_time: e.target.value })
                             }
@@ -479,8 +531,9 @@ export function ShiftModal({
                           <label className={labelClass}>{t('common.to')}</label>
                           <input
                             type="time"
-                            className={inputClass}
+                            className={rowInputClass}
                             value={row.end_time}
+                            disabled={rowLocked}
                             onChange={(e) =>
                               patchRow(row.key, { end_time: e.target.value })
                             }
@@ -491,9 +544,12 @@ export function ShiftModal({
                           <label className={labelClass}>
                             {t('common.status')}
                           </label>
+                          {/* Nhân viên điểm danh bằng nút Xác nhận ở danh sách
+                              ca, nơi có kiểm tra giờ — không đổi tay ở đây. */}
                           <select
-                            className={inputClass}
+                            className={restricted ? lockedInputClass : inputClass}
                             value={row.status}
+                            disabled={restricted}
                             onChange={(e) =>
                               patchRow(row.key, {
                                 status: e.target.value as AssignmentStatus,
@@ -510,10 +566,11 @@ export function ShiftModal({
                         <button
                           type="button"
                           onClick={() => removeRow(row.key)}
+                          disabled={rowLocked}
                           aria-label={t('shift.removeStaff', {
                             name: profile?.display_name ?? '',
                           })}
-                          className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 sm:h-9 sm:w-9"
+                          className="mb-0.5 flex h-11 w-11 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:pointer-events-none disabled:opacity-30 sm:h-9 sm:w-9"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -545,6 +602,12 @@ export function ShiftModal({
                           <span className="inline-flex items-center gap-1 text-amber-700">
                             <AlertTriangle className="h-3 w-3" />
                             {warning}
+                          </span>
+                        )}
+                        {rowLocked && (
+                          <span className="inline-flex items-center gap-1 text-slate-500">
+                            <Lock className="h-3 w-3" />
+                            {t('shift.rowLocked')}
                           </span>
                         )}
                       </div>

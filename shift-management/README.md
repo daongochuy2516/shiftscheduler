@@ -23,6 +23,7 @@ Ca: Trực trang, 08:00–18:00
 - [6. Tạo, sửa và xoá ca](#6-tạo-sửa-và-xoá-ca)
 - [7. Ca mẫu và nhận ca nhanh](#7-ca-mẫu-và-nhận-ca-nhanh)
 - [8. Ba trang lọc](#8-ba-trang-lọc)
+- [8b. Chấm công và tính công](#8b-chấm-công-và-tính-công)
 - [9. Đa ngôn ngữ và cập nhật thời gian thực](#9-đa-ngôn-ngữ-và-cập-nhật-thời-gian-thực)
 - [9b. Nhật ký thao tác](#9b-nhật-ký-thao-tác)
 - [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
@@ -64,8 +65,11 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/002_shift_templates.sql` | Bảng `shift_templates` + cột `shifts.template_id` cho tính năng ca mẫu |
 | `supabase/003_action_logs.sql` | Bảng `action_logs` + trigger ghi nhật ký, quyền chỉ-đọc |
 | `supabase/004_template_colors.sql` | Cột `shift_templates.color` — màu cho ca mẫu |
+| `supabase/005_attendance.sql` | Chấm công: cột `profiles.role`, `shift_assignments.confirmed_at` và các trigger luật điểm danh ([mục 8b](#8b-chấm-công-và-tính-công)) |
 
-Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký.
+Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký. Chưa chạy 005 thì không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước.
+
+> Chạy 005 xong **mọi người đều là nhân viên thường**. Phong admin ngay sau đó (mục 7 trong file, hoặc [mục 11](#11-dành-cho-quản-trị-viên)), nếu không sẽ không còn ai sửa được lượt đã điểm danh.
 
 ### Chế độ dữ liệu mẫu
 
@@ -372,6 +376,37 @@ Chỉ hiện các lượt phân công đang chờ.
 
 ---
 
+## 8b. Chấm công và tính công
+
+**Chấm công = xác nhận.** Bấm **✓ Xác nhận** trên lượt phân công của mình là điểm danh cho lượt đó. **Tính công** là trang **Tổng kết**: nó chỉ cộng những lượt đã xác nhận *và* đã qua giờ kết thúc của riêng người đó, theo ngày / tuần / tháng, ra số lượt và tổng giờ của từng người.
+
+Sau khi chạy `supabase/005_attendance.sql`, nhân viên thường phải theo các luật sau. Admin được miễn toàn bộ.
+
+| Luật | Chi tiết |
+| --- | --- |
+| Chỉ điểm danh lượt của mình | Lượt của người khác không có nút **Xác nhận** |
+| Chỉ trong giờ | Từ **30 phút trước giờ bắt đầu** đến **giờ kết thúc** của *riêng bạn* (không phải của cả ca). Làm 08:00–12:00 trong ca 08:00–18:00 thì cửa sổ là 07:30–12:00 |
+| Không điểm danh trễ | Qua giờ kết thúc là hết cửa. Trực thật mà quên bấm thì nhắn admin xác nhận hộ |
+| Đã điểm danh là khoá | Không bỏ điểm danh, không sửa giờ, không đổi người, không gỡ khỏi ca. Ghi chú vẫn sửa được |
+| Ca đã có người điểm danh | Không xoá, không dời sang ngày khác |
+| Ca tạo quá 30 phút | Không xoá được nữa |
+
+Trên giao diện, thay cho nút **Xác nhận** bạn sẽ thấy:
+
+| Hiển thị | Ý nghĩa |
+| --- | --- |
+| *Mở điểm danh lúc 07:30 8/9* | Chưa tới giờ. Nút tự hiện khi tới giờ, không cần tải lại |
+| *Hết giờ điểm danh — nhắn admin* | Đã qua giờ kết thúc của bạn |
+| *lúc 07:42 8/9* cạnh nhãn **Đã xác nhận** | Thời điểm điểm danh, do máy chủ ghi |
+
+Trong form sửa ca, dòng đã điểm danh bị khoá kèm biểu tượng 🔒, ô **Trạng thái** không đổi tay được, và nút **Xoá** được thay bằng câu giải thích khi ca không còn xoá được.
+
+Giờ tính theo **đồng hồ máy chủ, múi giờ Việt Nam** — chỉnh đồng hồ máy mình không có tác dụng. Mọi luật nằm trong trigger của database nên gọi thẳng Supabase API cũng không lách được; giao diện chỉ ẩn sẵn những gì database sẽ từ chối. Mọi can thiệp của admin đều vào [Nhật ký](#9b-nhật-ký-thao-tác).
+
+Chưa chặn ở bản này: nhân viên vẫn gỡ được lượt **đang chờ** của người khác, và vẫn tạo/sửa được ca mẫu. Xem [roadmap.md](roadmap.md).
+
+---
+
 ## 9. Đa ngôn ngữ và cập nhật thời gian thực
 
 **Ngôn ngữ.** Mặc định tiếng Việt. Nút **VI / EN** ở thanh trên đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
@@ -517,6 +552,18 @@ Trigger `handle_new_user` tự tạo dòng tương ứng trong bảng `profiles`
 3. Gửi mật khẩu tạm cho nhân viên qua kênh nội bộ.
 4. Nhắc họ tự đổi lại bằng nút **chìa khoá 🔑** sau khi đăng nhập.
 
+### Phong admin
+
+Vai trò nằm ở cột `profiles.role` (`staff` | `admin`), có từ migration 005. Chỉ đổi được trong **SQL Editor** — không có đường nào trong ứng dụng, và nhân viên tự sửa dòng của mình cũng bị database từ chối:
+
+```sql
+update public.profiles set role = 'admin' where email = 'ban@congty.vn';
+```
+
+Người được phong cần tải lại trang để giao diện nhận vai trò mới.
+
+Việc của admin khi nhân viên quên điểm danh: mở trang **Chờ xác nhận**, bỏ tích *Chỉ ca của tôi*, bấm **✓ Xác nhận** trên lượt của người đó.
+
 > Nếu timeline báo *"Chưa có tài khoản nhân viên"* thì bảng `profiles` đang rỗng — hãy tạo tài khoản trước khi phân ca.
 
 ### Thiết lập Auth cần thiết
@@ -531,7 +578,7 @@ Trigger `handle_new_user` tự tạo dòng tương ứng trong bảng `profiles`
 
 ### Phân quyền
 
-Ở mức MVP hiện tại: **anon không có quyền gì**; **mọi nhân viên đã đăng nhập đều xem và sửa được tất cả ca** — kể cả ca của người khác. Đây là chủ ý cho công cụ nội bộ. Nếu sau này cần giới hạn (ví dụ chỉ người tạo mới được xoá), sửa các policy trong `supabase/schema.sql`.
+**Anon không có quyền gì.** Mọi nhân viên đã đăng nhập đều xem được tất cả ca và tạo/sửa được ca, kể cả ca của người khác — đây là chủ ý cho công cụ nội bộ. Ngoại lệ là các luật chấm công ở [mục 8b](#8b-chấm-công-và-tính-công) (sau khi chạy migration 005): những việc đó chỉ admin làm được.
 
 ---
 

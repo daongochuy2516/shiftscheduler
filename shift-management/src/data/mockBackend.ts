@@ -15,6 +15,7 @@ import type {
   UUID,
 } from '../types'
 import { currentMockProfile } from '../auth/mockAuth'
+import { checkInWindow, deleteBlock, isRestricted } from '../lib/attendance'
 import type { SchedulerBackend } from './backend'
 import {
   MOCK_ASSIGNMENTS,
@@ -124,6 +125,73 @@ function withAssignments(shift: Shift): ShiftWithAssignments {
   }
 }
 
+// ---- luật chấm công: bản mô phỏng các trigger của 005_attendance.sql ----
+// Câu báo lỗi giống hệt bản SQL, để hai chế độ từ chối bằng cùng một câu.
+
+function restricted(): boolean {
+  return isRestricted(currentMockProfile())
+}
+
+function assertCanConfirm(
+  a: Pick<AssignmentInput, 'user_id' | 'start_time' | 'end_time'>,
+  date: string,
+) {
+  if (!restricted()) return
+  if (a.user_id !== currentMockProfile()?.id) {
+    throw new Error('Chỉ điểm danh được ca của chính mình.')
+  }
+  if (checkInWindow(date, a.start_time, a.end_time, new Date()) !== 'open') {
+    throw new Error(
+      'Ngoài giờ điểm danh: chỉ từ 30 phút trước giờ bắt đầu đến giờ kết thúc của bạn. Quá giờ thì nhắn admin.',
+    )
+  }
+}
+
+/**
+ * Kiểm tra cả danh sách **trước** khi sửa gì: một dòng bị từ chối thì không
+ * dòng nào được lưu, thay vì để lại ca lưu dở.
+ */
+function assertRosterAllowed(
+  shiftId: UUID | null,
+  date: string,
+  inputs: AssignmentInput[],
+) {
+  if (!restricted()) return
+  const byId = new Map(inputs.filter((i) => i.id).map((i) => [i.id, i]))
+  for (const before of state.assignments) {
+    if (before.shift_id !== shiftId) continue
+    const input = byId.get(before.id)
+    if (before.status !== 'confirmed') {
+      if (input?.status === 'confirmed') assertCanConfirm(input, date)
+      continue
+    }
+    if (!input) throw new Error('Lượt này đã điểm danh — chỉ admin gỡ được.')
+    if (input.status !== 'confirmed') {
+      throw new Error('Chỉ admin bỏ được điểm danh.')
+    }
+    if (
+      input.start_time !== before.start_time ||
+      input.end_time !== before.end_time ||
+      input.user_id !== before.user_id
+    ) {
+      throw new Error('Lượt này đã điểm danh — chỉ admin sửa được giờ.')
+    }
+  }
+  for (const input of inputs) {
+    if (!input.id && input.status === 'confirmed') assertCanConfirm(input, date)
+  }
+}
+
+/** Thời điểm điểm danh sau một lần ghi — client không tự đặt được. */
+function confirmedAt(
+  before: ShiftAssignment | null,
+  status: AssignmentInput['status'],
+  now: string,
+): string | null {
+  if (status !== 'confirmed') return null
+  return before?.status === 'confirmed' ? (before.confirmed_at ?? null) : now
+}
+
 /**
  * Applies the roster for a shift: updates existing rows, inserts new ones and
  * drops any that are no longer listed. Mirrors what the Supabase backend does.
@@ -153,11 +221,17 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
   for (const input of inputs) {
     if (input.id) {
       const before = state.assignments.find((a) => a.id === input.id)
-      const after = before ? { ...before, ...input, id: before.id, updated_at: now } : null
+      if (!before) continue
+      const after: ShiftAssignment = {
+        ...before,
+        ...input,
+        id: before.id,
+        confirmed_at: confirmedAt(before, input.status, now),
+        updated_at: now,
+      }
       state.assignments = state.assignments.map((a) =>
-        a.id === input.id ? { ...a, ...input, id: a.id, updated_at: now } : a,
+        a.id === input.id ? after : a,
       )
-      if (!before || !after) continue
 
       const onlyStatus =
         before.status !== input.status &&
@@ -192,6 +266,7 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
         start_time: input.start_time,
         end_time: input.end_time,
         status: input.status,
+        confirmed_at: confirmedAt(null, input.status, now),
         note: input.note,
         created_at: now,
         updated_at: now,
@@ -265,6 +340,7 @@ export const mockBackend: SchedulerBackend = {
   },
 
   async createShift(input: ShiftInput, assignments: AssignmentInput[]) {
+    assertRosterAllowed(null, input.date, assignments)
     const now = new Date().toISOString()
     const shift: Shift = {
       id: uid('s'),
@@ -291,6 +367,15 @@ export const mockBackend: SchedulerBackend = {
   async updateShift(id: UUID, input: ShiftInput, assignments: AssignmentInput[]) {
     const now = new Date().toISOString()
     const before = state.shifts.find((s) => s.id === id)
+    if (
+      restricted() &&
+      before &&
+      before.date !== input.date &&
+      withAssignments(before).assignments.some((a) => a.status === 'confirmed')
+    ) {
+      throw new Error('Ca đã có người điểm danh — chỉ admin đổi được ngày.')
+    }
+    assertRosterAllowed(id, input.date, assignments)
     state.shifts = state.shifts.map((s) =>
       s.id === id ? { ...s, ...input, updated_at: now } : s,
     )
@@ -328,6 +413,16 @@ export const mockBackend: SchedulerBackend = {
   async deleteShift(id: UUID) {
     const shift = state.shifts.find((s) => s.id === id)
     const doomed = state.assignments.filter((a) => a.shift_id === id)
+
+    if (shift && restricted()) {
+      const block = deleteBlock({ ...shift, assignments: doomed }, new Date())
+      if (block === 'confirmed') {
+        throw new Error('Ca đã có người điểm danh — chỉ admin xoá được.')
+      }
+      if (block === 'old') {
+        throw new Error('Ca đã tạo quá 30 phút — chỉ admin xoá được.')
+      }
+    }
 
     state.shifts = state.shifts.filter((s) => s.id !== id)
     // Mirrors `on delete cascade` in the real schema.
@@ -375,8 +470,16 @@ export const mockBackend: SchedulerBackend = {
   async setAssignmentStatus(assignmentId: UUID, status) {
     const now = new Date().toISOString()
     const before = state.assignments.find((a) => a.id === assignmentId)
+    if (before && before.status !== status) {
+      if (status === 'confirmed') {
+        assertCanConfirm(before, shiftLabel(before.shift_id).date)
+      } else if (restricted()) {
+        throw new Error('Chỉ admin bỏ được điểm danh.')
+      }
+    }
+    const confirmed_at = confirmedAt(before ?? null, status, now)
     state.assignments = state.assignments.map((a) =>
-      a.id === assignmentId ? { ...a, status, updated_at: now } : a,
+      a.id === assignmentId ? { ...a, status, confirmed_at, updated_at: now } : a,
     )
     if (before && before.status !== status) {
       const label = shiftLabel(before.shift_id)
@@ -386,7 +489,7 @@ export const mockBackend: SchedulerBackend = {
         entity_id: assignmentId,
         summary: `Đổi trạng thái của ${nameOf(before.user_id)} trong ca ${label.title} ngày ${label.date}: ${before.status} -> ${status}`,
         old_data: { ...before },
-        new_data: { ...before, status, updated_at: now },
+        new_data: { ...before, status, confirmed_at, updated_at: now },
         metadata: {
           shift_id: before.shift_id,
           ...label,
@@ -524,6 +627,7 @@ export const mockBackend: SchedulerBackend = {
         start_time: template.start_time,
         end_time: template.end_time,
         status: 'pending',
+        confirmed_at: null,
         note: null,
         created_at: now,
         updated_at: now,

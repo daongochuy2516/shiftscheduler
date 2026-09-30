@@ -25,6 +25,8 @@ function normalizeAssignment(row: ShiftAssignment): ShiftAssignment {
     ...row,
     start_time: normalizeTime(row.start_time),
     end_time: normalizeTime(row.end_time),
+    // Absent until migration 005 adds the column.
+    confirmed_at: row.confirmed_at ?? null,
   }
 }
 
@@ -170,10 +172,15 @@ export const supabaseBackend: SchedulerBackend = {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, display_name, created_at')
+      // `*` chứ không liệt kê cột: `role` chỉ có sau migration 005, gọi đích
+      // danh một cột chưa tồn tại sẽ làm hỏng cả truy vấn.
+      .select('*')
       .order('display_name')
     if (error) fail('Could not load staff', error)
-    return (data ?? []) as Profile[]
+    return ((data ?? []) as Profile[]).map((row) => ({
+      ...row,
+      role: row.role ?? null,
+    }))
   },
 
   async listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]> {

@@ -9,41 +9,48 @@ export const TOMORROW = toDateKey(addDays(now, 1))
 
 const ts = now.toISOString()
 
+/** Huy là admin để thử được cả hai phía của luật chấm công; còn lại là staff. */
 export const MOCK_PROFILES: Profile[] = [
   {
     id: 'u-huy',
     email: 'huy@thinkwork.test',
     display_name: 'Huy Nguyen',
+    role: 'admin',
     created_at: ts,
   },
   {
     id: 'u-thien',
     email: 'thien@thinkwork.test',
     display_name: 'Thien Pham',
+    role: 'staff',
     created_at: ts,
   },
   {
     id: 'u-an',
     email: 'an@thinkwork.test',
     display_name: 'An Tran',
+    role: 'staff',
     created_at: ts,
   },
   {
     id: 'u-mai',
     email: 'mai@thinkwork.test',
     display_name: 'Mai Le',
+    role: 'staff',
     created_at: ts,
   },
   {
     id: 'u-long',
     email: 'long@thinkwork.test',
     display_name: 'Long Vo',
+    role: 'staff',
     created_at: ts,
   },
   {
     id: 'u-ngoc',
     email: 'ngoc@thinkwork.test',
     display_name: 'Ngoc Bui',
+    role: 'staff',
     created_at: ts,
   },
 ]
@@ -89,6 +96,7 @@ function assignment(
     start_time,
     end_time,
     status,
+    confirmed_at: status === 'confirmed' ? ts : null,
     note,
     created_at: ts,
     updated_at: ts,
