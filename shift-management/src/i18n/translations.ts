@@ -147,13 +147,24 @@ export const en = {
   'shift.lockedByTemplate':
     'Fixed by the shift template. Adjust each person’s own hours below instead.',
   'shift.rowLocked':
-    'Checked in — only an admin can change the hours or remove this person.',
+    'Checked in — you don’t have permission to change the hours or remove this person.',
   'shift.dateLocked':
-    'Someone has checked in — only an admin can move this shift to another day.',
+    'Someone has checked in — you don’t have permission to move this shift to another day.',
   'shift.deleteLockedConfirmed':
-    'Someone has checked in — only an admin can delete this shift.',
-  'shift.deleteLockedOld':
-    'Created more than 30 minutes ago — only an admin can delete it.',
+    'Someone has checked in — you don’t have permission to delete this shift.',
+  'shift.deleteLockedOthers':
+    'Other people are on this shift — you don’t have permission to delete it.',
+  'shift.rowLockedOther':
+    'Someone else’s part — you don’t have permission to change or remove it.',
+  'shift.deleteLockedLate':
+    'Joined more than 30 minutes ago — you no longer have permission to delete this shift.',
+  'shift.infoLocked':
+    'Other people are on this shift — you don’t have permission to change its title, date or time. The note stays editable.',
+  'shift.addMe': 'Add me',
+  'shift.noPermissionAddOthers':
+    'You don’t have permission to add other people to a shift.',
+  'shift.rowLockedLate':
+    'Joined more than 30 minutes ago — you no longer have permission to leave.',
   'shift.everyoneAssigned': 'Every staff member is already on this shift.',
   'shift.noStaffAccounts':
     'No staff accounts exist yet — an administrator needs to create them before anyone can be assigned.',
@@ -173,8 +184,9 @@ export const en = {
   'shiftSimple.saveBeforeCheckIn': 'Save your new hours before checking in.',
   'shiftSimple.leave': 'Leave shift',
   'shiftSimple.leaveConfirm': 'Take yourself off this shift?',
+  'shiftSimple.leaveUntil': 'until {{time}}',
   'shiftSimple.hoursLocked':
-    'Checked in — only an admin can change your hours or take you off.',
+    'Checked in — you don’t have permission to change your hours or leave.',
   'shiftSimple.others': 'Others on this shift',
   'shiftSimple.noOthers': 'No one else yet.',
   'shiftSimple.advancedHint':
@@ -235,7 +247,7 @@ export const en = {
   'list.confirmEarly.body':
     'It’s not time for this shift to start yet. Confirm anyway?',
   'list.checkInOpens': 'Check-in opens {{time}}',
-  'list.checkInClosed': 'Check-in closed — ask an admin',
+  'list.checkInClosed': 'Check-in closed — you don’t have permission to check in late',
   'list.checkedInAt': 'at {{time}}',
   'list.searchPlaceholder': 'Search title, note or staff',
   'list.window.upcoming': 'Upcoming',
@@ -624,12 +636,20 @@ export const vi: Record<DictKey, string> = {
   'shift.lockedByTemplate':
     'Không thể sửa giờ của ca được tạo từ ca mẫu, chỉ có thể sửa giờ của từng nhân viên bên dưới.',
   'shift.rowLocked':
-    'Đã điểm danh — chỉ admin sửa được giờ hoặc gỡ người này.',
+    'Đã điểm danh — bạn không có quyền sửa giờ hay gỡ người này.',
   'shift.dateLocked':
-    'Ca đã có người điểm danh — chỉ admin dời được sang ngày khác.',
+    'Ca đã có người điểm danh — bạn không có quyền dời sang ngày khác.',
   'shift.deleteLockedConfirmed':
-    'Ca đã có người điểm danh — chỉ admin xoá được.',
-  'shift.deleteLockedOld': 'Ca đã tạo quá 30 phút — chỉ admin xoá được.',
+    'Ca đã có người điểm danh — bạn không có quyền xoá ca này.',
+  'shift.deleteLockedOthers': 'Ca có người khác — bạn không có quyền xoá ca này.',
+  'shift.rowLockedOther': 'Lượt của người khác — bạn không có quyền sửa hay gỡ.',
+  'shift.deleteLockedLate':
+    'Đã nhận ca quá 30 phút — bạn không còn quyền xoá ca này.',
+  'shift.infoLocked':
+    'Ca có người khác — bạn không có quyền sửa tên, ngày và giờ. Ghi chú thì vẫn sửa được.',
+  'shift.addMe': 'Thêm tôi vào ca',
+  'shift.noPermissionAddOthers': 'Bạn không có quyền thêm người khác vào ca.',
+  'shift.rowLockedLate': 'Đã nhận ca quá 30 phút — bạn không còn quyền rời ca.',
   'shift.everyoneAssigned': 'Tất cả nhân viên đều đã có trong ca này.',
   'shift.noStaffAccounts':
     'Chưa có tài khoản nhân viên nào — quản trị viên cần tạo trước khi phân công.',
@@ -649,8 +669,9 @@ export const vi: Record<DictKey, string> = {
   'shiftSimple.saveBeforeCheckIn': 'Lưu giờ mới trước khi điểm danh.',
   'shiftSimple.leave': 'Rời ca',
   'shiftSimple.leaveConfirm': 'Rút bạn khỏi ca này?',
+  'shiftSimple.leaveUntil': 'tới {{time}}',
   'shiftSimple.hoursLocked':
-    'Đã điểm danh — chỉ admin sửa được giờ hoặc rút bạn khỏi ca.',
+    'Đã điểm danh — bạn không có quyền sửa giờ hay rời ca.',
   'shiftSimple.others': 'Người khác trong ca',
   'shiftSimple.noOthers': 'Chưa có ai khác.',
   'shiftSimple.advancedHint':
@@ -712,7 +733,7 @@ export const vi: Record<DictKey, string> = {
   'list.confirmEarly.body':
     'Chưa đến thời gian bắt đầu ca này. Bạn vẫn muốn xác nhận vào ca?',
   'list.checkInOpens': 'Mở điểm danh lúc {{time}}',
-  'list.checkInClosed': 'Hết giờ điểm danh — nhắn admin',
+  'list.checkInClosed': 'Hết giờ điểm danh — bạn không có quyền điểm danh trễ',
   'list.checkedInAt': 'lúc {{time}}',
   'list.searchPlaceholder': 'Tìm theo tiêu đề, ghi chú hoặc nhân viên',
   'list.window.upcoming': 'Sắp tới',

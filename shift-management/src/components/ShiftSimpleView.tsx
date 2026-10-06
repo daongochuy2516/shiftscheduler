@@ -17,6 +17,8 @@ import {
   checkInOpensAt,
   checkInWindow,
   isRestricted,
+  leaveDeadline,
+  removeBlock,
 } from '../lib/attendance'
 import {
   formatDuration,
@@ -113,6 +115,19 @@ export function ShiftSimpleView({
   const confirmed = saved?.status === 'confirmed'
   /** Đã điểm danh: nhân viên chỉ còn sửa được ghi chú. */
   const locked = restricted && confirmed && mine?.id === saved?.id
+  /**
+   * Tự rời ca chỉ trong 30 phút đầu kể từ lúc nhận (006). Dòng chưa lưu thì
+   * rời thoải mái — trên máy chủ chưa có gì.
+   */
+  const leaveLate =
+    restricted &&
+    !!saved &&
+    mine?.id === saved.id &&
+    removeBlock(saved, user?.id ?? null, now) === 'late'
+  const leaveUntil =
+    restricted && saved && mine?.id === saved.id && !leaveLate
+      ? format(leaveDeadline(saved), 'HH:mm')
+      : null
   const start = mine?.start_time ?? draft.start_time
   const end = mine?.end_time ?? draft.end_time
   const rangeError = isInvalidRange(start, end)
@@ -379,15 +394,27 @@ export function ShiftSimpleView({
                             : null}
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingLeave(true)}
-                    disabled={saving}
-                    className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 sm:min-h-0 sm:py-1.5"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {t('shiftSimple.leave')}
-                  </button>
+                  {leaveLate ? (
+                    <span className="ml-auto inline-flex items-start gap-1 text-xs text-slate-500">
+                      <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+                      {t('shift.rowLockedLate')}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingLeave(true)}
+                      disabled={saving}
+                      className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 sm:min-h-0 sm:py-1.5"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {t('shiftSimple.leave')}
+                      {leaveUntil && (
+                        <span className="font-normal text-rose-500/80">
+                          · {t('shiftSimple.leaveUntil', { time: leaveUntil })}
+                        </span>
+                      )}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -433,9 +460,13 @@ export function ShiftSimpleView({
             })}
           </ul>
         )}
-        <p className="mt-3 text-xs text-slate-500">
-          {t('shiftSimple.advancedHint')}
-        </p>
+        {/* Nhân viên trong ca có người khác thì Nâng cao cũng chỉ cho xem —
+            đừng gợi ý sang đó sửa. */}
+        {!(restricted && others.length > 0) && (
+          <p className="mt-3 text-xs text-slate-500">
+            {t('shiftSimple.advancedHint')}
+          </p>
+        )}
       </section>
     </div>
   )

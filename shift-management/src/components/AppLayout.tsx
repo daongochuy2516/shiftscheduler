@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Activity,
@@ -83,6 +83,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return () => clearInterval(id)
   }, [])
 
+  // Popup thông báo nằm ngay dưới header. Header cao thấp tuỳ bề rộng (xuống
+  // dòng, băng dữ liệu mẫu), nên đo thật rồi đưa ra biến CSS cho Toaster.
+  const headerRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+    const root = document.documentElement
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty('--app-header-h', `${el.offsetHeight}px`)
+    })
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--app-header-h')
+    }
+  }, [])
+
   // Nhân viên chỉ quan tâm ca của mình. Root không có ca nào nên với họ con số
   // đó luôn là 0 và vô dụng — đếm của cả nhóm mới đúng việc họ cần làm.
   const pendingCount = shifts.reduce(
@@ -108,7 +125,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-full flex-col sm:h-dvh sm:min-h-0 sm:overflow-hidden">
-      <header className="app-header sticky top-0 z-40 shrink-0 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header
+        ref={headerRef}
+        className="app-header sticky top-0 z-40 shrink-0 border-b border-slate-200 bg-white/90 backdrop-blur"
+      >
         <div
           className="safe-x mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-2 py-3"
           style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}

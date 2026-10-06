@@ -67,6 +67,7 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/003_action_logs.sql` | Bảng `action_logs` + trigger ghi nhật ký, quyền chỉ-đọc |
 | `supabase/004_template_colors.sql` | Cột `shift_templates.color` — màu cho ca mẫu |
 | `supabase/005_attendance.sql` | Chấm công: cột `profiles.role`, `shift_assignments.confirmed_at` và các trigger luật điểm danh ([mục 8b](#8b-chấm-công-và-tính-công)) |
+| `supabase/006_shift_rules.sql` | Nhân viên chỉ thao tác phần của mình: rời ca trong 30 phút, không thêm / sửa / gỡ người khác, không sửa / xoá ca có người khác ([mục 8b](#8b-chấm-công-và-tính-công)). Cần 005 trước; thay luật "ca tạo quá 30 phút không xoá được" của 005 |
 
 Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký. Chưa chạy 005 thì không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước.
 
@@ -248,9 +249,9 @@ Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâ
 | Có trong ca, chờ xác nhận | Giờ và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca** | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
 | Đã điểm danh | Giờ bị khoá kèm 🔒, chỉ còn sửa ghi chú | — |
 
-- Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-tính-công): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — nhắn admin*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
+- Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-tính-công): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — bạn không có quyền điểm danh trễ*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
 - Vừa đổi giờ mà chưa lưu thì không điểm danh được: lưu giờ mới trước.
-- **Rời ca** hỏi lại một lần trước khi gỡ bạn khỏi ca.
+- **Rời ca** hỏi lại một lần trước khi gỡ bạn khỏi ca. Nhân viên chỉ tự rời được trong **30 phút đầu** sau khi nhận ca — nút ghi rõ hạn (*Rời ca · tới 16:34*); quá hạn thì nút được thay bằng câu *Đã nhận ca quá 30 phút — bạn không còn quyền rời ca*.
 
 **Nâng cao** là form đầy đủ mô tả ở các phần dưới: sửa thông tin ca, thêm/gỡ/sửa người khác, xoá ca. Hai chế độ dùng chung một bản nháp — sửa dở ở bên này rồi chuyển sang bên kia vẫn còn.
 
@@ -264,7 +265,7 @@ Khung giờ ở đây là khung giờ *tổng* của ca. Từng nhân viên vẫ
 
 Mỗi dòng gồm: **chọn người** · **Từ** · **Đến** · **Trạng thái** · nút xoá · ô ghi chú riêng cho người đó.
 
-- **Thêm nhân viên**: thêm một dòng mới, mặc định lấy khung giờ của ca và trạng thái *Chờ xác nhận*.
+- **Thêm nhân viên**: thêm một dòng mới, mặc định lấy khung giờ của ca và trạng thái *Chờ xác nhận*. Với nhân viên thường, nút này là **Thêm tôi vào ca** — chỉ admin thêm được người khác ([mục 8b](#8b-chấm-công-và-tính-công)).
 - Người đã có trong ca sẽ bị **làm mờ** trong danh sách chọn, tránh trùng.
 - Nút thùng rác **gỡ người đó khỏi ca**. Thay đổi chỉ có hiệu lực sau khi bấm **Lưu thay đổi**.
 - Dưới mỗi dòng hiện **thời lượng** đã tính sẵn (ví dụ `4h 30m`).
@@ -282,6 +283,8 @@ Cảnh báo vàng cố ý không chặn, vì có những ca thực tế cần ng
 ### Xoá ca
 
 Bấm **Xoá** (góc trái dưới), form chuyển sang bước xác nhận, bấm **Xoá ca** lần nữa. Thao tác này xoá luôn toàn bộ phân công thuộc ca đó.
+
+Nhân viên chỉ xoá được ca **đang trống**, hoặc ca **chỉ có chính mình** khi bạn **còn rời được** (chưa điểm danh, chưa quá 30 phút kể từ lúc nhận). Không xoá được thì nút **Xoá** được thay bằng câu giải thích, chỉ admin xoá được ([mục 8b](#8b-chấm-công-và-tính-công)).
 
 ### Đóng form
 
@@ -411,21 +414,33 @@ Sau khi chạy `supabase/005_attendance.sql`, nhân viên thường phải theo 
 | Không điểm danh trễ | Qua giờ kết thúc là hết cửa. Trực thật mà quên bấm thì nhắn admin xác nhận hộ |
 | Đã điểm danh là khoá | Không bỏ điểm danh, không sửa giờ, không đổi người, không gỡ khỏi ca. Ghi chú vẫn sửa được |
 | Ca đã có người điểm danh | Không xoá, không dời sang ngày khác |
-| Ca tạo quá 30 phút | Không xoá được nữa |
+
+Sau khi chạy thêm `supabase/006_shift_rules.sql` — **nhân viên chỉ thao tác phần của mình**:
+
+| Luật | Chi tiết |
+| --- | --- |
+| Tự rời ca | Chỉ trong **30 phút đầu** kể từ lúc nhận ca. Quá hạn thì nhắn admin |
+| Xoá ca | Ca **đang trống**: lúc nào cũng được. Ca **chỉ có bạn**: được khi bạn còn rời được (chưa điểm danh, chưa quá 30 phút). Có **người khác** trong ca: chỉ admin |
+| Thêm người khác vào ca | Chỉ admin — kể cả khi tạo ca mới. Bạn chỉ thêm được chính mình (nhận ca) |
+| Lượt của người khác | Chỉ admin sửa (giờ, ghi chú, trạng thái) hay gỡ được — kể cả khi họ chưa điểm danh |
+| Tên, ngày, giờ của ca | Ca có người khác thì chỉ admin sửa được. Bạn vẫn nhận ca đó được và sửa phần của mình |
+| Ghi chú của ca | Ai cũng sửa được, kể cả khi ca có người khác |
+
+006 bỏ luật "ca tạo quá 30 phút thì không xoá được" của 005.
 
 Trên giao diện, thay cho nút **Xác nhận** bạn sẽ thấy:
 
 | Hiển thị | Ý nghĩa |
 | --- | --- |
 | *Mở điểm danh lúc 07:30 8/9* | Chưa tới giờ. Nút tự hiện khi tới giờ, không cần tải lại |
-| *Hết giờ điểm danh — nhắn admin* | Đã qua giờ kết thúc của bạn |
+| *Hết giờ điểm danh — bạn không có quyền điểm danh trễ* | Đã qua giờ kết thúc của bạn |
 | *lúc 07:42 8/9* cạnh nhãn **Đã xác nhận** | Thời điểm điểm danh, do máy chủ ghi |
 
-Trong form sửa ca, dòng đã điểm danh bị khoá kèm biểu tượng 🔒, ô **Trạng thái** không đổi tay được, và nút **Xoá** được thay bằng câu giải thích khi ca không còn xoá được.
+Trong form sửa ca, dòng đã điểm danh bị khoá kèm biểu tượng 🔒, ô **Trạng thái** không đổi tay được, và nút **Xoá** được thay bằng câu giải thích khi ca không còn xoá được. Dòng của người khác bị khoá toàn bộ, dòng của bạn đã quá 30 phút thì khoá nút thùng rác, kèm lý do bên dưới. Ô chọn người luôn khoá với nhân viên thường. Ca có người khác thì tên, ngày và giờ của ca cũng bị khoá — ô ghi chú của ca vẫn mở.
 
 Giờ tính theo **đồng hồ máy chủ, múi giờ Việt Nam** — chỉnh đồng hồ máy mình không có tác dụng. Mọi luật nằm trong trigger của database nên gọi thẳng Supabase API cũng không lách được; giao diện chỉ ẩn sẵn những gì database sẽ từ chối. Mọi can thiệp của admin đều vào [Nhật ký](#9b-nhật-ký-thao-tác).
 
-Chưa chặn ở bản này: nhân viên vẫn gỡ được lượt **đang chờ** của người khác, và vẫn tạo/sửa được ca mẫu. Xem [roadmap.md](roadmap.md).
+Chưa chặn ở bản này: nhân viên vẫn tạo/sửa được ca mẫu. Xem [roadmap.md](roadmap.md).
 
 ---
 
@@ -515,12 +530,12 @@ Muốn tự kiểm chứng, mục 5 trong `supabase/003_action_logs.sql` có s�
 
 Mọi thao tác ghi dữ liệu — tạo / lưu / xoá ca, nhận ca, rời ca, điểm danh, xác nhận hộ, nhận ca mẫu, quản lý ca mẫu, đổi mật khẩu — đều báo kết quả bằng **thông báo** thay vì dòng chữ trong form.
 
-**Popup ở góc.** Khi máy chủ trả kết quả, một popup hiện ở góc dưới bên phải (mobile: trên cùng màn hình). Popup nổi trên cả form đang mở, nên lỗi lưu ca vẫn thấy được trong khi form còn mở để sửa.
+**Popup ở góc.** Khi máy chủ trả kết quả, một popup hiện ở góc trên bên phải, ngay dưới thanh trên cùng (mobile: trên cùng màn hình). Popup mới nhất nằm trên. Popup nổi trên cả form đang mở, nên lỗi lưu ca vẫn thấy được trong khi form còn mở để sửa.
 
 | Loại | Biểu tượng | Tự ẩn sau | Nội dung |
 | --- | --- | --- | --- |
 | Thành công | ✓ xanh | 5 giây | Việc vừa làm, kèm ngày và giờ của ca |
-| Lỗi | ✕ đỏ | 10 giây | Câu từ chối **nguyên văn** của máy chủ (ví dụ *Ngoài giờ điểm danh…*) |
+| Lỗi | ✕ đỏ | 10 giây | Câu từ chối **nguyên văn** của máy chủ (ví dụ *Bạn không có quyền điểm danh ngoài giờ…*) |
 
 Rê chuột vào popup thì nó dừng đếm giờ. Bấm **✕** chỉ ẩn popup — thông báo vẫn nằm trong ngăn. Bấm vào nội dung popup thì mở ngăn thông báo.
 

@@ -19,20 +19,22 @@ const TOAST_MS: Record<AppNotification['kind'], number> = {
  * vẫn nằm (chưa đọc) trong ngăn thông báo, giống Action Center của Windows.
  *
  * Mobile: hiện ở trên, vì đáy màn hình đã là thanh điều hướng và nút nổi.
- * Từ 640px: góc dưới bên phải. z-[60] để nổi trên cả hộp thoại (z-50) —
- * lỗi lưu ca phải thấy được khi form còn mở.
+ * Từ 640px: góc trên bên phải, ngay dưới header (`--app-header-h`, AppLayout
+ * đo) để không che nút chuông và tài khoản.
+ * Mới nhất nằm trên cùng. z-[60] để nổi trên cả hộp thoại (z-50) — lỗi lưu
+ * ca phải thấy được khi form còn mở.
  */
 export function Toaster() {
   const { items, toasts } = useNotifications()
   const visible = toasts
     .map((id) => items.find((n) => n.id === id))
     .filter((n): n is AppNotification => n !== undefined)
+    .reverse()
 
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:top-auto sm:right-0 sm:bottom-0 sm:items-end sm:p-5"
-      style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+      className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:inset-x-auto sm:right-0 sm:items-end sm:px-5 sm:pt-[calc(var(--app-header-h,4rem)+0.75rem)]"
     >
       {visible.map((n) => (
         <Toast key={n.id} item={n} />

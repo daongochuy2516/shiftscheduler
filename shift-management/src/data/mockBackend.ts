@@ -15,7 +15,14 @@ import type {
   UUID,
 } from '../types'
 import { currentMockProfile } from '../auth/mockAuth'
-import { checkInWindow, deleteBlock, isRestricted } from '../lib/attendance'
+import {
+  checkInWindow,
+  deleteBlock,
+  hasOthers,
+  isRestricted,
+  removeBlock,
+  type RemoveBlock,
+} from '../lib/attendance'
 import type { SchedulerBackend } from './backend'
 import {
   MOCK_ASSIGNMENTS,
@@ -125,7 +132,7 @@ function withAssignments(shift: Shift): ShiftWithAssignments {
   }
 }
 
-// ---- luật chấm công: bản mô phỏng các trigger của 005_attendance.sql ----
+// ---- luật chấm công: bản mô phỏng các trigger của 005 + 006 ----
 // Câu báo lỗi giống hệt bản SQL, để hai chế độ từ chối bằng cùng một câu.
 
 function restricted(): boolean {
@@ -138,13 +145,33 @@ function assertCanConfirm(
 ) {
   if (!restricted()) return
   if (a.user_id !== currentMockProfile()?.id) {
-    throw new Error('Chỉ điểm danh được ca của chính mình.')
+    throw new Error('Bạn không có quyền điểm danh cho người khác.')
   }
   if (checkInWindow(date, a.start_time, a.end_time, new Date()) !== 'open') {
     throw new Error(
-      'Ngoài giờ điểm danh: chỉ từ 30 phút trước giờ bắt đầu đến giờ kết thúc của bạn. Quá giờ thì nhắn admin.',
+      'Bạn không có quyền điểm danh ngoài giờ: chỉ từ 30 phút trước giờ bắt đầu đến giờ kết thúc của bạn.',
     )
   }
+}
+
+const REMOVE_ERRORS: Record<RemoveBlock, string> = {
+  confirmed: 'Bạn không có quyền gỡ lượt đã điểm danh.',
+  other: 'Bạn không có quyền gỡ người khác khỏi ca.',
+  late: 'Bạn không có quyền rời ca sau 30 phút kể từ lúc nhận.',
+}
+
+const ADD_OTHER_ERROR = 'Bạn không có quyền thêm người khác vào ca.'
+const EDIT_OTHER_ERROR = 'Bạn không có quyền sửa lượt của người khác.'
+
+function me(): UUID | null {
+  return currentMockProfile()?.id ?? null
+}
+
+/** Gỡ một lượt khỏi ca (006, luật A và B). */
+function assertCanRemove(a: ShiftAssignment) {
+  if (!restricted()) return
+  const block = removeBlock(a, me(), new Date())
+  if (block) throw new Error(REMOVE_ERRORS[block])
 }
 
 /**
@@ -161,24 +188,42 @@ function assertRosterAllowed(
   for (const before of state.assignments) {
     if (before.shift_id !== shiftId) continue
     const input = byId.get(before.id)
-    if (before.status !== 'confirmed') {
-      if (input?.status === 'confirmed') assertCanConfirm(input, date)
+    if (!input) {
+      assertCanRemove(before)
       continue
     }
-    if (!input) throw new Error('Lượt này đã điểm danh — chỉ admin gỡ được.')
+    // Cùng thứ tự với trigger 006: lượt của người khác, rồi đổi người, rồi
+    // tới luật điểm danh.
+    if (
+      before.user_id !== me() &&
+      (input.user_id !== before.user_id ||
+        input.start_time !== before.start_time ||
+        input.end_time !== before.end_time ||
+        input.status !== before.status ||
+        (input.note ?? null) !== (before.note ?? null))
+    ) {
+      throw new Error(EDIT_OTHER_ERROR)
+    }
+    if (input.user_id !== before.user_id) throw new Error(ADD_OTHER_ERROR)
+    if (before.status !== 'confirmed') {
+      if (input.status === 'confirmed') assertCanConfirm(input, date)
+      continue
+    }
     if (input.status !== 'confirmed') {
-      throw new Error('Chỉ admin bỏ được điểm danh.')
+      throw new Error('Bạn không có quyền bỏ điểm danh.')
     }
     if (
       input.start_time !== before.start_time ||
       input.end_time !== before.end_time ||
       input.user_id !== before.user_id
     ) {
-      throw new Error('Lượt này đã điểm danh — chỉ admin sửa được giờ.')
+      throw new Error('Bạn không có quyền sửa giờ của lượt đã điểm danh.')
     }
   }
   for (const input of inputs) {
-    if (!input.id && input.status === 'confirmed') assertCanConfirm(input, date)
+    if (input.id) continue
+    if (input.user_id !== me()) throw new Error(ADD_OTHER_ERROR)
+    if (input.status === 'confirmed') assertCanConfirm(input, date)
   }
 }
 
@@ -367,13 +412,28 @@ export const mockBackend: SchedulerBackend = {
   async updateShift(id: UUID, input: ShiftInput, assignments: AssignmentInput[]) {
     const now = new Date().toISOString()
     const before = state.shifts.find((s) => s.id === id)
+    // 006, luật E: ca có người khác thì tên / ngày / giờ chỉ admin sửa được.
+    // Ghi chú của ca thì không chặn.
+    if (
+      restricted() &&
+      before &&
+      hasOthers(withAssignments(before), me()) &&
+      (before.title !== input.title ||
+        before.date !== input.date ||
+        before.start_time !== input.start_time ||
+        before.end_time !== input.end_time)
+    ) {
+      throw new Error(
+        'Bạn không có quyền sửa tên, ngày và giờ của ca có người khác.',
+      )
+    }
     if (
       restricted() &&
       before &&
       before.date !== input.date &&
       withAssignments(before).assignments.some((a) => a.status === 'confirmed')
     ) {
-      throw new Error('Ca đã có người điểm danh — chỉ admin đổi được ngày.')
+      throw new Error('Bạn không có quyền đổi ngày của ca đã có người điểm danh.')
     }
     assertRosterAllowed(id, input.date, assignments)
     state.shifts = state.shifts.map((s) =>
@@ -415,12 +475,15 @@ export const mockBackend: SchedulerBackend = {
     const doomed = state.assignments.filter((a) => a.shift_id === id)
 
     if (shift && restricted()) {
-      const block = deleteBlock({ ...shift, assignments: doomed }, new Date())
-      if (block === 'confirmed') {
-        throw new Error('Ca đã có người điểm danh — chỉ admin xoá được.')
+      const block = deleteBlock({ assignments: doomed }, me(), new Date())
+      if (block === 'others') {
+        throw new Error('Bạn không có quyền xoá ca có người khác.')
       }
-      if (block === 'old') {
-        throw new Error('Ca đã tạo quá 30 phút — chỉ admin xoá được.')
+      if (block === 'confirmed') {
+        throw new Error('Bạn không có quyền xoá ca đã có người điểm danh.')
+      }
+      if (block === 'late') {
+        throw new Error('Bạn không có quyền xoá ca sau 30 phút kể từ lúc nhận.')
       }
     }
 
@@ -471,10 +534,13 @@ export const mockBackend: SchedulerBackend = {
     const now = new Date().toISOString()
     const before = state.assignments.find((a) => a.id === assignmentId)
     if (before && before.status !== status) {
+      if (restricted() && before.user_id !== me()) {
+        throw new Error(EDIT_OTHER_ERROR)
+      }
       if (status === 'confirmed') {
         assertCanConfirm(before, shiftLabel(before.shift_id).date)
       } else if (restricted()) {
-        throw new Error('Chỉ admin bỏ được điểm danh.')
+        throw new Error('Bạn không có quyền bỏ điểm danh.')
       }
     }
     const confirmed_at = confirmedAt(before ?? null, status, now)

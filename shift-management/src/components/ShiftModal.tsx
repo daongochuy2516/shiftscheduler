@@ -20,7 +20,14 @@ import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { useNotify } from '../notifications/NotificationContext'
-import { deleteBlock, isRestricted } from '../lib/attendance'
+import {
+  deleteBlock,
+  hasOthers,
+  isRestricted,
+  removeBlock,
+  type DeleteBlock,
+  type RemoveBlock,
+} from '../lib/attendance'
 import {
   formatDuration,
   formatShiftWhen,
@@ -94,6 +101,18 @@ const lockedInputClass =
 
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
+const DELETE_LOCK_TEXT: Record<DeleteBlock, TranslationKey> = {
+  others: 'shift.deleteLockedOthers',
+  confirmed: 'shift.deleteLockedConfirmed',
+  late: 'shift.deleteLockedLate',
+}
+
+const ROW_LOCK_TEXT: Record<RemoveBlock, TranslationKey> = {
+  confirmed: 'shift.rowLocked',
+  other: 'shift.rowLockedOther',
+  late: 'shift.rowLockedLate',
+}
+
 export function ShiftModal({
   shift,
   defaultDate,
@@ -129,10 +148,11 @@ export function ShiftModal({
   const lockedWindow = shift?.template_id != null
 
   /**
-   * Luật chấm công cho nhân viên thường (admin được miễn): lượt đã điểm danh
-   * bị khoá, và ca đã có người điểm danh thì không đổi ngày, không xoá.
-   * Database chặn thật (005_attendance.sql); ở đây chỉ khoá sẵn những gì nó
-   * sẽ từ chối, kèm lý do.
+   * Luật cho nhân viên thường (admin được miễn): lượt đã điểm danh bị khoá;
+   * chỉ admin gỡ được người khác; tự rời ca chỉ trong 30 phút đầu; ca có
+   * người khác hay đã có điểm danh thì không xoá. Database chặn thật (005 +
+   * 006); ở đây chỉ khoá sẵn những gì nó sẽ từ chối, kèm lý do. Tính trên
+   * bản đã lưu, vì database xét bản đã lưu.
    */
   const { user } = useAuth()
   const restricted = isRestricted(user)
@@ -146,8 +166,17 @@ export function ShiftModal({
     [shift],
   )
   const dateLocked = restricted && confirmedIds.size > 0
-  const [deleteLock] = useState(() =>
-    restricted && shift ? deleteBlock(shift, new Date()) : null,
+  const [openedAt] = useState(() => new Date())
+  const deleteLock =
+    restricted && shift ? deleteBlock(shift, user?.id ?? null, openedAt) : null
+  /**
+   * Ca có người khác: tên / ngày / giờ thuộc về cả nhóm, chỉ admin sửa (006).
+   * Ghi chú của ca thì ai cũng sửa được.
+   */
+  const infoLocked = restricted && !!shift && hasOthers(shift, user?.id ?? null)
+  const savedById = useMemo(
+    () => new Map((shift?.assignments ?? []).map((a) => [a.id, a])),
+    [shift],
   )
 
   const [form, setForm] = useState<ShiftInput>(() => ({
@@ -182,14 +211,24 @@ export function ShiftModal({
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
+  /**
+   * Ai thêm được vào ca. Nhân viên chỉ thêm chính mình — thêm người khác là
+   * việc của admin (006).
+   */
+  const addableIds = restricted
+    ? user && !usedUserIds.has(user.id)
+      ? [user.id]
+      : []
+    : availableProfiles.map((p) => p.id)
+
   function addRow() {
-    const candidate = availableProfiles[0]
+    const candidate = addableIds[0]
     if (!candidate) return
     setRows((prev) => [
       ...prev,
       {
         key: nextKey(),
-        user_id: candidate.id,
+        user_id: candidate,
         start_time: form.start_time,
         end_time: form.end_time,
         status: 'pending',
@@ -427,11 +466,7 @@ export function ShiftModal({
             {isEdit && deleteLock && (
               <span className="mr-auto inline-flex items-start gap-1.5 text-xs text-slate-500">
                 <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-                {t(
-                  deleteLock === 'confirmed'
-                    ? 'shift.deleteLockedConfirmed'
-                    : 'shift.deleteLockedOld',
-                )}
+                {t(DELETE_LOCK_TEXT[deleteLock])}
               </span>
             )}
             {isEdit && !deleteLock && (
@@ -527,7 +562,8 @@ export function ShiftModal({
                 </label>
                 <input
                   id="shift-title"
-                  className={inputClass}
+                  className={infoLocked ? lockedInputClass : inputClass}
+                  disabled={infoLocked}
                   value={form.title}
                   placeholder={t('shift.titlePlaceholder')}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -544,9 +580,11 @@ export function ShiftModal({
                 <input
                   id="shift-date"
                   type="date"
-                  className={dateLocked ? lockedInputClass : inputClass}
+                  className={
+                    dateLocked || infoLocked ? lockedInputClass : inputClass
+                  }
                   value={form.date}
-                  disabled={dateLocked}
+                  disabled={dateLocked || infoLocked}
                   aria-describedby={dateLocked ? 'shift-date-lock' : undefined}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                 />
@@ -560,9 +598,11 @@ export function ShiftModal({
                   <input
                     id="shift-start"
                     type="time"
-                    className={lockedWindow ? lockedInputClass : inputClass}
+                    className={
+                      lockedWindow || infoLocked ? lockedInputClass : inputClass
+                    }
                     value={form.start_time}
-                    disabled={lockedWindow}
+                    disabled={lockedWindow || infoLocked}
                     aria-describedby={lockedWindow ? 'shift-window-lock' : undefined}
                     onChange={(e) =>
                       setForm({ ...form, start_time: e.target.value })
@@ -576,9 +616,11 @@ export function ShiftModal({
                   <input
                     id="shift-end"
                     type="time"
-                    className={lockedWindow ? lockedInputClass : inputClass}
+                    className={
+                      lockedWindow || infoLocked ? lockedInputClass : inputClass
+                    }
                     value={form.end_time}
-                    disabled={lockedWindow}
+                    disabled={lockedWindow || infoLocked}
                     aria-describedby={lockedWindow ? 'shift-window-lock' : undefined}
                     onChange={(e) => setForm({ ...form, end_time: e.target.value })}
                   />
@@ -595,7 +637,14 @@ export function ShiftModal({
                 </p>
               )}
 
-              {dateLocked && (
+              {infoLocked && (
+                <p className="inline-flex items-start gap-1.5 text-xs text-slate-500 sm:col-span-2">
+                  <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+                  {t('shift.infoLocked')}
+                </p>
+              )}
+
+              {dateLocked && !infoLocked && (
                 <p
                   id="shift-date-lock"
                   className="inline-flex items-start gap-1.5 text-xs text-slate-500 sm:col-span-2"
@@ -638,11 +687,11 @@ export function ShiftModal({
                 <button
                   type="button"
                   onClick={addRow}
-                  disabled={availableProfiles.length === 0}
+                  disabled={addableIds.length === 0}
                   className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
-                  {t('shift.addStaff')}
+                  {restricted ? t('shift.addMe') : t('shift.addStaff')}
                 </button>
               </div>
 
@@ -650,11 +699,11 @@ export function ShiftModal({
                 <button
                   type="button"
                   onClick={addRow}
-                  disabled={availableProfiles.length === 0}
+                  disabled={addableIds.length === 0}
                   className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500 transition hover:border-indigo-400 hover:bg-indigo-50/40 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Plus className="h-5 w-5" />
-                  {t('shift.noOneAssigned')}
+                  {restricted ? t('shift.addMe') : t('shift.noOneAssigned')}
                 </button>
               ) : (
                 <ul className="space-y-2">
@@ -664,9 +713,18 @@ export function ShiftModal({
                     const profile = profiles.find((p) => p.id === row.user_id)
                     const isHighlighted =
                       !!highlightAssignmentId && row.id === highlightAssignmentId
-                    // Đã điểm danh: nhân viên chỉ còn sửa được ghi chú.
-                    const rowLocked =
-                      restricted && !!row.id && confirmedIds.has(row.id)
+                    // Nhân viên không đổi người trên dòng nào (đổi sang tên
+                    // khác = thêm người khác). Lượt của người khác khoá hết;
+                    // lượt của mình đã điểm danh thì chỉ còn sửa ghi chú.
+                    const saved = row.id ? savedById.get(row.id) : undefined
+                    const removeLock =
+                      restricted && saved
+                        ? removeBlock(saved, user?.id ?? null, openedAt)
+                        : null
+                    const othersRow =
+                      restricted && !!saved && saved.user_id !== user?.id
+                    const rowLocked = removeLock === 'confirmed' || othersRow
+                    const personLocked = restricted
                     const rowInputClass = rowLocked ? lockedInputClass : inputClass
                     return (
                       <li key={row.key}>
@@ -692,9 +750,11 @@ export function ShiftModal({
                                   size="sm"
                                 />
                                 <select
-                                  className={rowInputClass}
+                                  className={
+                                    personLocked ? lockedInputClass : inputClass
+                                  }
                                   value={row.user_id}
-                                  disabled={rowLocked}
+                                  disabled={personLocked}
                                   onChange={(e) =>
                                     patchRow(row.key, { user_id: e.target.value })
                                   }
@@ -768,7 +828,7 @@ export function ShiftModal({
                             <button
                               type="button"
                               onClick={() => removeRow(row.key)}
-                              disabled={rowLocked}
+                              disabled={removeLock !== null}
                               aria-label={t('shift.removeStaff', {
                                 name: profile?.display_name ?? '',
                               })}
@@ -780,7 +840,8 @@ export function ShiftModal({
 
                           <div className="mt-2">
                             <input
-                              className={inputClass}
+                              className={othersRow ? lockedInputClass : inputClass}
+                              disabled={othersRow}
                               value={row.note ?? ''}
                               placeholder={t('shift.personNotePlaceholder')}
                               onChange={(e) =>
@@ -806,10 +867,14 @@ export function ShiftModal({
                                 {warning}
                               </span>
                             )}
-                            {rowLocked && (
+                            {removeLock && (
                               <span className="inline-flex items-center gap-1 text-slate-500">
                                 <Lock className="h-3 w-3" />
-                                {t('shift.rowLocked')}
+                                {t(
+                                  othersRow
+                                    ? 'shift.rowLockedOther'
+                                    : ROW_LOCK_TEXT[removeLock],
+                                )}
                               </span>
                             )}
                           </div>
@@ -823,6 +888,10 @@ export function ShiftModal({
               {profiles.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-500">
                   {t('shift.noStaffAccounts')}
+                </p>
+              ) : restricted ? (
+                <p className="mt-2 text-xs text-slate-500">
+                  {t('shift.noPermissionAddOthers')}
                 </p>
               ) : availableProfiles.length === 0 && rows.length > 0 ? (
                 <p className="mt-2 text-xs text-slate-500">

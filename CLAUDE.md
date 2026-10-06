@@ -42,7 +42,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 | `src/auth/` | Cùng kiểu: interface + bản Supabase + bản mock |
 | `src/lib/` | Hàm thuần: `time.ts`, `colors.ts`, `summary.ts`, `shiftChunks.ts`, các probe của trang Trạng thái |
 | `src/i18n/` | Từ điển `en` / `vi` và `t()` |
-| `supabase/` | `schema.sql` rồi `002`…`005`, chạy tay theo thứ tự trong SQL Editor |
+| `supabase/` | `schema.sql` rồi `002`…`006`, chạy tay theo thứ tự trong SQL Editor |
 
 **Hai backend.** Có `VITE_SUPABASE_URL` + key trong `shift-management/.env` thì dùng Supabase, không thì dùng mock lưu `localStorage` (băng vàng "Đang chạy dữ liệu mẫu"). Chọn ở `src/data/index.ts` và `src/auth/index.ts`.
 
@@ -57,7 +57,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Thêm một `kind` cho `ShiftQuery` thì sửa cả `shiftQueryKey`, `parseShiftQueryKey` và `listShifts` ở hai backend.
 - Snapshot trả cho `useSyncExternalStore` phải giữ nguyên tham chiếu khi dữ liệu không đổi — trả object mới mỗi lần gọi là render vô hạn.
 - Lọc ca theo người là **AND** và không được cắt danh sách người trong ca: bản Supabase nhúng `shift_assignments!inner` thêm lần nữa dưới tên `match_N` để lọc, còn `assignments` vẫn trả đủ.
-- Migration 002–005 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`) đọc về là `null`.
+- Migration 002–006 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`) đọc về là `null`.
 
 **Ngày giờ**
 
@@ -69,7 +69,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 
 - Mọi biến `VITE_` đều xuống trình duyệt: chỉ publishable/anon key, không bao giờ `service_role`.
 - Quyền hiện tại là chủ ý: anon không có gì, mọi nhân viên đã đăng nhập tạo/sửa được mọi ca. Luật nào cần chặn thật thì đặt ở database (RLS, trigger, `check`, `now()` của máy chủ); giao diện chỉ phản ánh lại.
-- Chấm công = xác nhận (`pending` → `confirmed`). Luật cho `staff` nằm trong trigger của `005_attendance.sql`; `lib/attendance.ts` là bản sao phía client để khoá nút và để mock hành xử giống — sửa luật thì sửa cả ba nơi (SQL, `attendance.ts`, `mockBackend.ts`). `profiles.role` là `null` nghĩa là 005 chưa chạy: không áp luật nào.
+- Chấm công = xác nhận (`pending` → `confirmed`). Luật cho `staff` nằm trong trigger của `005_attendance.sql`, bản mới nhất của hai hàm trigger là ở `006_shift_rules.sql` (sửa luật thì viết migration mới ghi đè hàm, đừng sửa file đã chạy); `lib/attendance.ts` là bản sao phía client để khoá nút và để mock hành xử giống — sửa luật thì sửa cả ba nơi (SQL, `attendance.ts`, `mockBackend.ts`). `profiles.role` là `null` nghĩa là 005 chưa chạy: không áp luật nào.
 - `action_logs` chỉ do trigger `record_action_log` ghi. Không thêm đường ghi từ client, không thêm policy insert/update/delete.
 - Một thao tác của người dùng = đúng một dòng nhật ký (nhận ca, xoá ca đều đã gộp). Giữ nguyên tắc này khi thêm thao tác mới.
 

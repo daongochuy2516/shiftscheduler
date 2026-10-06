@@ -2,13 +2,16 @@
 
 Trạng thái hiện tại của ứng dụng nằm ở [README.md](README.md).
 
-**Đã làm** trong `supabase/005_attendance.sql` (README mục 8b): vai trò `staff` / `admin`, bốn luật ở mục 1, khoá lượt đã điểm danh (bỏ điểm danh, sửa giờ, gỡ), chặn xoá và dời ngày ca đã có người điểm danh, cột `confirmed_at`. Các câu hỏi treo được chốt theo đề xuất: cửa sổ tính theo **giờ riêng**, nhắn admin **ngoài** ứng dụng, phong admin **bằng tay** trong SQL Editor.
+**Đã làm** trong `supabase/005_attendance.sql` (README mục 8b): vai trò `staff` / `admin`, ba luật đầu ở mục 1, khoá lượt đã điểm danh (bỏ điểm danh, sửa giờ, gỡ), chặn xoá và dời ngày ca đã có người điểm danh, cột `confirmed_at`.
+
+**Đã làm** trong `supabase/006_shift_rules.sql`: luật 4 được thay — bỏ hạn "ca tạo quá 30 phút không xoá được". Nhân viên chỉ thao tác phần của mình: tự rời ca chỉ trong 30 phút đầu sau khi nhận; chỉ admin thêm, sửa hay gỡ người khác (cả lượt đang chờ); ca có người khác thì chỉ admin sửa tên / ngày / giờ ca và xoá ca (ghi chú của ca ai cũng sửa được); ca chỉ có mình thì xoá được khi còn rời được (bịt đường lách "xoá ca thay cho rời ca"); ca trống xoá lúc nào cũng được.
+
+Các câu hỏi treo được chốt theo đề xuất: cửa sổ tính theo **giờ riêng**, nhắn admin **ngoài** ứng dụng, phong admin **bằng tay** trong SQL Editor.
 
 **Chưa làm**:
 
 - Ca mẫu về tay admin (mục 2.1, dòng cuối).
-- Nhân viên vẫn gỡ được lượt **đang chờ** của người khác (mục 2.1 đề xuất chỉ cho tự gỡ mình). Lượt đã điểm danh thì đã khoá.
-- Sửa giờ / tên của ca đã qua mà chưa ai điểm danh vẫn tự do; chỉ xoá (quá 30 phút) và dời ngày (khi đã có điểm danh) là bị chặn.
+- Ca đã qua mà trống, hoặc chỉ có mình chưa điểm danh: nhân viên vẫn sửa giờ / tên tự do (ca có người khác thì đã khoá từ 006).
 - Ca qua nửa đêm.
 
 Phần dưới là ghi chú thiết kế gốc, giữ lại để biết vì sao có các luật này.
