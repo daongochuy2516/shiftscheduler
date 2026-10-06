@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ScheduleProvider } from '../data/ScheduleContext'
+import { NotificationProvider } from '../notifications/NotificationContext'
 import { ShiftEditorProvider } from './ShiftEditorProvider'
 import { AppLayout } from './AppLayout'
 
@@ -31,13 +32,16 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
+  // `key`: đổi tài khoản là mount lại, đọc đúng ngăn thông báo của người đó.
   return (
-    <ScheduleProvider>
-      <ShiftEditorProvider>
-        <AppLayout>
-          <Outlet />
-        </AppLayout>
-      </ShiftEditorProvider>
-    </ScheduleProvider>
+    <NotificationProvider key={user.id} userId={user.id}>
+      <ScheduleProvider>
+        <ShiftEditorProvider>
+          <AppLayout>
+            <Outlet />
+          </AppLayout>
+        </ShiftEditorProvider>
+      </ScheduleProvider>
+    </NotificationProvider>
   )
 }

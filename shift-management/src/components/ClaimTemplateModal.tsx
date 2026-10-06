@@ -16,7 +16,8 @@ import type { ShiftTemplate } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
-import { formatRange, toDateKey } from '../lib/time'
+import { formatRange, fromDateKey, toDateKey } from '../lib/time'
+import { useNotify } from '../notifications/NotificationContext'
 import { templateColor } from '../lib/colors'
 import { Modal } from './Modal'
 
@@ -46,7 +47,7 @@ export function ClaimTemplateModal({
     () => new Set([toDateKey(viewedDate)]),
   )
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const notify = useNotify()
 
   const todayKey = toDateKey(new Date())
   const color = templateColor(template)
@@ -151,17 +152,26 @@ export function ClaimTemplateModal({
   async function handleClaim() {
     if (!user || selected.size === 0) return
     setSaving(true)
-    setError(null)
+    // Sorted so a partial failure leaves the earliest days done.
+    const dates = [...selected].sort()
+    const params = { title: template.title, count: dates.length }
     try {
-      // Sorted so a partial failure leaves the earliest days done.
-      await claimTemplate(template.id, [...selected].sort(), user.id)
+      await claimTemplate(template.id, dates, user.id)
+      notify.success(
+        'notif.claim.done',
+        params,
+        dates.map((d) => format(fromDateKey(d), 'd/M')).join(', '),
+      )
       onClose()
     } catch (err) {
-      setError(
-        `${err instanceof Error ? err.message : t('tpl.errClaim')} ${
-          selected.size > 1 ? t('claim.partialError') : ''
+      notify.notify({
+        kind: 'error',
+        title: 'notif.claim.failed',
+        params,
+        body: `${err instanceof Error ? err.message : t('tpl.errClaim')} ${
+          dates.length > 1 ? t('claim.partialError') : ''
         }`.trim(),
-      )
+      })
       setSaving(false)
     }
   }
@@ -204,12 +214,6 @@ export function ClaimTemplateModal({
       }
     >
       <div className="space-y-4">
-        {error && (
-          <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
-            {error}
-          </p>
-        )}
-
         {/* ---- which shift ---- */}
         <div
           className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 ${color.block}`}

@@ -12,6 +12,7 @@ import {
   type ShiftColorKey,
 } from '../lib/colors'
 import { formatRange, isInvalidRange } from '../lib/time'
+import { useNotify } from '../notifications/NotificationContext'
 import { Modal } from './Modal'
 
 const inputClass =
@@ -42,7 +43,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
     useSchedule()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const notify = useNotify()
   const [confirmingDelete, setConfirmingDelete] = useState<UUID | null>(null)
 
   /** Weekday chips in Monday-first order, carrying JS getDay() values. */
@@ -84,7 +85,6 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
   async function handleSave() {
     if (!draft || !canSave) return
     setSaving(true)
-    setError(null)
     const payload: TemplateInput = {
       title: draft.title.trim(),
       start_time: draft.start_time,
@@ -94,25 +94,34 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
       is_active: draft.is_active,
       color: draft.color,
     }
+    const params = { title: payload.title }
+    const when = formatRange(payload.start_time, payload.end_time)
     try {
-      if (draft.id) await updateTemplate(draft.id, payload)
-      else await createTemplate(payload)
+      if (draft.id) {
+        await updateTemplate(draft.id, payload)
+        notify.success('notif.tpl.saved', params, when)
+      } else {
+        await createTemplate(payload)
+        notify.success('notif.tpl.created', params, when)
+      }
       setDraft(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('tpl.errSave'))
+      notify.error('notif.tpl.saveFailed', err, params)
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(id: UUID) {
+    const template = templates.find((tpl) => tpl.id === id)
+    const params = { title: template?.title ?? '' }
     setSaving(true)
-    setError(null)
     try {
       await deleteTemplate(id)
+      notify.success('notif.tpl.deleted', params)
       setConfirmingDelete(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('tpl.errSave'))
+      notify.error('notif.tpl.deleteFailed', err, params)
     } finally {
       setSaving(false)
     }
@@ -178,12 +187,6 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
         )
       }
     >
-      {error && (
-        <p className="mb-3 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
-          {error}
-        </p>
-      )}
-
       {draft ? (
         // ---- edit / create form ----
         <div className="space-y-3">

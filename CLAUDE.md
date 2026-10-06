@@ -28,6 +28,7 @@ npm run lint     # oxlint
 ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
   /login
   ProtectedRoute            chỉ mount phần dưới khi đã đăng nhập
+   NotificationProvider     thông báo (localStorage theo user) + popup + ngăn thông báo
     ScheduleProvider        nhân viên + ca mẫu + bộ đệm ca + mọi thao tác ghi
       ShiftEditorProvider   form tạo/sửa ca dùng chung (openCreate / openEdit)
         AppLayout           header, BottomNav (mobile), nút nổi, sheet tài khoản
@@ -80,6 +81,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Mốc mobile/desktop là `sm` (640px). Dưới mốc: `BottomNav`, nút nổi, `Modal` thành bottom sheet, vùng chạm tối thiểu 44px. Từ mốc trở lên giao diện PC không được đổi theo khi sửa mobile.
 - Từ 640px nội dung cuộn trong `#app-scroll`, không phải `window`. Cần gốc cuộn (IntersectionObserver, `scrollTo`) thì dùng `scrollRoot()`.
 - Hộp thoại dùng `components/Modal.tsx`; mở form ca bằng `useShiftEditor()`; màu ca lấy từ `useShiftColor()`.
+- Kết quả của thao tác ghi (thành công, hay lỗi máy chủ trả về) báo qua `useNotify()` — `success(key, params, body)` / `error(key, err, params)` — không thêm dòng xanh/đỏ trong form. Lỗi giữ form mở, thành công thì đóng. Tiêu đề lưu dạng khoá `t()` (`notif.*`), `body` là chuỗi thô nên đừng đưa chữ phụ thuộc ngôn ngữ vào đó. Lỗi nhập liệu từng ô vẫn hiện tại chỗ.
 - Khoá `localStorage` của theme (`scheduler.theme`) lặp lại trong script chống nháy ở `index.html` — đổi một chỗ phải đổi cả hai.
 
 ## Quy ước

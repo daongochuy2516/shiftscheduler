@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Activity,
+  Bell,
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
@@ -19,6 +20,7 @@ import { useShifts } from '../data/ScheduleContext'
 import { IS_MOCK_BACKEND } from '../data'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang, TranslationKey } from '../i18n/translations'
+import { useNotifications } from '../notifications/NotificationContext'
 import { SCROLL_ROOT_ID } from '../lib/scrollRoot'
 import { toDateKey } from '../lib/time'
 import { Avatar } from './Avatar'
@@ -65,6 +67,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // Cùng lát cắt với trang Chờ xác nhận: mở trang đó không phải tải lại.
   const { shifts } = useShifts(user ? { kind: 'pending' } : null)
   const { openCreate } = useShiftEditor()
+  const { unreadCount, setCenterOpen } = useNotifications()
   const { t, lang, setLang } = useI18n()
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -176,6 +179,25 @@ export function AppLayout({ children }: { children: ReactNode }) {
             >
               <Plus className="h-4 w-4" />
               {t('nav.newShift')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCenterOpen(true)}
+              aria-label={
+                unreadCount > 0
+                  ? `${t('notif.title')} · ${t('notif.unread', { count: unreadCount })}`
+                  : t('notif.title')
+              }
+              title={t('notif.title')}
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:h-8 sm:w-8 sm:rounded-md"
+            >
+              <Bell className="h-5 w-5 sm:h-4.5 sm:w-4.5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] leading-none font-semibold text-white sm:-top-1 sm:-right-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {user && (

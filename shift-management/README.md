@@ -26,6 +26,7 @@ Ca: Trực trang, 08:00–18:00
 - [8b. Chấm công và tính công](#8b-chấm-công-và-tính-công)
 - [9. Đa ngôn ngữ và cập nhật thời gian thực](#9-đa-ngôn-ngữ-và-cập-nhật-thời-gian-thực)
 - [9b. Nhật ký thao tác](#9b-nhật-ký-thao-tác)
+- [9c. Thông báo](#9c-thông-báo)
 - [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
 - [11. Dành cho quản trị viên](#11-dành-cho-quản-trị-viên)
 - [12. Cấu trúc mã nguồn](#12-cấu-trúc-mã-nguồn)
@@ -119,6 +120,8 @@ Lỗi hiện ngay dưới từng ô khi bạn gõ, không phải bấm nút mớ
 
 > **Mật khẩu hiện tại được kiểm tra thật.** Supabase không tự đối chiếu mật khẩu cũ khi đổi, nên ứng dụng đăng nhập lại ngầm bằng mật khẩu bạn vừa nhập trước khi cho đổi. Nhờ vậy người tình cờ ngồi vào máy bạn đang mở sẵn cũng không đổi được mật khẩu.
 
+Kết quả báo bằng [thông báo](#9c-thông-báo): thành công thì form tự đóng; sai mật khẩu hiện tại hay máy chủ từ chối thì form vẫn mở để nhập lại.
+
 Sau khi đổi thành công, bạn **vẫn đăng nhập bình thường trên thiết bị này**. Các thiết bị khác giữ phiên cho tới khi hết hạn.
 
 *Ở chế độ dữ liệu mẫu, mật khẩu mới được lưu trong `localStorage` của trình duyệt, đủ để thử luồng đổi mật khẩu mà không cần Supabase.*
@@ -138,6 +141,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
 | **VI / EN** | Đổi ngôn ngữ giao diện |
 | **Tạo ca** (nút xanh) | Mở form tạo ca mới, mặc định là **hôm nay** |
+| 🔔 | Ngăn thông báo, kèm số thông báo chưa đọc ([mục 9c](#9c-thông-báo)) |
 | Avatar + tên | Tài khoản đang đăng nhập |
 | 🔑 | Đổi mật khẩu |
 | ↪ | Đăng xuất |
@@ -231,6 +235,24 @@ Timeline cuộn ngang được khi khung giờ rộng; cột tên nhân viên lu
 | Nút **Thêm ca vào ngày này** (chế độ Ngày) | Ca mới, ngày = ngày đang xem |
 | Bấm một khối trên timeline / chip tuần / chip tháng | Sửa ca đã có |
 | Nút **Sửa** trên thẻ ca ở các trang danh sách | Sửa ca đã có |
+
+### Hai chế độ: **Đơn giản** và **Nâng cao**
+
+Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâng cao**. Form nhớ chế độ bạn chọn lần trước (trên trình duyệt đó); lần đầu là **Đơn giản**. Tạo ca mới thì luôn là form đầy đủ.
+
+**Đơn giản** chỉ xoay quanh *phần của bạn* trong ca. Thông tin ca và những người khác chỉ hiện để xem.
+
+| Bạn đang… | Form hiện | Bấm là |
+| --- | --- | --- |
+| Chưa có trong ca | Ô **Từ / Đến** (sẵn giờ của ca), ghi chú, nút **Nhận ca này** | Lưu ngay, đóng form |
+| Có trong ca, chờ xác nhận | Giờ và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca** | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
+| Đã điểm danh | Giờ bị khoá kèm 🔒, chỉ còn sửa ghi chú | — |
+
+- Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-tính-công): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — nhắn admin*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
+- Vừa đổi giờ mà chưa lưu thì không điểm danh được: lưu giờ mới trước.
+- **Rời ca** hỏi lại một lần trước khi gỡ bạn khỏi ca.
+
+**Nâng cao** là form đầy đủ mô tả ở các phần dưới: sửa thông tin ca, thêm/gỡ/sửa người khác, xoá ca. Hai chế độ dùng chung một bản nháp — sửa dở ở bên này rồi chuyển sang bên kia vẫn còn.
 
 ### Phần thông tin ca
 
@@ -488,6 +510,36 @@ Hệ quả:
 Muốn tự kiểm chứng, mục 5 trong `supabase/003_action_logs.sql` có sẵn bốn câu lệnh: một câu `select` phải chạy được, ba câu `insert`/`update`/`delete` phải báo *permission denied*.
 
 > Trang Nhật ký **không** dùng Realtime — log sinh ra ở mọi thao tác nên sẽ khiến màn hình nhảy liên tục và phá phân trang. Bấm **Tải lại** khi cần xem dòng mới.
+
+## 9c. Thông báo
+
+Mọi thao tác ghi dữ liệu — tạo / lưu / xoá ca, nhận ca, rời ca, điểm danh, xác nhận hộ, nhận ca mẫu, quản lý ca mẫu, đổi mật khẩu — đều báo kết quả bằng **thông báo** thay vì dòng chữ trong form.
+
+**Popup ở góc.** Khi máy chủ trả kết quả, một popup hiện ở góc dưới bên phải (mobile: trên cùng màn hình). Popup nổi trên cả form đang mở, nên lỗi lưu ca vẫn thấy được trong khi form còn mở để sửa.
+
+| Loại | Biểu tượng | Tự ẩn sau | Nội dung |
+| --- | --- | --- | --- |
+| Thành công | ✓ xanh | 5 giây | Việc vừa làm, kèm ngày và giờ của ca |
+| Lỗi | ✕ đỏ | 10 giây | Câu từ chối **nguyên văn** của máy chủ (ví dụ *Ngoài giờ điểm danh…*) |
+
+Rê chuột vào popup thì nó dừng đếm giờ. Bấm **✕** chỉ ẩn popup — thông báo vẫn nằm trong ngăn. Bấm vào nội dung popup thì mở ngăn thông báo.
+
+**Ngăn thông báo** (nút 🔔 trên thanh trên cùng; số đỏ là số chưa đọc). Giống Action Center của Windows: trượt ra từ mép phải, thông báo nhóm theo ngày, mới nhất ở trên.
+
+| Thao tác | Cách làm |
+| --- | --- |
+| Đánh dấu đã đọc | Bấm vào thông báo, hoặc nút phong bì bên phải nó |
+| Đánh dấu chưa đọc lại | Nút phong bì trên thông báo đã đọc |
+| Xoá một thông báo | Nút **✕** bên phải nó |
+| Đánh dấu tất cả đã đọc / Xoá tất cả | Hai nút ở đầu ngăn |
+
+Trên máy tính, hai nút của từng thông báo chỉ hiện khi rê chuột vào; trên điện thoại chúng luôn hiện.
+
+**Lưu ở đâu.** Thông báo nằm trong `localStorage` của trình duyệt, riêng cho từng tài khoản (`scheduler.notifications.<id>`), giữ tối đa 200 cái gần nhất. **Không đồng bộ** giữa các máy và không gửi lên máy chủ: xoá dữ liệu trình duyệt là mất. Các tab cùng trình duyệt thì thấy chung. Muốn biết chắc ai đã làm gì, xem [Nhật ký](#9b-nhật-ký-thao-tác) — đó mới là bản ghi của máy chủ.
+
+Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt đầu, mật khẩu quá ngắn…) vẫn hiện ngay dưới ô nhập như cũ — đó không phải phản hồi từ máy chủ. Form đăng nhập cũng giữ dòng báo lỗi riêng, vì lúc đó chưa có tài khoản để gắn thông báo.
+
+---
 
 ## 10. Tra cứu nhanh
 

@@ -33,6 +33,14 @@ export function formatRange(start: string, end: string): string {
   return `${normalizeTime(start)} – ${normalizeTime(end)}`
 }
 
+/**
+ * "6/10/2026 · 16:00 – 22:00" — chi tiết của một thông báo. Không có tên thứ
+ * nên không phụ thuộc ngôn ngữ: thông báo đã lưu đọc được cả khi đổi ngôn ngữ.
+ */
+export function formatShiftWhen(date: string, start: string, end: string): string {
+  return `${format(fromDateKey(date), 'd/M/yyyy')} · ${formatRange(start, end)}`
+}
+
 /** 210 → "3h 30m" */
 export function formatMinutesDuration(total: number): string {
   const mins = Math.max(0, Math.round(total))

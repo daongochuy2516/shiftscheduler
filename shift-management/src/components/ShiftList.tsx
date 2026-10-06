@@ -27,9 +27,11 @@ import {
 import {
   formatDuration,
   formatRange,
+  formatShiftWhen,
   fromDateKey,
   toMinutes,
 } from '../lib/time'
+import { useNotify } from '../notifications/NotificationContext'
 import { Avatar } from './Avatar'
 import { Modal } from './Modal'
 import { StatusBadge } from './StatusBadge'
@@ -76,7 +78,7 @@ export function ShiftList({
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(
     null,
   )
-  const [confirmError, setConfirmError] = useState<string | null>(null)
+  const notify = useNotify()
   /** Nhân viên thường: chỉ điểm danh lượt của mình, và chỉ trong giờ. */
   const restricted = isRestricted(user)
 
@@ -116,14 +118,32 @@ export function ShiftList({
       }))
   }, [shifts, order])
 
-  async function confirm(assignmentId: UUID) {
-    setBusyId(assignmentId)
-    setConfirmError(null)
+  async function confirm(
+    assignment: ShiftAssignment,
+    shift: ShiftWithAssignments,
+  ) {
+    const own = assignment.user_id === user?.id
+    const params = {
+      title: shift.title,
+      name:
+        profilesById.get(assignment.user_id)?.display_name ??
+        t('common.unknownStaff'),
+    }
+    setBusyId(assignment.id)
     try {
-      await setAssignmentStatus(assignmentId, 'confirmed')
+      await setAssignmentStatus(assignment.id, 'confirmed')
+      notify.success(
+        own ? 'notif.shift.checkedIn' : 'notif.shift.confirmedOther',
+        params,
+        formatShiftWhen(shift.date, assignment.start_time, assignment.end_time),
+      )
     } catch (err) {
       // Database là nơi quyết định (đồng hồ máy chủ): câu từ chối hiện nguyên văn.
-      setConfirmError(err instanceof Error ? err.message : String(err))
+      notify.error(
+        own ? 'notif.shift.checkInFailed' : 'notif.shift.confirmOtherFailed',
+        err,
+        params,
+      )
     } finally {
       setBusyId(null)
     }
@@ -141,15 +161,6 @@ export function ShiftList({
 
   return (
     <div className="space-y-6">
-      {confirmError && (
-        <p
-          role="alert"
-          className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200"
-        >
-          {confirmError}
-        </p>
-      )}
-
       {groups.map((group) => (
         <section key={group.date}>
           <h2 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
@@ -316,7 +327,7 @@ export function ShiftList({
                                         ? 'early'
                                         : null
                                   if (!kind) {
-                                    void confirm(assignment.id)
+                                    void confirm(assignment, shift)
                                     return
                                   }
                                   setConfirmTarget({
@@ -370,7 +381,7 @@ export function ShiftList({
               <button
                 type="button"
                 onClick={() => {
-                  void confirm(confirmTarget.assignment.id)
+                  void confirm(confirmTarget.assignment, confirmTarget.shift)
                   setConfirmTarget(null)
                 }}
                 className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500"
