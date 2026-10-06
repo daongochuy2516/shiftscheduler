@@ -35,8 +35,13 @@ function earlierOf(a: string | null, b: string | null): string | null {
 }
 
 export function AllShiftsPage() {
-  const { profiles, profilesById, loading, shiftDateBounds, dataVersion } =
-    useSchedule()
+  const {
+    rosterProfiles,
+    profilesById,
+    loading,
+    shiftDateBounds,
+    dataVersion,
+  } = useSchedule()
   const { user } = useAuth()
   const { t } = useI18n()
   const [query, setQuery] = useState('')
@@ -214,7 +219,7 @@ export function AllShiftsPage() {
             filters={filters}
             onFiltersChange={patch}
             onClear={clearSearch}
-            profiles={profiles}
+            profiles={rosterProfiles}
             dateLimits={{
               // Theo tab: Sắp tới không chọn được ngày đã qua, và ngược lại.
               from: { min: windowRange.from, max: to },

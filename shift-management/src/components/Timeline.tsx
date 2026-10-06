@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CalendarOff, Clock3 } from 'lucide-react'
 import type { Profile, ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { formatRange, normalizeTime, toDateKey, toMinutes } from '../lib/time'
+import { showRow } from '../lib/profiles'
 import { useShiftColor } from '../data/useShiftColor'
 import { useI18n } from '../i18n/I18nContext'
 import { Avatar } from './Avatar'
@@ -111,7 +112,11 @@ export function Timeline({
         const { placed, lanes } = packLanes(byUser.get(profile.id) ?? [])
         return { profile, items: placed, lanes }
       })
-      .filter((row) => !hideEmptyStaff || row.items.length > 0)
+      .filter(
+        (row) =>
+          showRow(row.profile, row.items.length > 0) &&
+          (!hideEmptyStaff || row.items.length > 0),
+      )
   }, [shifts, profiles, currentUserId, hideEmptyStaff])
 
   /** Assignments that fall entirely outside the visible hour window. */

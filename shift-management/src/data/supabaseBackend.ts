@@ -5,6 +5,7 @@ import type {
   ActionLogQuery,
   AssignmentInput,
   Profile,
+  ProfileInput,
   Shift,
   ShiftAssignment,
   ShiftDateBounds,
@@ -180,7 +181,24 @@ export const supabaseBackend: SchedulerBackend = {
     return ((data ?? []) as Profile[]).map((row) => ({
       ...row,
       role: row.role ?? null,
+      // Chưa chạy 007 thì cột chưa có: null, coi như hiện.
+      displayed: row.displayed ?? null,
     }))
+  },
+
+  async updateProfile(id: UUID, input: ProfileInput) {
+    const supabase = getSupabase()
+    // `select` để biết có dòng nào thật sự được sửa: RLS từ chối thì Supabase
+    // không báo lỗi mà chỉ trả về 0 dòng.
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(input)
+      .eq('id', id)
+      .select('id')
+    if (error) fail('Could not update the account', error)
+    if (!data || data.length === 0) {
+      throw new Error('Bạn không có quyền sửa tài khoản.')
+    }
   },
 
   async listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]> {

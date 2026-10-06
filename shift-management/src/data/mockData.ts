@@ -9,13 +9,18 @@ export const TOMORROW = toDateKey(addDays(now, 1))
 
 const ts = now.toISOString()
 
-/** Huy là admin để thử được cả hai phía của luật chấm công; còn lại là staff. */
+/**
+ * Huy là admin để thử được cả hai phía của luật chấm công; còn lại là staff.
+ * Quản lý là admin đang ẩn (displayed = false): vào được web nhưng không hiện
+ * trong các bảng xếp ca.
+ */
 export const MOCK_PROFILES: Profile[] = [
   {
     id: 'u-huy',
     email: 'huy@thinkwork.test',
     display_name: 'Huy Nguyen',
     role: 'admin',
+    displayed: true,
     created_at: ts,
   },
   {
@@ -23,6 +28,7 @@ export const MOCK_PROFILES: Profile[] = [
     email: 'thien@thinkwork.test',
     display_name: 'Thien Pham',
     role: 'staff',
+    displayed: true,
     created_at: ts,
   },
   {
@@ -30,6 +36,7 @@ export const MOCK_PROFILES: Profile[] = [
     email: 'an@thinkwork.test',
     display_name: 'An Tran',
     role: 'staff',
+    displayed: true,
     created_at: ts,
   },
   {
@@ -37,6 +44,7 @@ export const MOCK_PROFILES: Profile[] = [
     email: 'mai@thinkwork.test',
     display_name: 'Mai Le',
     role: 'staff',
+    displayed: true,
     created_at: ts,
   },
   {
@@ -44,6 +52,7 @@ export const MOCK_PROFILES: Profile[] = [
     email: 'long@thinkwork.test',
     display_name: 'Long Vo',
     role: 'staff',
+    displayed: true,
     created_at: ts,
   },
   {
@@ -51,6 +60,15 @@ export const MOCK_PROFILES: Profile[] = [
     email: 'ngoc@thinkwork.test',
     display_name: 'Ngoc Bui',
     role: 'staff',
+    displayed: true,
+    created_at: ts,
+  },
+  {
+    id: 'u-manager',
+    email: 'manager@thinkwork.test',
+    display_name: 'Quản lý',
+    role: 'admin',
+    displayed: false,
     created_at: ts,
   },
 ]

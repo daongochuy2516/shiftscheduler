@@ -17,7 +17,13 @@ async function loadProfile(user: User): Promise<Profile> {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (data) return { ...(data as Profile), role: data.role ?? null }
+  if (data) {
+    return {
+      ...(data as Profile),
+      role: data.role ?? null,
+      displayed: data.displayed ?? null,
+    }
+  }
 
   const email = user.email ?? ''
   return {
@@ -25,6 +31,7 @@ async function loadProfile(user: User): Promise<Profile> {
     email,
     display_name: email.split('@')[0] || 'Unknown',
     role: null,
+    displayed: null,
     created_at: user.created_at,
   }
 }

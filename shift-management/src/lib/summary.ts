@@ -6,6 +6,7 @@ import type {
   UUID,
 } from '../types'
 import { fromDateKey, normalizeTime, toMinutes } from './time'
+import { showRow } from './profiles'
 
 /**
  * Tổng kết ca — phần tính toán thuần, không dính React.
@@ -153,7 +154,12 @@ export function buildSummary({
     })
     // Nhân viên không có ca bị ẩn theo mặc định: bảng tổng kết mà đầy dòng
     // rỗng thì không đọc được gì.
-    .filter((row) => includeEmptyStaff || row.count > 0)
+    // Người đang ẩn (tài khoản quản lý) chỉ hiện khi có công thật.
+    .filter(
+      (row) =>
+        showRow(row.profile, row.count > 0) &&
+        (includeEmptyStaff || row.count > 0),
+    )
 
   return {
     rows,

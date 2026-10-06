@@ -13,6 +13,7 @@ import type {
   AssignmentInput,
   AssignmentStatus,
   Profile,
+  ProfileInput,
   ShiftDateBounds,
   ShiftInput,
   ShiftQuery,
@@ -21,6 +22,7 @@ import type {
   UUID,
 } from '../types'
 import { backend } from './index'
+import { isListed } from '../lib/profiles'
 import {
   createShiftStore,
   shiftQueryKey,
@@ -31,8 +33,13 @@ import {
 interface ScheduleContextValue {
   /** Bộ đệm ca theo lát cắt — đọc qua `useShifts`, không dùng trực tiếp. */
   store: ShiftStore
+  /** Mọi tài khoản, kể cả người đang ẩn — dùng để tra tên. */
   profiles: Profile[]
   profilesById: Map<UUID, Profile>
+  /** Những người hiện trong ô chọn / bộ lọc nhân viên (bỏ người đang ẩn). */
+  rosterProfiles: Profile[]
+  /** False khi migration 007 chưa chạy (cột `displayed` chưa có). */
+  accountsAvailable: boolean
   templates: ShiftTemplate[]
   /** False when the templates migration has not been run yet. */
   templatesAvailable: boolean
@@ -58,6 +65,8 @@ interface ScheduleContextValue {
     assignments: AssignmentInput[],
   ) => Promise<void>
   deleteShift: (id: UUID) => Promise<void>
+  /** Chỉ admin (trang Tài khoản). */
+  updateProfile: (id: UUID, input: ProfileInput) => Promise<void>
   setAssignmentStatus: (
     assignmentId: UUID,
     status: AssignmentStatus,
@@ -155,6 +164,14 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     [refresh],
   )
 
+  const updateProfile = useCallback(
+    async (id: UUID, input: ProfileInput) => {
+      await backend.updateProfile(id, input)
+      await refresh()
+    },
+    [refresh],
+  )
+
   const setAssignmentStatus = useCallback(
     async (assignmentId: UUID, status: AssignmentStatus) => {
       await backend.setAssignmentStatus(assignmentId, status)
@@ -212,12 +229,18 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     () => new Map(profiles.map((p) => [p.id, p])),
     [profiles],
   )
+  const rosterProfiles = useMemo(() => profiles.filter(isListed), [profiles])
+  // Cột chưa có thì mọi dòng đều đọc về null.
+  const accountsAvailable =
+    profiles.length === 0 || profiles.some((p) => p.displayed !== null)
 
   const value = useMemo(
     () => ({
       store,
       profiles,
       profilesById,
+      rosterProfiles,
+      accountsAvailable,
       templates,
       templatesAvailable,
       loading,
@@ -228,6 +251,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       createShift,
       updateShift,
       deleteShift,
+      updateProfile,
       setAssignmentStatus,
       createTemplate,
       updateTemplate,
@@ -238,6 +262,8 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       store,
       profiles,
       profilesById,
+      rosterProfiles,
+      accountsAvailable,
       templates,
       templatesAvailable,
       loading,
@@ -248,6 +274,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       createShift,
       updateShift,
       deleteShift,
+      updateProfile,
       setAssignmentStatus,
       createTemplate,
       updateTemplate,

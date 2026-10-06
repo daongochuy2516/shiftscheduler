@@ -1,4 +1,4 @@
-# Lịch Ca Làm Việc
+# Thinkmay Team Board
 
 Ứng dụng xếp ca nội bộ: **một ca chứa nhiều lượt phân công**, mỗi nhân viên trong ca có khung giờ và trạng thái (`pending` / `confirmed`) riêng. SPA React, backend là Supabase (Postgres + Auth + Realtime), không có server riêng.
 
@@ -32,7 +32,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
     ScheduleProvider        nhân viên + ca mẫu + bộ đệm ca + mọi thao tác ghi
       ShiftEditorProvider   form tạo/sửa ca dùng chung (openCreate / openEdit)
         AppLayout           header, BottomNav (mobile), nút nổi, sheet tài khoản
-          / · /shifts · /summary · /my-shifts · /pending · /logs · /status
+          / · /shifts · /summary · /my-shifts · /pending · /logs · /status · /accounts (admin)
 ```
 
 | Thư mục | Vai trò |
@@ -42,7 +42,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 | `src/auth/` | Cùng kiểu: interface + bản Supabase + bản mock |
 | `src/lib/` | Hàm thuần: `time.ts`, `colors.ts`, `summary.ts`, `shiftChunks.ts`, các probe của trang Trạng thái |
 | `src/i18n/` | Từ điển `en` / `vi` và `t()` |
-| `supabase/` | `schema.sql` rồi `002`…`006`, chạy tay theo thứ tự trong SQL Editor |
+| `supabase/` | `schema.sql` rồi `002`…`007`, chạy tay theo thứ tự trong SQL Editor |
 
 **Hai backend.** Có `VITE_SUPABASE_URL` + key trong `shift-management/.env` thì dùng Supabase, không thì dùng mock lưu `localStorage` (băng vàng "Đang chạy dữ liệu mẫu"). Chọn ở `src/data/index.ts` và `src/auth/index.ts`.
 
@@ -57,7 +57,8 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Thêm một `kind` cho `ShiftQuery` thì sửa cả `shiftQueryKey`, `parseShiftQueryKey` và `listShifts` ở hai backend.
 - Snapshot trả cho `useSyncExternalStore` phải giữ nguyên tham chiếu khi dữ liệu không đổi — trả object mới mỗi lần gọi là render vô hạn.
 - Lọc ca theo người là **AND** và không được cắt danh sách người trong ca: bản Supabase nhúng `shift_assignments!inner` thêm lần nữa dưới tên `match_N` để lọc, còn `assignments` vẫn trả đủ.
-- Migration 002–006 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`) đọc về là `null`.
+- Migration 002–007 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`, `displayed`) đọc về là `null`.
+- `profiles` gồm cả người đang ẩn (`displayed = false`, ví dụ tài khoản quản lý). Danh sách để **chọn / lọc** nhân viên dùng `rosterProfiles`; bảng xếp ca lọc hàng bằng `showRow` trong `lib/profiles.ts` (người ẩn vẫn hiện nếu có ca). Tra tên theo id thì dùng `profilesById` như cũ.
 
 **Ngày giờ**
 
@@ -75,7 +76,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 
 **Giao diện**
 
-- Mọi chuỗi người dùng thấy đều qua `t()`. Thêm khoá vào `en` trước (nguồn của `TranslationKey`), rồi `vi` — thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`. Chèn giá trị: `{{name}}`.
+- Mọi chuỗi người dùng thấy đều qua `t()` — trừ tên sản phẩm `APP_NAME` (`lib/brand.ts`, giống nhau mọi ngôn ngữ; `<title>` trong `index.html` lặp lại nó). Thêm khoá vào `en` trước (nguồn của `TranslationKey`), rồi `vi` — thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`. Chèn giá trị: `{{name}}`.
 - Chế độ tối làm bằng cách định nghĩa lại biến màu Tailwind dưới `[data-theme='dark']` trong `index.css`, **không** rải `dark:` trong component. Viết class sáng như bình thường. Họ màu đã có bản tối: slate, indigo, rose, amber, emerald, sky, violet, teal, orange, lime, fuchsia, cyan — dùng họ khác thì thêm khối biến tương ứng.
 - Class Tailwind phải viết nguyên chuỗi, không ghép từ mảnh lúc chạy (`bg-${x}-50` sẽ không được sinh). Xem `PALETTE` trong `lib/colors.ts`.
 - Mốc mobile/desktop là `sm` (640px). Dưới mốc: `BottomNav`, nút nổi, `Modal` thành bottom sheet, vùng chạm tối thiểu 44px. Từ mốc trở lên giao diện PC không được đổi theo khi sửa mobile.

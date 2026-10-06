@@ -3,6 +3,7 @@ import type {
   ActionLogQuery,
   AssignmentInput,
   Profile,
+  ProfileInput,
   ShiftDateBounds,
   ShiftInput,
   ShiftQuery,
@@ -18,8 +19,14 @@ import type {
  * `data/index.ts`.
  */
 export interface SchedulerBackend {
-  /** Everyone who can be rostered. */
+  /** Mọi tài khoản, kể cả người đang ẩn (`displayed = false`). */
   listProfiles(): Promise<Profile[]>
+
+  /**
+   * Sửa tên hiển thị / hiện-ẩn của một tài khoản. Chỉ admin — database chặn
+   * mọi người khác (007_accounts.sql).
+   */
+  updateProfile(id: UUID, input: ProfileInput): Promise<void>
 
   /**
    * Các ca khớp `query`, kèm toàn bộ phân công của từng ca (kể cả khi lọc

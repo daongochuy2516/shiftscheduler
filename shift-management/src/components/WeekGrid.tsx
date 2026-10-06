@@ -11,6 +11,7 @@ import {
   toDateKey,
   toMinutes,
 } from '../lib/time'
+import { showRow } from '../lib/profiles'
 import { Avatar } from './Avatar'
 
 const LEFT_COL = 176
@@ -96,7 +97,11 @@ export function WeekGrid({
         const count = [...days.values()].reduce((n, c) => n + c.length, 0)
         return { profile, days, minutes, count }
       })
-      .filter((row) => !hideEmptyStaff || row.count > 0)
+      .filter(
+        (row) =>
+          showRow(row.profile, row.count > 0) &&
+          (!hideEmptyStaff || row.count > 0),
+      )
   }, [profiles, byUser, currentUserId, hideEmptyStaff])
 
   const gridTemplate = `${LEFT_COL}px repeat(7, minmax(${DAY_MIN}px, 1fr)) ${TOTAL_COL}px`

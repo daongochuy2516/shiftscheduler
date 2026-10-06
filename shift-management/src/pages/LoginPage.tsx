@@ -8,6 +8,7 @@ import { MOCK_PASSWORD } from '../auth/mockAuth'
 import { MOCK_PROFILES } from '../data/mockData'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang } from '../i18n/translations'
+import { APP_NAME } from '../lib/brand'
 
 const LANGS: { id: Lang; label: string }[] = [
   { id: 'vi', label: 'Tiếng Việt' },
@@ -71,7 +72,7 @@ export function LoginPage() {
             <CalendarClock className="h-6 w-6" />
           </span>
           <h1 className="text-lg font-semibold text-slate-900">
-            {t('auth.appName')}
+            {APP_NAME}
           </h1>
           <p className="mt-1 text-sm text-slate-500">{t('auth.subtitle')}</p>
 

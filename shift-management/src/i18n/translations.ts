@@ -36,7 +36,6 @@ export const en = {
   'status.confirmed': 'Confirmed',
 
   // ---- auth ----
-  'auth.appName': 'Shift Scheduler',
   'auth.subtitle': 'Sign in with your staff account to continue.',
   'auth.email': 'Email',
   'auth.password': 'Password',
@@ -380,6 +379,31 @@ export const en = {
   // ---- action log ----
   'nav.actionLog': 'Activity',
   'nav.status': 'Status',
+  'nav.accounts': 'Accounts',
+  'menu.label': 'Menu',
+  'menu.themeNext': 'Switch to {{theme}}',
+
+  // ---- accounts (admin only) ----
+  'accounts.title': 'Accounts',
+  'accounts.subtitle':
+    'Change display names, and choose who shows up on the schedule boards. Only admins see this page.',
+  'accounts.count_one': '{{count}} account',
+  'accounts.count_other': '{{count}} accounts',
+  'accounts.hiddenCount_one': '{{count}} hidden',
+  'accounts.hiddenCount_other': '{{count}} hidden',
+  'accounts.displayName': 'Display name',
+  'accounts.errNameRequired': 'Display name can’t be empty.',
+  'accounts.shown': 'Shown',
+  'accounts.hidden': 'Hidden',
+  'accounts.roleAdmin': 'Admin',
+  'accounts.roleStaff': 'Staff',
+  'accounts.notInstalled': 'Account settings aren’t installed yet',
+  'accounts.notInstalledHint':
+    'Run supabase/007_accounts.sql in the Supabase SQL Editor to enable editing.',
+  'notif.account.renamed': 'Renamed to “{{name}}”',
+  'notif.account.shown': '“{{name}}” is shown on the boards',
+  'notif.account.hidden': '“{{name}}” is hidden from the boards',
+  'notif.account.saveFailed': 'Could not update “{{name}}”',
   'status.title': 'System status',
   'status.subtitle': 'Connection to the database and your current session.',
   'status.recheck': 'Check again',
@@ -524,7 +548,6 @@ export const vi: Record<DictKey, string> = {
   'status.confirmed': 'Đã xác nhận',
 
   // ---- auth ----
-  'auth.appName': 'Lịch Ca Làm Việc',
   'auth.subtitle': 'Đăng nhập bằng tài khoản nhân viên để tiếp tục.',
   'auth.email': 'Email',
   'auth.password': 'Mật khẩu',
@@ -863,6 +886,31 @@ export const vi: Record<DictKey, string> = {
   // ---- action log ----
   'nav.actionLog': 'Nhật ký',
   'nav.status': 'Trạng thái',
+  'nav.accounts': 'Tài khoản',
+  'menu.label': 'Menu',
+  'menu.themeNext': 'Chuyển sang {{theme}}',
+
+  // ---- accounts (admin only) ----
+  'accounts.title': 'Tài khoản',
+  'accounts.subtitle':
+    'Sửa tên hiển thị và chọn ai được hiện trên các bảng xếp ca. Chỉ admin thấy trang này.',
+  'accounts.count_one': '{{count}} tài khoản',
+  'accounts.count_other': '{{count}} tài khoản',
+  'accounts.hiddenCount_one': '{{count}} đang ẩn',
+  'accounts.hiddenCount_other': '{{count}} đang ẩn',
+  'accounts.displayName': 'Tên hiển thị',
+  'accounts.errNameRequired': 'Tên hiển thị không được để trống.',
+  'accounts.shown': 'Đang hiện',
+  'accounts.hidden': 'Đang ẩn',
+  'accounts.roleAdmin': 'Admin',
+  'accounts.roleStaff': 'Nhân viên',
+  'accounts.notInstalled': 'Chưa cài đặt tính năng tài khoản',
+  'accounts.notInstalledHint':
+    'Chạy supabase/007_accounts.sql trong SQL Editor của Supabase để sửa được.',
+  'notif.account.renamed': 'Đã đổi tên thành “{{name}}”',
+  'notif.account.shown': 'Đã hiện “{{name}}” trên các bảng',
+  'notif.account.hidden': 'Đã ẩn “{{name}}” khỏi các bảng',
+  'notif.account.saveFailed': 'Không cập nhật được “{{name}}”',
   'status.title': 'Trạng thái hệ thống',
   'status.subtitle': 'Kết nối tới Database và phiên đăng nhập hiện tại của bạn.',
   'status.recheck': 'Kiểm tra lại',

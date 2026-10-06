@@ -18,7 +18,19 @@ export interface Profile {
    * nào được áp (xem lib/attendance.ts).
    */
   role: 'staff' | 'admin' | null
+  /**
+   * `false` = không hiện người này trong các bảng xếp ca và ô chọn nhân viên
+   * (ví dụ tài khoản quản lý chỉ vào để xem). `null` = migration 007 chưa
+   * chạy: coi như hiện.
+   */
+  displayed: boolean | null
   created_at: string
+}
+
+/** Những gì admin sửa được ở trang Tài khoản. */
+export interface ProfileInput {
+  display_name: string
+  displayed: boolean
 }
 
 export interface Shift {

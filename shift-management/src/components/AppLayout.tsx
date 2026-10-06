@@ -13,10 +13,11 @@ import {
   Plus,
   ScrollText,
   User,
+  UserCog,
 } from 'lucide-react'
 import { ChangePasswordModal } from './ChangePasswordModal'
 import { useAuth } from '../auth/AuthContext'
-import { useShifts } from '../data/ScheduleContext'
+import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { IS_MOCK_BACKEND } from '../data'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang, TranslationKey } from '../i18n/translations'
@@ -27,13 +28,17 @@ import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
 import { Modal } from './Modal'
 import { useShiftEditor } from './ShiftEditorProvider'
-import { ThemeMenu, ThemeSegmented } from './ThemeMenu'
+import { ThemeSegmented } from './ThemeMenu'
+import { HeaderMenu } from './HeaderMenu'
+import { APP_NAME } from '../lib/brand'
 
 const NAV: {
   to: string
   label: TranslationKey
   icon: typeof CalendarDays
   end: boolean
+  /** Chỉ hiện với admin. */
+  adminOnly?: boolean
 }[] = [
   { to: '/', label: 'nav.timeline', icon: CalendarDays, end: true },
   { to: '/shifts', label: 'nav.allShifts', icon: LayoutList, end: false },
@@ -42,6 +47,13 @@ const NAV: {
   { to: '/pending', label: 'nav.pending', icon: Clock3, end: false },
   { to: '/logs', label: 'nav.actionLog', icon: ScrollText, end: false },
   { to: '/status', label: 'nav.status', icon: Activity, end: false },
+  {
+    to: '/accounts',
+    label: 'nav.accounts',
+    icon: UserCog,
+    end: false,
+    adminOnly: true,
+  },
 ]
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -66,6 +78,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
   // Cùng lát cắt với trang Chờ xác nhận: mở trang đó không phải tải lại.
   const { shifts } = useShifts(user ? { kind: 'pending' } : null)
+  const { profilesById } = useSchedule()
+  const isAdmin = user?.role === 'admin'
+  /**
+   * Tên lấy từ danh sách nhân viên chứ không từ phiên đăng nhập: admin vừa
+   * đổi tên mình ở trang Tài khoản thì header đổi theo ngay.
+   */
+  const displayName = user
+    ? (profilesById.get(user.id)?.display_name ?? user.display_name)
+    : ''
   const { openCreate } = useShiftEditor()
   const { unreadCount, setCenterOpen } = useNotifications()
   const { t, lang, setLang } = useI18n()
@@ -138,14 +159,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <CalendarClock className="h-4.5 w-4.5" />
             </span>
             <span className="truncate text-sm font-semibold text-slate-900">
-              {t('auth.appName')}
+              {APP_NAME}
             </span>
           </div>
 
           {/* Điều hướng trên chỉ dành cho màn hình rộng. Dưới 640px việc này do
-              thanh dưới đảm nhiệm, header giữ gọn theo quy tắc app bar. */}
-          <nav className="order-3 -mx-1 hidden w-full items-center gap-1 overflow-x-auto sm:order-none sm:mx-0 sm:flex sm:w-auto">
-            {NAV.map(({ to, label, icon: Icon, end }) => (
+              thanh dưới đảm nhiệm, header giữ gọn theo quy tắc app bar.
+
+              Đủ chữ cả hàng thì cần ~1450px. Hẹp hơn thì không bỏ bớt gì mà
+              xếp lại: dòng trên là logo + cụm nút, dòng dưới là dải tab chạy
+              hết chiều ngang (quá hẹp thì dải tab tự chia hai hàng). Để mặc
+              flex-wrap thì cụm nút bên phải rơi xuống lẻ loi một mình. Đổi
+              mục điều hướng hay nút trên header thì đo lại mốc 1480px. */}
+          <nav className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1480px]:order-none min-[1480px]:mx-0 min-[1480px]:w-auto min-[1480px]:flex-nowrap">
+            {NAV.filter((item) => !item.adminOnly || isAdmin).map(
+              ({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -166,7 +194,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </span>
                 )}
               </NavLink>
-            ))}
+              ),
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
@@ -210,11 +239,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   : t('notif.title')
               }
               title={t('notif.title')}
-              className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:h-8 sm:w-8 sm:rounded-md"
+              // Từ 640px chuông nằm trong nút lưới (HeaderMenu).
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:hidden"
             >
-              <Bell className="h-5 w-5 sm:h-4.5 sm:w-4.5" />
+              <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] leading-none font-semibold text-white sm:-top-1 sm:-right-1">
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] leading-none font-semibold text-white">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -230,37 +260,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   aria-label={t('nav.account')}
                   className="flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-slate-100 sm:hidden"
                 >
-                  <Avatar name={user.display_name} seed={user.id} size="sm" />
+                  <Avatar name={displayName} seed={user.id} size="sm" />
                 </button>
 
                 <div className="hidden items-center gap-2 border-l border-slate-200 pl-2 sm:flex">
-                  <Avatar name={user.display_name} seed={user.id} size="sm" />
+                  <Avatar name={displayName} seed={user.id} size="sm" />
                   <div className="hidden leading-tight md:block">
                     <p className="text-sm font-medium text-slate-800">
-                      {user.display_name}
+                      {displayName}
                     </p>
                     <p className="text-[11px] text-slate-500">{user.email}</p>
                   </div>
-                  <ThemeMenu />
-                  <button
-                    type="button"
-                    onClick={() => setChangingPassword(true)}
-                    aria-label={t('pwd.title')}
-                    title={t('pwd.title')}
-                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    <KeyRound className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    disabled={signingOut}
-                    aria-label={t('auth.signOut')}
-                    title={t('auth.signOut')}
-                    className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
+                </div>
+
+                {/* Nút lưới ở ngoài cùng bên phải, sau tài khoản. */}
+                <div className="hidden sm:block">
+                  <HeaderMenu
+                    onChangePassword={() => setChangingPassword(true)}
+                    onSignOut={handleSignOut}
+                    signingOut={signingOut}
+                  />
                 </div>
               </>
             )}
@@ -291,7 +310,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             vẫn còn, nằm trong sheet tài khoản. */}
         {user && (
           <footer className="safe-x hidden pt-1 pb-6 text-center text-xs text-slate-400 select-none sm:block">
-            {t(greeting, { name: user.display_name })}
+            {t(greeting, { name: displayName })}
           </footer>
         )}
       </div>
@@ -311,14 +330,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {accountOpen && user && (
         <Modal
-          title={user.display_name}
+          title={displayName}
           subtitle={user.email}
           width="max-w-md"
           onClose={() => setAccountOpen(false)}
         >
           <div className="space-y-1">
             <p className="px-1 pb-2 text-center text-xs text-slate-400 select-none">
-              {t(greeting, { name: user.display_name })}
+              {t(greeting, { name: displayName })}
             </p>
 
             <NavLink
@@ -347,6 +366,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <Activity className="h-5 w-5 text-slate-400" />
               {t('nav.status')}
             </NavLink>
+
+            {isAdmin && (
+              <NavLink
+                to="/accounts"
+                onClick={() => setAccountOpen(false)}
+                className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+              >
+                <UserCog className="h-5 w-5 text-slate-400" />
+                {t('nav.accounts')}
+              </NavLink>
+            )}
 
             <button
               type="button"

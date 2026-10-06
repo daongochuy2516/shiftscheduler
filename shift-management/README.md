@@ -1,4 +1,4 @@
-# Lịch Ca Làm Việc
+# Thinkmay Team Board
 
 Ứng dụng xếp ca nội bộ cho nhân viên. React + Vite + TypeScript + Tailwind, backend là Supabase (Postgres + Auth + Realtime).
 
@@ -68,6 +68,7 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/004_template_colors.sql` | Cột `shift_templates.color` — màu cho ca mẫu |
 | `supabase/005_attendance.sql` | Chấm công: cột `profiles.role`, `shift_assignments.confirmed_at` và các trigger luật điểm danh ([mục 8b](#8b-chấm-công-và-tính-công)) |
 | `supabase/006_shift_rules.sql` | Nhân viên chỉ thao tác phần của mình: rời ca trong 30 phút, không thêm / sửa / gỡ người khác, không sửa / xoá ca có người khác ([mục 8b](#8b-chấm-công-và-tính-công)). Cần 005 trước; thay luật "ca tạo quá 30 phút không xoá được" của 005 |
+| `supabase/007_accounts.sql` | Trang Tài khoản: cột `profiles.displayed` (hiện / ẩn trên bảng), admin sửa được mọi tài khoản, người khác không sửa được ([mục 11](#trang-tài-khoản)). Cần 005 trước |
 
 Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký. Chưa chạy 005 thì không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước.
 
@@ -95,7 +96,7 @@ Vài điểm cần biết:
 - Nếu bạn dán một đường dẫn sâu (ví dụ `/pending`) khi chưa đăng nhập, hệ thống ghi nhớ và **đưa bạn về đúng trang đó** sau khi đăng nhập xong.
 - Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
 
-**Đăng xuất**: bấm biểu tượng ↪ ở góc phải trên cùng, cạnh tên bạn. Bạn sẽ được đưa về trang đăng nhập ngay.
+**Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Bạn sẽ được đưa về trang đăng nhập ngay.
 
 ### Quên mật khẩu
 
@@ -107,7 +108,7 @@ Cố ý làm vậy: bật tính năng gửi email đặt lại mật khẩu củ
 
 ### Đổi mật khẩu
 
-Bấm biểu tượng **chìa khoá 🔑** ở góc phải trên cùng, ngay bên trái nút đăng xuất.
+Bấm nút lưới ở góc phải trên cùng rồi chọn **Đổi mật khẩu** (điện thoại: bấm avatar).
 
 Form gồm ba ô: **Mật khẩu hiện tại**, **Mật khẩu mới**, **Nhập lại mật khẩu mới**. Có nút *Hiện mật khẩu* để soi lại nếu gõ nhầm.
 
@@ -140,12 +141,15 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Ca của tôi** | Chỉ những ca bạn được phân công |
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
+| **Tài khoản** | Chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng ([mục 11](#trang-tài-khoản)) |
 | **VI / EN** | Đổi ngôn ngữ giao diện |
 | **Tạo ca** (nút xanh) | Mở form tạo ca mới, mặc định là **hôm nay** |
-| 🔔 | Ngăn thông báo, kèm số thông báo chưa đọc ([mục 9c](#9c-thông-báo)) |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng 4 ô: **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Đổi mật khẩu**, **Đăng xuất** |
 | Avatar + tên | Tài khoản đang đăng nhập |
-| 🔑 | Đổi mật khẩu |
-| ↪ | Đăng xuất |
+
+Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng, còn giao diện, đổi mật khẩu, đăng xuất nằm trong bảng mở ra khi bấm avatar.
+
+Màn hình chưa đủ rộng để xếp cả hàng (dưới khoảng 1480px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn.
 
 > Con số màu vàng cạnh chữ "Chờ xác nhận" chỉ đếm **các lượt phân công của riêng bạn** đang chờ xác nhận. Ca của người khác không tính vào đây — mở trang *Chờ xác nhận* rồi bỏ tích *Chỉ ca của tôi* để xem của cả nhóm.
 
@@ -539,7 +543,7 @@ Mọi thao tác ghi dữ liệu — tạo / lưu / xoá ca, nhận ca, rời ca,
 
 Rê chuột vào popup thì nó dừng đếm giờ. Bấm **✕** chỉ ẩn popup — thông báo vẫn nằm trong ngăn. Bấm vào nội dung popup thì mở ngăn thông báo.
 
-**Ngăn thông báo** (nút 🔔 trên thanh trên cùng; số đỏ là số chưa đọc). Giống Action Center của Windows: trượt ra từ mép phải, thông báo nhóm theo ngày, mới nhất ở trên.
+**Ngăn thông báo** (nút lưới → **Thông báo**; trên điện thoại là nút 🔔. Số đỏ là số chưa đọc). Giống Action Center của Windows: trượt ra từ mép phải, thông báo nhóm theo ngày, mới nhất ở trên.
 
 | Thao tác | Cách làm |
 | --- | --- |
@@ -570,6 +574,7 @@ Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt
 | `/my-shifts` | Ca của tôi |
 | `/pending` | Chờ xác nhận |
 | `/logs` | Nhật ký thao tác |
+| `/accounts` | Tài khoản (chỉ admin; người khác bị đưa về `/`) |
 | `/login` | Đăng nhập |
 
 Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình bạn đang xem**.
@@ -617,7 +622,7 @@ Trigger `handle_new_user` tự tạo dòng tương ứng trong bảng `profiles`
 1. Supabase Dashboard → **Authentication → Users**.
 2. Tìm tài khoản → menu `···` → **Reset password** (hoặc sửa trực tiếp mật khẩu).
 3. Gửi mật khẩu tạm cho nhân viên qua kênh nội bộ.
-4. Nhắc họ tự đổi lại bằng nút **chìa khoá 🔑** sau khi đăng nhập.
+4. Nhắc họ tự đổi lại bằng mục **Đổi mật khẩu** (nút lưới) sau khi đăng nhập.
 
 ### Phong admin
 
@@ -632,6 +637,25 @@ Người được phong cần tải lại trang để giao diện nhận vai tr�
 Việc của admin khi nhân viên quên điểm danh: mở trang **Chờ xác nhận**, bỏ tích *Chỉ ca của tôi*, bấm **✓ Xác nhận** trên lượt của người đó.
 
 > Nếu timeline báo *"Chưa có tài khoản nhân viên"* thì bảng `profiles` đang rỗng — hãy tạo tài khoản trước khi phân ca.
+
+### Trang Tài khoản
+
+Chỉ admin thấy mục **Tài khoản** trên thanh điều hướng (mobile: trong sheet tài khoản). Người khác mở thẳng `/accounts` sẽ bị đưa về trang Lịch. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
+
+Mỗi dòng là một tài khoản, kèm email và vai trò:
+
+| Thao tác | Cách làm |
+| --- | --- |
+| Đổi tên hiển thị | Sửa ô tên — **tự lưu** khi rời ô hoặc bấm Enter. **Esc** trả lại tên đang lưu. Để trống thì tên cũ được giữ nguyên |
+| Hiện / ẩn trên bảng | Bấm công tắc **Đang hiện / Đang ẩn** — **tự lưu** ngay |
+
+Không có nút Lưu. Mỗi lần lưu báo bằng [thông báo](#9c-thông-báo); lỗi thì ô quay về giá trị cũ.
+
+**Ẩn** dành cho tài khoản chỉ vào để xem, ví dụ quản lý xem tổng: người đang ẩn không hiện trên Lịch ngày / tuần, Tổng kết, ô chọn nhân viên trong form ca và bộ lọc ở trang Tất cả ca. Họ vẫn đăng nhập và dùng web bình thường. Nếu người đang ẩn **có ca** trong khoảng đang xem thì dòng của họ vẫn hiện — ẩn người không làm mất ca. Nhật ký vẫn liệt kê họ khi lọc theo người.
+
+Đổi email hay vai trò không làm ở đây: email theo tài khoản đăng nhập, vai trò đổi trong SQL Editor (mục trên).
+
+Database chặn thật: chỉ admin sửa được tên hiển thị và hiện / ẩn, của bất kỳ ai. Người khác — kể cả sửa dòng của chính mình, kể cả gọi thẳng Supabase API — bị từ chối với *Bạn không có quyền sửa tài khoản.* Thay đổi ở trang này không ghi vào Nhật ký.
 
 ### Thiết lập Auth cần thiết
 

@@ -70,7 +70,7 @@ function rangeOf(days: Date[]): { from: string; to: string } {
  */
 export function SummaryPage() {
   const [params, setParams] = useSearchParams()
-  const { profiles, loading, error } = useSchedule()
+  const { profiles, rosterProfiles, loading, error } = useSchedule()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
   const [includeEmptyStaff, setIncludeEmptyStaff] = useState(false)
@@ -282,7 +282,7 @@ export function SummaryPage() {
             rows={rows}
             minutesByDate={minutesByDate}
             totalMinutes={totals.minutes}
-            profileCount={profiles.length}
+            profileCount={rosterProfiles.length}
             currentUserId={user?.id ?? null}
             dense={view === 'month'}
           />

@@ -4,6 +4,7 @@ import type {
   ActionLogQuery,
   AssignmentInput,
   Profile,
+  ProfileInput,
   Shift,
   ShiftAssignment,
   ShiftDateBounds,
@@ -39,6 +40,12 @@ interface Snapshot {
   assignments: ShiftAssignment[]
   templates: ShiftTemplate[]
   logs: ActionLog[]
+  /**
+   * Tài khoản mẫu là hằng số (MOCK_PROFILES, dùng chung với đăng nhập mock);
+   * phần admin đã sửa ở trang Tài khoản nằm ở đây, ghép lên khi đọc. Tuỳ
+   * chọn để dữ liệu đã lưu từ bản cũ vẫn đọc được.
+   */
+  profileEdits?: Record<UUID, ProfileInput>
 }
 
 function seed(): Snapshot {
@@ -347,10 +354,26 @@ function involves(row: ActionLog, id: UUID): boolean {
 export const mockBackend: SchedulerBackend = {
   listProfiles(): Promise<Profile[]> {
     return delay(
-      [...MOCK_PROFILES].sort((a, b) =>
-        a.display_name.localeCompare(b.display_name),
+      MOCK_PROFILES.map((p) => ({ ...p, ...state.profileEdits?.[p.id] })).sort(
+        (a, b) => a.display_name.localeCompare(b.display_name),
       ),
     )
+  },
+
+  async updateProfile(id: UUID, input: ProfileInput) {
+    // Bản sao của 007_accounts.sql: chỉ admin, tên không được trống.
+    if (currentMockProfile()?.role !== 'admin') {
+      throw new Error('Bạn không có quyền sửa tài khoản.')
+    }
+    if (input.display_name.trim() === '') {
+      throw new Error('Tên hiển thị không được để trống.')
+    }
+    if (!MOCK_PROFILES.some((p) => p.id === id)) {
+      throw new Error('Bạn không có quyền sửa tài khoản.')
+    }
+    state.profileEdits = { ...state.profileEdits, [id]: input }
+    persist()
+    await delay(null)
   },
 
   listShifts(query: ShiftQuery): Promise<ShiftWithAssignments[]> {

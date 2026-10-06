@@ -20,6 +20,7 @@ import { useSchedule } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { useNotify } from '../notifications/NotificationContext'
+import { isListed } from '../lib/profiles'
 import {
   deleteBlock,
   hasOthers,
@@ -126,8 +127,14 @@ export function ShiftModal({
   highlightAssignmentId?: UUID | null
   onClose: () => void
 }) {
-  const { profiles, createShift, updateShift, deleteShift, setAssignmentStatus } =
-    useSchedule()
+  const {
+    profiles,
+    rosterProfiles,
+    createShift,
+    updateShift,
+    deleteShift,
+    setAssignmentStatus,
+  } = useSchedule()
   const { t } = useI18n()
   const isEdit = shift !== null
   /**
@@ -203,8 +210,8 @@ export function ShiftModal({
     [rows],
   )
   const availableProfiles = useMemo(
-    () => profiles.filter((p) => !usedUserIds.has(p.id)),
-    [profiles, usedUserIds],
+    () => rosterProfiles.filter((p) => !usedUserIds.has(p.id)),
+    [rosterProfiles, usedUserIds],
   )
 
   function patchRow(key: string, patch: Partial<Row>) {
@@ -759,7 +766,13 @@ export function ShiftModal({
                                     patchRow(row.key, { user_id: e.target.value })
                                   }
                                 >
-                                  {profiles.map((p) => (
+                                  {/* Người đang ẩn không có trong danh sách chọn,
+                                      trừ khi đã nằm sẵn trên dòng này. */}
+                                  {profiles
+                                    .filter(
+                                      (p) => isListed(p) || p.id === row.user_id,
+                                    )
+                                    .map((p) => (
                                     <option
                                       key={p.id}
                                       value={p.id}
@@ -769,7 +782,7 @@ export function ShiftModal({
                                     >
                                       {p.display_name}
                                     </option>
-                                  ))}
+                                    ))}
                                 </select>
                               </div>
                             </div>
