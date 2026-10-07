@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  Activity,
   Bell,
   Grip,
   KeyRound,
@@ -14,6 +15,8 @@ import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { useNotifications } from '../notifications/NotificationContext'
 import { useTheme, type ThemePref } from '../theme/ThemeContext'
+import { useExitAnimation } from './useExitAnimation'
+import { useTwoStep } from './useTwoStep'
 
 const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
   { id: 'system', icon: Monitor, label: 'theme.systemShort' },
@@ -23,8 +26,8 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
 
 /**
  * Nút lưới trên header PC, kiểu trình mở ứng dụng của Google: gom trang Tài
- * khoản (chỉ admin), thông báo, giao diện, đổi mật khẩu và đăng xuất vào một
- * ô lưới, để header đỡ chật. Số thông báo chưa đọc hiện ngay trên nút.
+ * khoản (chỉ admin), thông báo, giao diện, trang Trạng thái, đổi mật khẩu và
+ * đăng xuất vào một ô lưới, để header đỡ chật. Số thông báo chưa đọc hiện ngay trên nút.
  *
  * Mobile không dùng: ở đó đã có nút chuông và sheet tài khoản.
  */
@@ -43,6 +46,8 @@ export function HeaderMenu({
   const { pref, setPref } = useTheme()
   const { unreadCount, setCenterOpen } = useNotifications()
   const navigate = useNavigate()
+  // Đăng xuất phải bấm hai lần: lỡ tay một lần là mất phiên đang làm.
+  const signOut = useTwoStep(onSignOut)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -76,7 +81,10 @@ export function HeaderMenu({
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v)
+          signOut.reset()
+        }}
         aria-label={
           unreadCount > 0
             ? `${t('menu.label')} · ${t('notif.unread', { count: unreadCount })}`
@@ -98,19 +106,9 @@ export function HeaderMenu({
       </button>
 
       {open && (
-        <div
-          role="menu"
-          aria-label={t('menu.label')}
-          // Admin có 5 ô: ba cột cho đỡ dài. Còn lại 4 ô: 2×2 cho vuông.
-          className={`absolute top-full right-0 z-50 mt-2 rounded-3xl bg-slate-100 p-2 shadow-xl ring-1 ring-slate-900/10 ${
-            isAdmin ? 'w-96' : 'w-72'
-          }`}
-        >
-          <div
-            className={`grid gap-1 rounded-2xl bg-white p-2 ${
-              isAdmin ? 'grid-cols-3' : 'grid-cols-2'
-            }`}
-          >
+        <MenuPanel label={t('menu.label')}>
+          {/* Admin 6 ô (3×2), nhân viên 5 ô. */}
+          <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-2">
             {isAdmin && (
               <Tile
                 icon={UserCog}
@@ -140,6 +138,12 @@ export function HeaderMenu({
               onClick={() => setPref(nextTheme.id)}
             />
             <Tile
+              icon={Activity}
+              tone="bg-emerald-50 text-emerald-600"
+              label={t('nav.status')}
+              onClick={() => run(() => navigate('/status'))}
+            />
+            <Tile
               icon={KeyRound}
               tone="bg-amber-50 text-amber-600"
               label={t('pwd.title')}
@@ -149,12 +153,35 @@ export function HeaderMenu({
               icon={LogOut}
               tone="bg-rose-50 text-rose-600"
               label={t('auth.signOut')}
+              sub={signOut.armed ? t('auth.signOutAgain') : undefined}
+              alert={signOut.armed}
               disabled={signingOut}
-              onClick={() => run(onSignOut)}
+              onClick={signOut.press}
             />
           </div>
-        </div>
+        </MenuPanel>
       )}
+    </div>
+  )
+}
+
+/**
+ * Khung bảng menu. Tách riêng để có hiệu ứng: mở thì xổ ra từ góc nút
+ * (`menu-panel` trong index.css), đóng thì useExitAnimation để lại bản sao
+ * thu gọn lại. Bảng nằm canh theo nút chứ không phủ màn hình, nên bản sao
+ * phải giữ đúng vị trí (`freezePosition`).
+ */
+function MenuPanel({ label, children }: { label: string; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useExitAnimation(ref, 200, { freezePosition: true })
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label={label}
+      className="menu-panel absolute top-full right-0 z-50 mt-2 w-96 rounded-3xl bg-slate-100 p-2 shadow-xl ring-1 ring-slate-900/10"
+    >
+      {children}
     </div>
   )
 }
@@ -167,6 +194,7 @@ function Tile({
   badge,
   title,
   disabled,
+  alert = false,
   onClick,
 }: {
   icon: typeof Sun
@@ -177,6 +205,8 @@ function Tile({
   badge?: string | null
   title?: string
   disabled?: boolean
+  /** Đang chờ bấm lần hai để xác nhận: đổi sang nền đỏ cho khó bỏ qua. */
+  alert?: boolean
   onClick: () => void
 }) {
   return (
@@ -186,10 +216,14 @@ function Tile({
       title={title}
       disabled={disabled}
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition hover:bg-slate-100 disabled:opacity-50"
+      className={`flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition disabled:opacity-50 ${
+        alert ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-slate-100'
+      }`}
     >
       <span
-        className={`relative flex h-11 w-11 items-center justify-center rounded-full ${tone}`}
+        className={`relative flex h-11 w-11 items-center justify-center rounded-full ${
+          alert ? 'bg-rose-600 text-white' : tone
+        }`}
       >
         <Icon className="h-5 w-5" />
         {badge && (
@@ -201,7 +235,15 @@ function Tile({
       <span className="text-sm leading-tight font-medium text-slate-800">
         {label}
       </span>
-      {sub && <span className="-mt-1 text-xs text-slate-500">{sub}</span>}
+      {sub && (
+        <span
+          className={`-mt-1 text-xs ${
+            alert ? 'font-medium text-rose-600' : 'text-slate-500'
+          }`}
+        >
+          {sub}
+        </span>
+      )}
     </button>
   )
 }

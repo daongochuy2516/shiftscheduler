@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { scrollRoot } from '../lib/scrollRoot'
+import { useExitAnimation } from './useExitAnimation'
 
 /**
  * Hộp thoại chung.
@@ -27,6 +28,11 @@ export function Modal({
   footer?: ReactNode
   width?: string
 }) {
+  // Mở: CSS chạy hiệu ứng khi mount (`modal-backdrop`, `modal-panel` trong
+  // index.css). Đóng: xem useExitAnimation.
+  const rootRef = useRef<HTMLDivElement>(null)
+  useExitAnimation(rootRef, 260)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -47,6 +53,7 @@ export function Modal({
 
   return (
     <div
+      ref={rootRef}
       className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto sm:items-start sm:p-6"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
@@ -57,13 +64,13 @@ export function Modal({
           sẽ lộ nền trắng của trang. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 h-[calc(100lvh+10rem)] bg-slate-900/40 backdrop-blur-[2px] dark:bg-black/60"
+        className="modal-backdrop pointer-events-none fixed inset-x-0 top-0 h-[calc(100lvh+10rem)] bg-slate-900/40 backdrop-blur-[2px] dark:bg-black/60"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 sm:my-auto sm:max-h-[calc(100dvh-6rem)] sm:rounded-xl ${width}`}
+        className={`modal-panel relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 sm:my-auto sm:max-h-[calc(100dvh-6rem)] sm:rounded-xl ${width}`}
       >
         {/* Tay nắm: dấu hiệu quen thuộc cho biết đây là tấm kéo từ đáy lên. */}
         <div className="flex justify-center pt-2 pb-1 sm:hidden">

@@ -42,6 +42,7 @@ export const en = {
   'auth.signIn': 'Sign in',
   'auth.signingIn': 'Signing in…',
   'auth.signOut': 'Sign out',
+  'auth.signOutAgain': 'Tap again to sign out',
   'auth.invalidCredentials': 'Invalid email or password.',
   'auth.mockMode': 'Mock mode',
   'auth.mockHint': 'Any seeded staff email works with the password {{password}}:',
@@ -554,6 +555,7 @@ export const vi: Record<DictKey, string> = {
   'auth.signIn': 'Đăng nhập',
   'auth.signingIn': 'Đang đăng nhập…',
   'auth.signOut': 'Đăng xuất',
+  'auth.signOutAgain': 'Bấm lần nữa để đăng xuất',
   'auth.invalidCredentials': 'Email hoặc mật khẩu không đúng.',
   'auth.mockMode': 'Chế độ dữ liệu mẫu',
   'auth.mockHint':
@@ -903,7 +905,8 @@ export const vi: Record<DictKey, string> = {
   'accounts.shown': 'Đang hiện',
   'accounts.hidden': 'Đang ẩn',
   'accounts.roleAdmin': 'Admin',
-  'accounts.roleStaff': 'Nhân viên',
+  // Nhãn vai trò giữ nguyên tiếng Anh ở cả hai ngôn ngữ (Admin / Staff).
+  'accounts.roleStaff': 'Staff',
   'accounts.notInstalled': 'Chưa cài đặt tính năng tài khoản',
   'accounts.notInstalledHint':
     'Chạy supabase/007_accounts.sql trong SQL Editor của Supabase để sửa được.',

@@ -30,6 +30,8 @@ import { Modal } from './Modal'
 import { useShiftEditor } from './ShiftEditorProvider'
 import { ThemeSegmented } from './ThemeMenu'
 import { HeaderMenu } from './HeaderMenu'
+import { useTwoStep } from './useTwoStep'
+import { RoleBadge } from './RoleBadge'
 import { APP_NAME } from '../lib/brand'
 
 const NAV: {
@@ -44,8 +46,8 @@ const NAV: {
   { to: '/my-shifts', label: 'nav.myShifts', icon: User, end: false },
   { to: '/pending', label: 'nav.pending', icon: Clock3, end: false },
   { to: '/logs', label: 'nav.actionLog', icon: ScrollText, end: false },
-  { to: '/status', label: 'nav.status', icon: Activity, end: false },
-  // Trang Tài khoản (admin) không nằm ở đây mà trong nút lưới (HeaderMenu).
+  // Trạng thái và Tài khoản (admin) không nằm ở đây mà trong nút lưới
+  // (HeaderMenu), cho thanh điều hướng đỡ dài.
 ]
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -87,6 +89,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [signingOut, setSigningOut] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const signOutStep = useTwoStep(handleSignOut)
   const [greeting, setGreeting] = useState<TranslationKey>(greetingKey)
 
   // Keeps the greeting honest on a tab left open across a boundary. Setting
@@ -158,12 +161,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
           {/* Điều hướng trên chỉ dành cho màn hình rộng. Dưới 640px việc này do
               thanh dưới đảm nhiệm, header giữ gọn theo quy tắc app bar.
 
-              Đủ chữ cả hàng thì cần ~1350px. Hẹp hơn thì không bỏ bớt gì mà
+              Đủ chữ cả hàng thì cần ~1290px (admin, tiếng Anh). Hẹp hơn thì không bỏ bớt gì mà
               xếp lại: dòng trên là logo + cụm nút, dòng dưới là dải tab chạy
               hết chiều ngang (quá hẹp thì dải tab tự chia hai hàng). Để mặc
               flex-wrap thì cụm nút bên phải rơi xuống lẻ loi một mình. Đổi
-              mục điều hướng hay nút trên header thì đo lại mốc 1380px. */}
-          <nav className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1380px]:order-none min-[1380px]:mx-0 min-[1380px]:w-auto min-[1380px]:flex-nowrap">
+              mục điều hướng hay nút trên header thì đo lại mốc 1320px. */}
+          <nav className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1320px]:order-none min-[1320px]:mx-0 min-[1320px]:w-auto min-[1320px]:flex-nowrap">
             {NAV.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
@@ -246,7 +249,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     avatar + email + hai nút icon nhỏ. */}
                 <button
                   type="button"
-                  onClick={() => setAccountOpen(true)}
+                  onClick={() => {
+                    setAccountOpen(true)
+                    signOutStep.reset()
+                  }}
                   aria-label={t('nav.account')}
                   className="flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-slate-100 sm:hidden"
                 >
@@ -256,8 +262,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <div className="hidden items-center gap-2 border-l border-slate-200 pl-2 sm:flex">
                   <Avatar name={displayName} seed={user.id} size="sm" />
                   <div className="hidden leading-tight md:block">
-                    <p className="text-sm font-medium text-slate-800">
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
                       {displayName}
+                      <RoleBadge role={user.role} />
                     </p>
                     <p className="text-[11px] text-slate-500">{user.email}</p>
                   </div>
@@ -418,14 +425,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {/* Đăng xuất tách khỏi nhóm trên và dùng màu cảnh báo: nó đưa người
                 dùng ra khỏi ứng dụng, không nên nằm lẫn với các mục thường. */}
             <div className="border-t border-slate-100 pt-1">
+              {/* Bấm hai lần mới đăng xuất, giống ô Đăng xuất trên PC. */}
               <button
                 type="button"
-                onClick={handleSignOut}
+                onClick={signOutStep.press}
                 disabled={signingOut}
-                className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-rose-600 transition active:bg-rose-50 disabled:opacity-50"
+                className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm text-rose-600 transition disabled:opacity-50 ${
+                  signOutStep.armed
+                    ? 'bg-rose-50 font-semibold ring-1 ring-rose-200'
+                    : 'font-medium active:bg-rose-50'
+                }`}
               >
                 <LogOut className="h-5 w-5" />
-                {t('auth.signOut')}
+                {signOutStep.armed
+                  ? t('auth.signOutAgain')
+                  : t('auth.signOut')}
               </button>
             </div>
           </div>

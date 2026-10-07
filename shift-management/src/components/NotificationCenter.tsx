@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   differenceInMinutes,
   format,
@@ -20,6 +20,7 @@ import {
 import { useI18n } from '../i18n/I18nContext'
 import { scrollRoot } from '../lib/scrollRoot'
 import { toDateKey } from '../lib/time'
+import { useExitAnimation } from './useExitAnimation'
 import {
   useNotifications,
   type AppNotification,
@@ -57,6 +58,9 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
   const { t, dateLocale } = useI18n()
   const { items, unreadCount, setRead, markAllRead, remove, clearAll } =
     useNotifications()
+
+  const rootRef = useRef<HTMLDivElement>(null)
+  useExitAnimation(rootRef, 260)
 
   // Giờ tương đối ("5 phút trước") phải tự nhích khi ngăn đang mở.
   const [now, setNow] = useState(() => new Date())
@@ -110,17 +114,17 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
     'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-40 sm:min-h-0 sm:py-1.5'
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div ref={rootRef} className="fixed inset-0 z-50">
       <div
         aria-hidden="true"
         onMouseDown={onClose}
-        className="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px] dark:bg-black/50"
+        className="modal-backdrop absolute inset-0 bg-slate-900/30 backdrop-blur-[1px] dark:bg-black/50"
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={t('notif.title')}
-        className="drawer-in absolute inset-y-0 right-0 flex w-full flex-col bg-slate-50 shadow-2xl ring-1 ring-slate-900/10 sm:w-[24rem]"
+        className="drawer-panel absolute inset-y-0 right-0 flex w-full flex-col bg-slate-50 shadow-2xl ring-1 ring-slate-900/10 sm:w-[24rem]"
       >
         <header
           className="flex items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3"

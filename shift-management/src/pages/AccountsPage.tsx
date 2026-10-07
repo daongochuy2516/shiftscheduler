@@ -10,6 +10,7 @@ import { useNotify } from '../notifications/NotificationContext'
 import { isListed } from '../lib/profiles'
 import { Avatar } from '../components/Avatar'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { RoleBadge } from '../components/RoleBadge'
 
 const inputClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500'
@@ -227,21 +228,5 @@ function AccountRow({
         {listed ? t('accounts.shown') : t('accounts.hidden')}
       </button>
     </li>
-  )
-}
-
-function RoleBadge({ role }: { role: Profile['role'] }) {
-  const { t } = useI18n()
-  if (role === null) return null
-  return (
-    <span
-      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
-        role === 'admin'
-          ? 'bg-violet-50 text-violet-700 ring-violet-200'
-          : 'bg-slate-100 text-slate-600 ring-slate-200'
-      }`}
-    >
-      {role === 'admin' ? t('accounts.roleAdmin') : t('accounts.roleStaff')}
-    </span>
   )
 }

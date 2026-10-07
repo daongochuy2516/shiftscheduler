@@ -82,6 +82,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Mốc mobile/desktop là `sm` (640px). Dưới mốc: `BottomNav`, nút nổi, `Modal` thành bottom sheet, vùng chạm tối thiểu 44px. Từ mốc trở lên giao diện PC không được đổi theo khi sửa mobile.
 - Từ 640px nội dung cuộn trong `#app-scroll`, không phải `window`. Cần gốc cuộn (IntersectionObserver, `scrollTo`) thì dùng `scrollRoot()`.
 - Hộp thoại dùng `components/Modal.tsx`; mở form ca bằng `useShiftEditor()`; màu ca lấy từ `useShiftColor()`.
+- Hiệu ứng mở / đóng của `Modal` và ngăn thông báo nằm trong `index.css` (`modal-backdrop`, `modal-panel`, `drawer-panel`, `.is-leaving`). Đóng không cần chờ ở chỗ gọi: `useExitAnimation` để lại một bản sao tĩnh chạy hiệu ứng rồi xoá. Lớp phủ tự làm thì dùng lại hook này thay vì tự giữ state "đang đóng".
 - Kết quả của thao tác ghi (thành công, hay lỗi máy chủ trả về) báo qua `useNotify()` — `success(key, params, body)` / `error(key, err, params)` — không thêm dòng xanh/đỏ trong form. Lỗi giữ form mở, thành công thì đóng. Tiêu đề lưu dạng khoá `t()` (`notif.*`), `body` là chuỗi thô nên đừng đưa chữ phụ thuộc ngôn ngữ vào đó. Lỗi nhập liệu từng ô vẫn hiện tại chỗ.
 - Khoá `localStorage` của theme (`scheduler.theme`) lặp lại trong script chống nháy ở `index.html` — đổi một chỗ phải đổi cả hai.
 
