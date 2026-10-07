@@ -69,6 +69,7 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/005_attendance.sql` | Chấm công: cột `profiles.role`, `shift_assignments.confirmed_at` và các trigger luật điểm danh ([mục 8b](#8b-chấm-công-và-tính-công)) |
 | `supabase/006_shift_rules.sql` | Nhân viên chỉ thao tác phần của mình: rời ca trong 30 phút, không thêm / sửa / gỡ người khác, không sửa / xoá ca có người khác ([mục 8b](#8b-chấm-công-và-tính-công)). Cần 005 trước; thay luật "ca tạo quá 30 phút không xoá được" của 005 |
 | `supabase/007_accounts.sql` | Trang Tài khoản: cột `profiles.displayed` (hiện / ẩn trên bảng), admin sửa được mọi tài khoản, người khác không sửa được ([mục 11](#trang-tài-khoản)). Cần 005 trước |
+| `supabase/008_template_admin.sql` | Chỉ admin tạo / sửa / bật-tắt / xoá ca mẫu; nhân viên vẫn nhận ca mẫu bình thường ([mục 7](#quản-lý-ca-mẫu)). Cần 002 và 005 trước |
 
 Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký. Chưa chạy 005 thì không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước.
 
@@ -344,7 +345,7 @@ Muốn đổi giờ sau khi nhận? Bấm vào khối của bạn trên timeline
 
 ### Quản lý ca mẫu
 
-Bấm **Quản lý ca mẫu** ở góc phải thanh ca mẫu.
+Bấm **Quản lý ca mẫu** ở góc phải thanh ca mẫu. **Chỉ admin** thấy nút này (cần chạy `supabase/008_template_admin.sql`): nhân viên chỉ nhận ca mẫu, không tạo, sửa, bật/tắt hay xoá được — database cũng chặn, gọi thẳng API sẽ nhận *Bạn không có quyền sửa ca mẫu.* Khi chưa có ca mẫu nào, nhân viên thấy dòng *Chưa có ca mẫu nào — admin sẽ tạo.*
 
 - **Tạo ca mẫu**: tiêu đề, giờ bắt đầu/kết thúc, ghi chú.
 - **Lặp vào**: chọn các thứ trong tuần. **Không chọn thứ nào = lặp mọi ngày.**
@@ -443,7 +444,7 @@ Trong form sửa ca, dòng đã điểm danh bị khoá kèm biểu tượng �
 
 Giờ tính theo **đồng hồ máy chủ, múi giờ Việt Nam** — chỉnh đồng hồ máy mình không có tác dụng. Mọi luật nằm trong trigger của database nên gọi thẳng Supabase API cũng không lách được; giao diện chỉ ẩn sẵn những gì database sẽ từ chối. Mọi can thiệp của admin đều vào [Nhật ký](#9b-nhật-ký-thao-tác).
 
-Chưa chặn ở bản này: nhân viên vẫn tạo/sửa được ca mẫu. Xem [roadmap.md](roadmap.md).
+Ca mẫu chỉ admin quản lý (sau khi chạy `008_template_admin.sql`, xem [mục 7](#quản-lý-ca-mẫu)). Phần còn chưa chặn: xem [roadmap.md](roadmap.md).
 
 ---
 
@@ -598,7 +599,27 @@ Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp
 | Bấm nền tối ngoài form | Đóng form |
 | Bấm khối / chip ca | Mở form sửa ca đó |
 | Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |
+| `Ctrl + K` (Mac: `⌘K`) | Mở / đóng **bảng tìm nhanh** (xem bên dưới) |
 | Bấm số ngày (Tháng) | Sang chế độ Ngày |
+
+### Tìm nhanh (Ctrl + K)
+
+Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avatar → **Tìm nhanh**). Gõ để lọc, **↑ ↓** để chọn, **Enter** để chạy, **Esc** để đóng. Gõ không dấu cũng được, tiếng Việt hay tiếng Anh đều tìm ra.
+
+| Gõ | Được |
+| --- | --- |
+| Tên trang: *lịch tuần*, *tổng kết*, *nhật ký*… | Đi tới trang đó (Lịch ngày / tuần / tháng, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản với admin) |
+| *tạo ca*, *thông báo*, *giao diện tối*, *ngôn ngữ*, *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó. Đăng xuất phải Enter hai lần |
+| Tên một người: *mai* | **Ca của Mai Le** — mở Tất cả ca, lọc sẵn theo người đó |
+| Phép tính: `12*3+4`, `(1+2)^3` | Kết quả — Enter để chép |
+| Giờ ± thời lượng: `08:00 + 4h30m`, `22:00 + 3h` | `12:30`, `01:00 (+1 ngày)` |
+| Giờ − giờ: `17:30 - 08:15` | `9h 15m` (kèm số phút). Giờ sau nhỏ hơn thì hiểu là qua đêm |
+| Thời lượng: `90m`, `1h30 + 45m`, `2 giờ 15 phút` | Đổi ra giờ + phút |
+| Ngày ± ngày / tuần: `hôm nay + 10 ngày`, `15/10 - 2w`, `ngày mai` | Ngày đó — Enter để mở lịch ngày đó |
+| Ngày − ngày: `20/12 - 15/10` | Số ngày giữa hai ngày |
+| `now + 90m` / `bây giờ + 2h` | Giờ và ngày lúc đó |
+
+Ngày viết `dd/mm`, `dd/mm/yyyy` hoặc `yyyy-mm-dd`; thiếu năm thì là năm nay. Đơn vị: `h` / `giờ`, `m` / `phút`, `d` / `ngày`, `w` / `tuần` (viết tiếng Anh cũng được).
 
 ---
 

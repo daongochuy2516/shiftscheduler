@@ -17,6 +17,7 @@ import type {
 } from '../types'
 import { currentMockProfile } from '../auth/mockAuth'
 import {
+  canManageTemplates,
   checkInWindow,
   deleteBlock,
   hasOthers,
@@ -172,6 +173,13 @@ const EDIT_OTHER_ERROR = 'Bạn không có quyền sửa lượt của người 
 
 function me(): UUID | null {
   return currentMockProfile()?.id ?? null
+}
+
+/** Bản sao trigger của 008: chỉ admin tạo / sửa / xoá ca mẫu. */
+function assertCanManageTemplates() {
+  if (!canManageTemplates(currentMockProfile())) {
+    throw new Error('Bạn không có quyền sửa ca mẫu.')
+  }
 }
 
 /** Gỡ một lượt khỏi ca (006, luật A và B). */
@@ -601,6 +609,7 @@ export const mockBackend: SchedulerBackend = {
   },
 
   async createTemplate(input: TemplateInput) {
+    assertCanManageTemplates()
     const now = new Date().toISOString()
     const created: ShiftTemplate = {
       id: uid('t'),
@@ -623,6 +632,7 @@ export const mockBackend: SchedulerBackend = {
   },
 
   async updateTemplate(id: UUID, input: TemplateInput) {
+    assertCanManageTemplates()
     const now = new Date().toISOString()
     const before = state.templates.find((t) => t.id === id)
     state.templates = state.templates.map((t) =>
@@ -656,6 +666,7 @@ export const mockBackend: SchedulerBackend = {
   },
 
   async deleteTemplate(id: UUID) {
+    assertCanManageTemplates()
     const before = state.templates.find((t) => t.id === id)
     state.templates = state.templates.filter((t) => t.id !== id)
     if (before) {

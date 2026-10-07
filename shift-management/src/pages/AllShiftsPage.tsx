@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays } from 'date-fns'
+import { useSearchParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useSchedule, useShiftChunks } from '../data/ScheduleContext'
 import { ShiftList } from '../components/ShiftList'
@@ -34,7 +35,21 @@ function earlierOf(a: string | null, b: string | null): string | null {
   return a < b ? a : b
 }
 
+/**
+ * `?staff=<id>` (có thể lặp lại) đặt sẵn bộ lọc nhân viên — bảng lệnh nhanh
+ * (Ctrl + K) dùng để mở "ca của một người". Chỉ là giá trị ban đầu: lọc tiếp
+ * trên trang không ghi ngược lại URL. `key` theo tham số để mở lại từ bảng
+ * lệnh khi đang đứng sẵn ở trang này vẫn áp bộ lọc mới.
+ */
 export function AllShiftsPage() {
+  const [params] = useSearchParams()
+  const staffIds = params.getAll('staff')
+  return (
+    <AllShiftsView key={staffIds.join('+')} initialStaffIds={staffIds} />
+  )
+}
+
+function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
   const {
     rosterProfiles,
     profilesById,
@@ -46,7 +61,10 @@ export function AllShiftsPage() {
   const { t } = useI18n()
   const [query, setQuery] = useState('')
   const [window, setWindow] = useState<Window>('upcoming')
-  const [filters, setFilters] = useState<ShiftFilters>(DEFAULT_SHIFT_FILTERS)
+  const [filters, setFilters] = useState<ShiftFilters>(() => ({
+    ...DEFAULT_SHIFT_FILTERS,
+    staffIds: initialStaffIds,
+  }))
   /** Số lát tháng đã tải theo chiều sắp xếp; cuộn tới đáy thì tăng. */
   const [chunkCount, setChunkCount] = useState(1)
 

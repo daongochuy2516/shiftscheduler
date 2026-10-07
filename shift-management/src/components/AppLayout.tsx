@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Activity,
   Bell,
   CalendarClock,
   CalendarDays,
@@ -12,8 +11,10 @@ import {
   LogOut,
   Plus,
   ScrollText,
+  Search,
   User,
   UserCog,
+  Wifi,
 } from 'lucide-react'
 import { ChangePasswordModal } from './ChangePasswordModal'
 import { useAuth } from '../auth/AuthContext'
@@ -30,6 +31,7 @@ import { Modal } from './Modal'
 import { useShiftEditor } from './ShiftEditorProvider'
 import { ThemeSegmented } from './ThemeMenu'
 import { HeaderMenu } from './HeaderMenu'
+import { CommandPalette } from './CommandPalette'
 import { useTwoStep } from './useTwoStep'
 import { RoleBadge } from './RoleBadge'
 import { APP_NAME } from '../lib/brand'
@@ -88,6 +90,25 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [params] = useSearchParams()
   const [signingOut, setSigningOut] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  // Ctrl + K (⌘K trên Mac) mở / đóng bảng lệnh nhanh ở bất cứ trang nào —
+  // kể cả khi đang gõ trong ô nhập: phím tắt này không gõ ra chữ gì.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === 'k'
+      ) {
+        e.preventDefault()
+        setPaletteOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const [accountOpen, setAccountOpen] = useState(false)
   const signOutStep = useTwoStep(handleSignOut)
   const [greeting, setGreeting] = useState<TranslationKey>(greetingKey)
@@ -361,7 +382,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <Activity className="h-5 w-5 text-slate-400" />
+              <Wifi className="h-5 w-5 text-slate-400" />
               {t('nav.status')}
             </NavLink>
 
@@ -375,6 +396,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {t('nav.accounts')}
               </NavLink>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setAccountOpen(false)
+                setPaletteOpen(true)
+              }}
+              className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <Search className="h-5 w-5 text-slate-400" />
+              {t('palette.title')}
+            </button>
 
             <button
               type="button"
@@ -448,6 +481,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {changingPassword && (
         <ChangePasswordModal onClose={() => setChangingPassword(false)} />
+      )}
+
+      {paletteOpen && (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          onCreateShift={() => openCreate(createDate)}
+          onChangePassword={() => setChangingPassword(true)}
+          onSignOut={handleSignOut}
+        />
       )}
     </div>
   )

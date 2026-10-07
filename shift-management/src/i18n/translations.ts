@@ -299,6 +299,7 @@ export const en = {
   'tpl.claimTitle': 'Claim {{title}} on this day',
   'tpl.claimedTitle': 'You already have this shift on this day',
   'tpl.empty': 'No templates yet.',
+  'tpl.emptyStaff': 'No shift templates yet — an admin creates them.',
   'tpl.emptyHint':
     'Templates are recurring shifts staff can claim without filling in a form.',
   'tpl.noneToday': 'No templates repeat on this day.',
@@ -383,6 +384,33 @@ export const en = {
   'nav.accounts': 'Accounts',
   'menu.label': 'Menu',
   'menu.themeNext': 'Switch to {{theme}}',
+  'menu.paletteHint': '{{keys}} — quick search & calculator',
+
+  // ---- command palette (Ctrl + K) ----
+  'palette.title': 'Quick search',
+  'palette.placeholder': 'Go to a page, run an action, or calculate…',
+  'palette.group.result': 'Result',
+  'palette.group.nav': 'Go to',
+  'palette.group.action': 'Actions',
+  'palette.group.staff': 'Staff',
+  'palette.weekView': 'Schedule — week',
+  'palette.monthView': 'Schedule — month',
+  'palette.theme': 'Theme: {{theme}}',
+  'palette.lang': 'Language: {{lang}}',
+  'palette.current': 'Current',
+  'palette.staffShifts': 'Shifts of {{name}}',
+  'palette.copy': 'Enter to copy',
+  'palette.copied': 'Copied',
+  'palette.openDay': 'Open this day',
+  'palette.days_one': '{{count}} day',
+  'palette.days_other': '{{count}} days',
+  'palette.minutes_one': '{{count}} minute',
+  'palette.minutes_other': '{{count}} minutes',
+  'palette.empty': 'Nothing found',
+  'palette.examples':
+    'Try: 08:00 + 4h30m · 17:30 - 08:15 · today + 7 days · 20/12 - 15/10 · 12*3+4',
+  'palette.hintMove': 'to move',
+  'palette.hintRun': 'to run',
 
   // ---- accounts (admin only) ----
   'accounts.title': 'Accounts',
@@ -809,6 +837,7 @@ export const vi: Record<DictKey, string> = {
   'tpl.claimTitle': 'Nhận ca {{title}} trong ngày này',
   'tpl.claimedTitle': 'Bạn đã có ca này trong ngày này',
   'tpl.empty': 'Chưa có ca mẫu nào.',
+  'tpl.emptyStaff': 'Chưa có ca mẫu nào — admin sẽ tạo.',
   'tpl.emptyHint':
     'Ca mẫu là những ca lặp lại mà nhân viên có thể nhận mà không cần điền biểu mẫu.',
   'tpl.noneToday': 'Không có ca mẫu nào lặp vào ngày này.',
@@ -891,6 +920,33 @@ export const vi: Record<DictKey, string> = {
   'nav.accounts': 'Tài khoản',
   'menu.label': 'Menu',
   'menu.themeNext': 'Chuyển sang {{theme}}',
+  'menu.paletteHint': '{{keys}} — tìm nhanh, tính nhanh',
+
+  // ---- command palette (Ctrl + K) ----
+  'palette.title': 'Tìm nhanh',
+  'palette.placeholder': 'Đi tới trang, chạy thao tác, hoặc tính nhanh…',
+  'palette.group.result': 'Kết quả',
+  'palette.group.nav': 'Đi tới',
+  'palette.group.action': 'Thao tác',
+  'palette.group.staff': 'Nhân viên',
+  'palette.weekView': 'Lịch tuần',
+  'palette.monthView': 'Lịch tháng',
+  'palette.theme': 'Giao diện: {{theme}}',
+  'palette.lang': 'Ngôn ngữ: {{lang}}',
+  'palette.current': 'Đang dùng',
+  'palette.staffShifts': 'Ca của {{name}}',
+  'palette.copy': 'Enter để chép',
+  'palette.copied': 'Đã chép',
+  'palette.openDay': 'Mở ngày này',
+  'palette.days_one': '{{count}} ngày',
+  'palette.days_other': '{{count}} ngày',
+  'palette.minutes_one': '{{count}} phút',
+  'palette.minutes_other': '{{count}} phút',
+  'palette.empty': 'Không tìm thấy gì',
+  'palette.examples':
+    'Thử: 08:00 + 4h30m · 17:30 - 08:15 · hôm nay + 7 ngày · 20/12 - 15/10 · 12*3+4',
+  'palette.hintMove': 'chọn',
+  'palette.hintRun': 'chạy',
 
   // ---- accounts (admin only) ----
   'accounts.title': 'Tài khoản',

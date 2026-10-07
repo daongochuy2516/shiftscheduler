@@ -20,6 +20,15 @@ export const CHECK_IN_LEAD_MIN = 30
 export const LEAVE_GRACE_MIN = 30
 
 /**
+ * Ai được tạo / sửa / xoá ca mẫu (008_template_admin.sql). Nhân viên chỉ
+ * nhận ca mẫu. `role` null (005 chưa chạy) thì database không chặn, nên giao
+ * diện cũng không.
+ */
+export function canManageTemplates(user: Pick<Profile, 'role'> | null): boolean {
+  return !isRestricted(user)
+}
+
+/**
  * Luật chỉ áp cho `staff`. Admin được miễn; `role` là `null` nghĩa là
  * migration 005 chưa chạy, database không chặn gì nên giao diện cũng không.
  */

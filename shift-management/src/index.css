@@ -398,6 +398,14 @@ body {
 .toast-in {
   animation: toast-in 180ms ease-out;
 }
+/* Bảng lệnh nhanh (Ctrl + K) bật ra ở mọi cỡ màn hình — nó nằm trên cao, không
+   phải bottom sheet như Modal trên mobile. */
+.palette-panel {
+  animation: pop-in 200ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.is-leaving .palette-panel {
+  animation: pop-out 140ms ease-in forwards;
+}
 /* Bảng menu xổ ra từ góc trên bên phải — chỗ có nút lưới. */
 .menu-panel {
   transform-origin: top right;
@@ -437,6 +445,7 @@ body {
   .modal-panel,
   .drawer-panel,
   .menu-panel,
+  .palette-panel,
   .toast-in {
     animation: none;
   }

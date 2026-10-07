@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { templateColor } from '../lib/colors'
 import { formatRange, toDateKey } from '../lib/time'
+import { canManageTemplates } from '../lib/attendance'
 import { ClaimTemplateModal } from './ClaimTemplateModal'
 import { TemplateManagerModal } from './TemplateManagerModal'
 
@@ -19,6 +20,8 @@ export function TemplateBar({ date }: { date: Date }) {
   const { user } = useAuth()
   const { templates, templatesAvailable } = useSchedule()
   const [managing, setManaging] = useState(false)
+  // Nhân viên chỉ nhận ca mẫu; tạo / sửa / xoá là việc của admin (008).
+  const canManage = canManageTemplates(user)
   const [claimTarget, setClaimTarget] = useState<ShiftTemplate | null>(null)
 
   const dateKey = toDateKey(date)
@@ -69,17 +72,23 @@ export function TemplateBar({ date }: { date: Date }) {
           <p className="hidden text-xs text-slate-500 sm:block">
             {t('tpl.sectionHint')}
           </p>
-          <button
-            type="button"
-            onClick={() => setManaging(true)}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            {t('tpl.manage')}
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => setManaging(true)}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              {t('tpl.manage')}
+            </button>
+          )}
         </div>
 
-        {templates.length === 0 ? (
+        {templates.length === 0 && !canManage ? (
+          <p className="px-1 py-2 text-sm text-slate-500">
+            {t('tpl.emptyStaff')}
+          </p>
+        ) : templates.length === 0 ? (
           <button
             type="button"
             onClick={() => setManaging(true)}
@@ -146,7 +155,9 @@ export function TemplateBar({ date }: { date: Date }) {
         />
       )}
 
-      {managing && <TemplateManagerModal onClose={() => setManaging(false)} />}
+      {managing && canManage && (
+        <TemplateManagerModal onClose={() => setManaging(false)} />
+      )}
     </>
   )
 }

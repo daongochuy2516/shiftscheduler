@@ -6,11 +6,12 @@ Trạng thái hiện tại của ứng dụng nằm ở [README.md](README.md).
 
 **Đã làm** trong `supabase/006_shift_rules.sql`: luật 4 được thay — bỏ hạn "ca tạo quá 30 phút không xoá được". Nhân viên chỉ thao tác phần của mình: tự rời ca chỉ trong 30 phút đầu sau khi nhận; chỉ admin thêm, sửa hay gỡ người khác (cả lượt đang chờ); ca có người khác thì chỉ admin sửa tên / ngày / giờ ca và xoá ca (ghi chú của ca ai cũng sửa được); ca chỉ có mình thì xoá được khi còn rời được (bịt đường lách "xoá ca thay cho rời ca"); ca trống xoá lúc nào cũng được.
 
+**Đã làm** trong `supabase/008_template_admin.sql`: ca mẫu về tay admin (mục 2.1, dòng cuối) — nhân viên chỉ nhận ca mẫu, tạo / sửa / bật-tắt / xoá là của admin.
+
 Các câu hỏi treo được chốt theo đề xuất: cửa sổ tính theo **giờ riêng**, nhắn admin **ngoài** ứng dụng, phong admin **bằng tay** trong SQL Editor.
 
 **Chưa làm**:
 
-- Ca mẫu về tay admin (mục 2.1, dòng cuối).
 - Ca đã qua mà trống, hoặc chỉ có mình chưa điểm danh: nhân viên vẫn sửa giờ / tên tự do (ca có người khác thì đã khoá từ 006).
 - Ca qua nửa đêm.
 

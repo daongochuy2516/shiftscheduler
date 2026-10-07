@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { format, formatDistanceStrict } from 'date-fns'
 import {
-  Activity,
   Cloud,
   Database,
   ExternalLink,
@@ -9,6 +8,7 @@ import {
   KeyRound,
   RotateCw,
   UserRound,
+  Wifi,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { IS_MOCK_BACKEND } from '../data'
@@ -188,7 +188,7 @@ export function StatusPage() {
       <div className="flex flex-wrap items-start gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <Activity className="h-5 w-5 shrink-0 text-slate-400" />
+            <Wifi className="h-5 w-5 shrink-0 text-slate-400" />
             {t('status.title')}
           </h1>
           <p className="text-sm text-slate-500">{t('status.subtitle')}</p>
@@ -427,7 +427,7 @@ function Card({
   label,
   children,
 }: {
-  icon: typeof Activity
+  icon: typeof Wifi
   title: string
   tone: Tone
   label: string

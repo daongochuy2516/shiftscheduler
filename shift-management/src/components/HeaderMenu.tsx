@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Activity,
   Bell,
   Grip,
   KeyRound,
@@ -10,6 +9,7 @@ import {
   Moon,
   Sun,
   UserCog,
+  Wifi,
 } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -138,7 +138,7 @@ export function HeaderMenu({
               onClick={() => setPref(nextTheme.id)}
             />
             <Tile
-              icon={Activity}
+              icon={Wifi}
               tone="bg-emerald-50 text-emerald-600"
               label={t('nav.status')}
               onClick={() => run(() => navigate('/status'))}
@@ -159,6 +159,12 @@ export function HeaderMenu({
               onClick={signOut.press}
             />
           </div>
+          {/* Cho người chưa biết có bảng lệnh nhanh. */}
+          <p className="px-3 pt-2 pb-1 text-center text-xs text-slate-500">
+            {t('menu.paletteHint', {
+              keys: /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K',
+            })}
+          </p>
         </MenuPanel>
       )}
     </div>
