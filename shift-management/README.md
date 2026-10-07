@@ -141,15 +141,14 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Ca của tôi** | Chỉ những ca bạn được phân công |
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
-| **Tài khoản** | Chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng ([mục 11](#trang-tài-khoản)) |
 | **VI / EN** | Đổi ngôn ngữ giao diện |
 | **Tạo ca** (nút xanh) | Mở form tạo ca mới, mặc định là **hôm nay** |
-| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng 4 ô: **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Đổi mật khẩu**, **Đăng xuất** |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Đổi mật khẩu**, **Đăng xuất** |
 | Avatar + tên | Tài khoản đang đăng nhập |
 
 Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng, còn giao diện, đổi mật khẩu, đăng xuất nằm trong bảng mở ra khi bấm avatar.
 
-Màn hình chưa đủ rộng để xếp cả hàng (dưới khoảng 1480px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn.
+Màn hình chưa đủ rộng để xếp cả hàng (dưới khoảng 1380px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn.
 
 > Con số màu vàng cạnh chữ "Chờ xác nhận" chỉ đếm **các lượt phân công của riêng bạn** đang chờ xác nhận. Ca của người khác không tính vào đây — mở trang *Chờ xác nhận* rồi bỏ tích *Chỉ ca của tôi* để xem của cả nhóm.
 
@@ -640,7 +639,7 @@ Việc của admin khi nhân viên quên điểm danh: mở trang **Chờ xác n
 
 ### Trang Tài khoản
 
-Chỉ admin thấy mục **Tài khoản** trên thanh điều hướng (mobile: trong sheet tài khoản). Người khác mở thẳng `/accounts` sẽ bị đưa về trang Lịch. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
+Chỉ admin thấy ô **Tài khoản** trong nút lưới ở góc phải trên cùng (mobile: trong sheet mở ra khi bấm avatar). Người khác mở thẳng `/accounts` sẽ bị đưa về trang Lịch. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
 
 Mỗi dòng là một tài khoản, kèm email và vai trò:
 

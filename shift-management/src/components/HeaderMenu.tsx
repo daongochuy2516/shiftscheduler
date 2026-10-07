@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Grip, KeyRound, LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Bell,
+  Grip,
+  KeyRound,
+  LogOut,
+  Monitor,
+  Moon,
+  Sun,
+  UserCog,
+} from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { useNotifications } from '../notifications/NotificationContext'
@@ -12,17 +22,19 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
 ]
 
 /**
- * Nút lưới trên header PC, kiểu trình mở ứng dụng của Google: gom thông báo,
- * giao diện, đổi mật khẩu và đăng xuất vào một ô lưới, để header đỡ chật.
- * Số thông báo chưa đọc hiện ngay trên nút.
+ * Nút lưới trên header PC, kiểu trình mở ứng dụng của Google: gom trang Tài
+ * khoản (chỉ admin), thông báo, giao diện, đổi mật khẩu và đăng xuất vào một
+ * ô lưới, để header đỡ chật. Số thông báo chưa đọc hiện ngay trên nút.
  *
  * Mobile không dùng: ở đó đã có nút chuông và sheet tài khoản.
  */
 export function HeaderMenu({
+  isAdmin,
   onChangePassword,
   onSignOut,
   signingOut,
 }: {
+  isAdmin: boolean
   onChangePassword: () => void
   onSignOut: () => void
   signingOut: boolean
@@ -30,6 +42,7 @@ export function HeaderMenu({
   const { t } = useI18n()
   const { pref, setPref } = useTheme()
   const { unreadCount, setCenterOpen } = useNotifications()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -88,9 +101,24 @@ export function HeaderMenu({
         <div
           role="menu"
           aria-label={t('menu.label')}
-          className="absolute top-full right-0 z-50 mt-2 w-72 rounded-3xl bg-slate-100 p-2 shadow-xl ring-1 ring-slate-900/10"
+          // Admin có 5 ô: ba cột cho đỡ dài. Còn lại 4 ô: 2×2 cho vuông.
+          className={`absolute top-full right-0 z-50 mt-2 rounded-3xl bg-slate-100 p-2 shadow-xl ring-1 ring-slate-900/10 ${
+            isAdmin ? 'w-96' : 'w-72'
+          }`}
         >
-          <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-2">
+          <div
+            className={`grid gap-1 rounded-2xl bg-white p-2 ${
+              isAdmin ? 'grid-cols-3' : 'grid-cols-2'
+            }`}
+          >
+            {isAdmin && (
+              <Tile
+                icon={UserCog}
+                tone="bg-teal-50 text-teal-600"
+                label={t('nav.accounts')}
+                onClick={() => run(() => navigate('/accounts'))}
+              />
+            )}
             <Tile
               icon={Bell}
               tone="bg-sky-50 text-sky-600"

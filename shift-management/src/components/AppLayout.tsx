@@ -37,8 +37,6 @@ const NAV: {
   label: TranslationKey
   icon: typeof CalendarDays
   end: boolean
-  /** Chỉ hiện với admin. */
-  adminOnly?: boolean
 }[] = [
   { to: '/', label: 'nav.timeline', icon: CalendarDays, end: true },
   { to: '/shifts', label: 'nav.allShifts', icon: LayoutList, end: false },
@@ -47,13 +45,7 @@ const NAV: {
   { to: '/pending', label: 'nav.pending', icon: Clock3, end: false },
   { to: '/logs', label: 'nav.actionLog', icon: ScrollText, end: false },
   { to: '/status', label: 'nav.status', icon: Activity, end: false },
-  {
-    to: '/accounts',
-    label: 'nav.accounts',
-    icon: UserCog,
-    end: false,
-    adminOnly: true,
-  },
+  // Trang Tài khoản (admin) không nằm ở đây mà trong nút lưới (HeaderMenu).
 ]
 
 const LANGS: { id: Lang; label: string }[] = [
@@ -166,14 +158,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
           {/* Điều hướng trên chỉ dành cho màn hình rộng. Dưới 640px việc này do
               thanh dưới đảm nhiệm, header giữ gọn theo quy tắc app bar.
 
-              Đủ chữ cả hàng thì cần ~1450px. Hẹp hơn thì không bỏ bớt gì mà
+              Đủ chữ cả hàng thì cần ~1350px. Hẹp hơn thì không bỏ bớt gì mà
               xếp lại: dòng trên là logo + cụm nút, dòng dưới là dải tab chạy
               hết chiều ngang (quá hẹp thì dải tab tự chia hai hàng). Để mặc
               flex-wrap thì cụm nút bên phải rơi xuống lẻ loi một mình. Đổi
-              mục điều hướng hay nút trên header thì đo lại mốc 1480px. */}
-          <nav className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1480px]:order-none min-[1480px]:mx-0 min-[1480px]:w-auto min-[1480px]:flex-nowrap">
-            {NAV.filter((item) => !item.adminOnly || isAdmin).map(
-              ({ to, label, icon: Icon, end }) => (
+              mục điều hướng hay nút trên header thì đo lại mốc 1380px. */}
+          <nav className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1380px]:order-none min-[1380px]:mx-0 min-[1380px]:w-auto min-[1380px]:flex-nowrap">
+            {NAV.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -194,8 +185,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </span>
                 )}
               </NavLink>
-              ),
-            )}
+            ))}
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
@@ -276,6 +266,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {/* Nút lưới ở ngoài cùng bên phải, sau tài khoản. */}
                 <div className="hidden sm:block">
                   <HeaderMenu
+                    isAdmin={isAdmin}
                     onChangePassword={() => setChangingPassword(true)}
                     onSignOut={handleSignOut}
                     signingOut={signingOut}
