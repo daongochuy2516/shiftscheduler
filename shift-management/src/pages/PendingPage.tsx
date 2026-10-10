@@ -46,7 +46,10 @@ export function PendingPage() {
           </p>
         </div>
 
-        <label className="ml-auto flex items-center gap-1.5 text-sm text-slate-600">
+        <label
+          data-tour="pending-only-mine"
+          className="ml-auto flex items-center gap-1.5 text-sm text-slate-600"
+        >
           <input
             type="checkbox"
             className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Bell,
+  BookOpen,
   CalendarClock,
   CalendarDays,
   ClipboardCheck,
@@ -24,7 +25,7 @@ import { useI18n } from '../i18n/I18nContext'
 import type { Lang, TranslationKey } from '../i18n/translations'
 import { useNotifications } from '../notifications/NotificationContext'
 import { SCROLL_ROOT_ID } from '../lib/scrollRoot'
-import { toDateKey } from '../lib/time'
+import { fromDateKey, toDateKey } from '../lib/time'
 import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
 import { Modal } from './Modal'
@@ -32,6 +33,10 @@ import { useShiftEditor } from './ShiftEditorProvider'
 import { ThemeSegmented } from './ThemeMenu'
 import { HeaderMenu } from './HeaderMenu'
 import { CommandPalette } from './CommandPalette'
+import { NewShiftButton, NewShiftChooser } from './NewShiftMenu'
+import { ClaimTemplateModal } from './ClaimTemplateModal'
+import { TemplateManagerModal } from './TemplateManagerModal'
+import type { ShiftTemplate } from '../types'
 import { useTwoStep } from './useTwoStep'
 import { RoleBadge } from './RoleBadge'
 import { APP_NAME } from '../lib/brand'
@@ -91,6 +96,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [signingOut, setSigningOut] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  /**
+   * Bảng chọn của nút Tạo ca khi mở dạng hộp thoại: nút nổi trên điện thoại
+   * (`menu`), hay lệnh "Nhận ca mẫu" trong Ctrl + K (`templates`, vào thẳng
+   * danh sách mẫu). Trên PC nút Tạo ca tự xổ menu của nó.
+   */
+  const [newShift, setNewShift] = useState<'menu' | 'templates' | null>(null)
+  const [claimTarget, setClaimTarget] = useState<ShiftTemplate | null>(null)
+  const [managingTemplates, setManagingTemplates] = useState(false)
 
   // Ctrl + K (⌘K trên Mac) mở / đóng bảng lệnh nhanh ở bất cứ trang nào —
   // kể cả khi đang gõ trong ô nhập: phím tắt này không gõ ra chữ gì.
@@ -187,12 +200,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
               hết chiều ngang (quá hẹp thì dải tab tự chia hai hàng). Để mặc
               flex-wrap thì cụm nút bên phải rơi xuống lẻ loi một mình. Đổi
               mục điều hướng hay nút trên header thì đo lại mốc 1320px. */}
-          <nav className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1320px]:order-none min-[1320px]:mx-0 min-[1320px]:w-auto min-[1320px]:flex-nowrap">
+          <nav data-tour="nav" className="order-3 -mx-1 hidden w-full flex-wrap items-center gap-1 sm:flex min-[1320px]:order-none min-[1320px]:mx-0 min-[1320px]:w-auto min-[1320px]:flex-nowrap">
             {NAV.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
+                data-tour={`nav-${to}`}
                 className={({ isActive }) =>
                   `inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition ${
                     isActive
@@ -235,14 +249,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={() => openCreate(toDateKey(new Date()))}
-              className="hidden items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 sm:inline-flex"
-            >
-              <Plus className="h-4 w-4" />
-              {t('nav.newShift')}
-            </button>
+            {/* Bấm là xổ menu: nhận ca mẫu, hay tạo ca thủ công. */}
+            <NewShiftButton
+              onManual={() => openCreate(toDateKey(new Date()))}
+              onTemplate={setClaimTarget}
+              onManage={() => setManagingTemplates(true)}
+            />
 
             <button
               type="button"
@@ -254,6 +266,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               }
               title={t('notif.title')}
               // Từ 640px chuông nằm trong nút lưới (HeaderMenu).
+              data-tour="bell-mobile"
               className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:hidden"
             >
               <Bell className="h-5 w-5" />
@@ -275,6 +288,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     signOutStep.reset()
                   }}
                   aria-label={t('nav.account')}
+                  data-tour="account-mobile"
                   className="flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-slate-100 sm:hidden"
                 >
                   <Avatar name={displayName} seed={user.id} size="sm" />
@@ -337,8 +351,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Nút nổi: hành động chính, đặt trong tầm ngón cái, chỉ có ở mobile. */}
       <button
         type="button"
-        onClick={() => openCreate(createDate)}
+        onClick={() => setNewShift('menu')}
         aria-label={t('nav.newShift')}
+        data-tour="fab"
         className="fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition active:bg-indigo-700 sm:hidden"
         style={{ bottom: 'calc(var(--bottom-nav-h) + var(--safe-b) + 1rem)' }}
       >
@@ -384,6 +399,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
             >
               <Wifi className="h-5 w-5 text-slate-400" />
               {t('nav.status')}
+            </NavLink>
+
+            <NavLink
+              to="/help"
+              onClick={() => setAccountOpen(false)}
+              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <BookOpen className="h-5 w-5 text-slate-400" />
+              {t('nav.help')}
             </NavLink>
 
             {isAdmin && (
@@ -483,10 +507,47 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <ChangePasswordModal onClose={() => setChangingPassword(false)} />
       )}
 
+      {newShift && (
+        <Modal
+          title={t('nav.newShift')}
+          width="max-w-md"
+          onClose={() => setNewShift(null)}
+        >
+          <NewShiftChooser
+            startAtTemplates={newShift === 'templates'}
+            onManual={() => {
+              setNewShift(null)
+              openCreate(createDate)
+            }}
+            onTemplate={(tpl) => {
+              setNewShift(null)
+              setClaimTarget(tpl)
+            }}
+            onManage={() => {
+              setNewShift(null)
+              setManagingTemplates(true)
+            }}
+          />
+        </Modal>
+      )}
+
+      {managingTemplates && (
+        <TemplateManagerModal onClose={() => setManagingTemplates(false)} />
+      )}
+
+      {claimTarget && (
+        <ClaimTemplateModal
+          template={claimTarget}
+          viewedDate={fromDateKey(createDate)}
+          onClose={() => setClaimTarget(null)}
+        />
+      )}
+
       {paletteOpen && (
         <CommandPalette
           onClose={() => setPaletteOpen(false)}
           onCreateShift={() => openCreate(createDate)}
+          onClaimTemplate={() => setNewShift('templates')}
           onChangePassword={() => setChangingPassword(true)}
           onSignOut={handleSignOut}
         />

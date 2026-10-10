@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ScheduleProvider } from '../data/ScheduleContext'
 import { NotificationProvider } from '../notifications/NotificationContext'
+import { TourProvider } from '../help/TourProvider'
 import { ShiftEditorProvider } from './ShiftEditorProvider'
 import { AppLayout } from './AppLayout'
 
@@ -37,9 +38,11 @@ export function ProtectedRoute() {
     <NotificationProvider key={user.id} userId={user.id}>
       <ScheduleProvider>
         <ShiftEditorProvider>
-          <AppLayout>
-            <Outlet />
-          </AppLayout>
+          <TourProvider>
+            <AppLayout>
+              <Outlet />
+            </AppLayout>
+          </TourProvider>
         </ShiftEditorProvider>
       </ScheduleProvider>
     </NotificationProvider>

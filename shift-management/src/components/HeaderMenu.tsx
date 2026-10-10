@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  BookOpen,
   Bell,
   Grip,
   KeyRound,
@@ -54,7 +55,11 @@ export function HeaderMenu({
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Element
+      // Bấm trên thẻ của wizard hướng dẫn thì giữ menu mở — wizard đang chỉ
+      // vào các ô trong menu này.
+      if (target.closest?.('[data-tour-overlay]')) return
+      if (!ref.current?.contains(target)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
@@ -91,6 +96,7 @@ export function HeaderMenu({
             : t('menu.label')
         }
         title={t('menu.label')}
+        data-tour="menu"
         aria-haspopup="menu"
         aria-expanded={open}
         className={`relative flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-slate-100 hover:text-slate-800 ${
@@ -107,12 +113,13 @@ export function HeaderMenu({
 
       {open && (
         <MenuPanel label={t('menu.label')}>
-          {/* Admin 6 ô (3×2), nhân viên 5 ô. */}
+          {/* Nhân viên 6 ô (3×2), admin thêm ô Tài khoản. */}
           <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-2">
             {isAdmin && (
               <Tile
                 icon={UserCog}
                 tone="bg-teal-50 text-teal-600"
+                tour="menu-accounts"
                 label={t('nav.accounts')}
                 onClick={() => run(() => navigate('/accounts'))}
               />
@@ -120,6 +127,7 @@ export function HeaderMenu({
             <Tile
               icon={Bell}
               tone="bg-sky-50 text-sky-600"
+              tour="menu-notifications"
               label={t('notif.title')}
               sub={
                 unreadCount > 0
@@ -132,6 +140,7 @@ export function HeaderMenu({
             <Tile
               icon={theme.icon}
               tone="bg-violet-50 text-violet-600"
+              tour="menu-theme"
               label={t('theme.label')}
               sub={t(theme.label)}
               title={t('menu.themeNext', { theme: t(nextTheme.label) })}
@@ -140,18 +149,28 @@ export function HeaderMenu({
             <Tile
               icon={Wifi}
               tone="bg-emerald-50 text-emerald-600"
+              tour="menu-status"
               label={t('nav.status')}
               onClick={() => run(() => navigate('/status'))}
             />
             <Tile
+              icon={BookOpen}
+              tone="bg-cyan-50 text-cyan-600"
+              tour="menu-help"
+              label={t('nav.help')}
+              onClick={() => run(() => navigate('/help'))}
+            />
+            <Tile
               icon={KeyRound}
               tone="bg-amber-50 text-amber-600"
+              tour="menu-password"
               label={t('pwd.title')}
               onClick={() => run(onChangePassword)}
             />
             <Tile
               icon={LogOut}
               tone="bg-rose-50 text-rose-600"
+              tour="menu-signout"
               label={t('auth.signOut')}
               sub={signOut.armed ? t('auth.signOutAgain') : undefined}
               alert={signOut.armed}
@@ -201,6 +220,7 @@ function Tile({
   title,
   disabled,
   alert = false,
+  tour,
   onClick,
 }: {
   icon: typeof Sun
@@ -213,12 +233,15 @@ function Tile({
   disabled?: boolean
   /** Đang chờ bấm lần hai để xác nhận: đổi sang nền đỏ cho khó bỏ qua. */
   alert?: boolean
+  /** Mốc cho wizard hướng dẫn (`data-tour`). */
+  tour?: string
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       role="menuitem"
+      data-tour={tour}
       title={title}
       disabled={disabled}
       onClick={onClick}

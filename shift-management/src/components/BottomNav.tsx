@@ -27,6 +27,7 @@ export function BottomNav({ pendingCount }: { pendingCount: number }) {
 
   return (
     <nav
+      data-tour="bottom-nav"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur sm:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
@@ -36,6 +37,7 @@ export function BottomNav({ pendingCount }: { pendingCount: number }) {
             <NavLink
               to={to}
               end={end}
+              data-tour={`bottom-${to}`}
               className={({ isActive }) =>
                 // min-h-14 giữ vùng chạm trên 44px kể cả khi nhãn xuống dòng.
                 `relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition ${

@@ -186,7 +186,7 @@ export function ShiftSimpleView({
       </section>
 
       {/* ---- phần của bạn ---- */}
-      <section>
+      <section data-tour="simple-mine">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-900">
             {t('shiftSimple.yourPart')}
@@ -291,7 +291,10 @@ export function ShiftSimpleView({
 
           {/* ---- hành động chính ---- (đã khoá thì không còn gì để bấm) */}
           {!locked && (
-            <div className="mt-3 border-t border-slate-100 pt-3">
+            <div
+              data-tour="simple-actions"
+              className="mt-3 border-t border-slate-100 pt-3"
+            >
               {!mine && (
                 <button
                   type="button"
@@ -423,7 +426,7 @@ export function ShiftSimpleView({
       </section>
 
       {/* ---- người khác, chỉ xem ---- */}
-      <section>
+      <section data-tour="simple-others">
         <h3 className="mb-2 text-sm font-semibold text-slate-900">
           {t('shiftSimple.others')}{' '}
           <span className="font-normal text-slate-400">({others.length})</span>

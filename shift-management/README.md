@@ -27,6 +27,7 @@ Ca: Trực trang, 08:00–18:00
 - [9. Đa ngôn ngữ và cập nhật thời gian thực](#9-đa-ngôn-ngữ-và-cập-nhật-thời-gian-thực)
 - [9b. Nhật ký thao tác](#9b-nhật-ký-thao-tác)
 - [9c. Thông báo](#9c-thông-báo)
+- [9d. Hướng dẫn và bài từng bước](#9d-hướng-dẫn-và-bài-từng-bước)
 - [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
 - [11. Dành cho quản trị viên](#11-dành-cho-quản-trị-viên)
 - [12. Cấu trúc mã nguồn](#12-cấu-trúc-mã-nguồn)
@@ -143,7 +144,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
 | **VI / EN** | Đổi ngôn ngữ giao diện |
-| **Tạo ca** (nút xanh) | Mở form tạo ca mới, mặc định là **hôm nay** |
+| **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định **hôm nay**) |
 | ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) |
 
@@ -173,7 +174,6 @@ Dòng dưới tiêu đề luôn cho biết phạm vi đang xem có bao nhiêu ca
 
 Timeline chi tiết theo giờ. Đây là chế độ duy nhất có:
 
-- **Thanh ca mẫu** để nhận ca nhanh (xem [mục 7](#7-ca-mẫu-và-nhận-ca-nhanh)).
 - **Bộ chọn khung giờ**: *Vừa theo ngày* (tự co giãn theo dữ liệu thực tế), *06:00–22:00*, *08:00–20:00*, *Cả ngày*.
 - Nút **Thêm ca vào ngày này** — khác với nút "Tạo ca" ở thanh trên (nút đó luôn dùng ngày hôm nay).
 - Dải chip liệt kê các ca trong ngày ở cuối trang; bấm chip là mở ca đó ra sửa.
@@ -236,7 +236,8 @@ Timeline cuộn ngang được khi khung giờ rộng; cột tên nhân viên lu
 
 | Cách | Kết quả |
 | --- | --- |
-| Nút **Tạo ca** trên thanh điều hướng | Ca mới, ngày = hôm nay |
+| Nút **Tạo ca** trên thanh điều hướng → **Tạo ca thủ công** | Ca mới, ngày = hôm nay |
+| Nút tròn (điện thoại) → **Tạo ca thủ công** | Ca mới, ngày = ngày đang xem |
 | Nút **Thêm ca vào ngày này** (chế độ Ngày) | Ca mới, ngày = ngày đang xem |
 | Bấm một khối trên timeline / chip tuần / chip tháng | Sửa ca đã có |
 | Nút **Sửa** trên thẻ ca ở các trang danh sách | Sửa ca đã có |
@@ -300,13 +301,13 @@ Ba cách: nút **✕**, phím **Esc**, hoặc bấm ra vùng nền tối bên ng
 
 Ca mẫu là **định nghĩa ca lặp lại** — ví dụ *Trực trang 08:00–18:00, Thứ 2 đến Thứ 6*. Nhân viên nhận ca chỉ bằng một cú bấm, không phải điền form.
 
-Thanh ca mẫu nằm ngay trên timeline, **chỉ có ở chế độ Ngày** (vì nhận ca luôn gắn với một ngày cụ thể).
+Mọi thứ về ca mẫu nằm trong nút **Tạo ca** (máy tính: thanh trên; điện thoại: nút tròn ở góc dưới), dùng được ở bất cứ trang nào. Trang Lịch không còn thanh ca mẫu riêng.
 
 ### Nhận ca
 
-Mỗi ca mẫu lặp vào thứ đó hiện thành một chip: `● Trực trang  08:00 – 18:00  [+ Nhận ca]`
+Bấm **Tạo ca → Nhận ca mẫu**: menu liệt kê mọi ca mẫu đang dùng, mỗi dòng ghi giờ và các thứ mẫu lặp vào. Trong Ctrl + K, gõ *nhận ca mẫu* để vào thẳng danh sách này.
 
-Bấm **Nhận ca** sẽ mở hộp thoại **chọn ngày** — bạn không bị mặc định nhận vào ngày đang xem, và **chọn được nhiều ngày cùng lúc**.
+Bấm một mẫu sẽ mở hộp thoại **chọn ngày** — bạn không bị mặc định nhận vào ngày đang xem, và **chọn được nhiều ngày cùng lúc**.
 
 **Chọn nhanh** (hàng chip phía trên):
 
@@ -345,7 +346,7 @@ Muốn đổi giờ sau khi nhận? Bấm vào khối của bạn trên timeline
 
 ### Quản lý ca mẫu
 
-Bấm **Quản lý ca mẫu** ở góc phải thanh ca mẫu. **Chỉ admin** thấy nút này (cần chạy `supabase/008_template_admin.sql`): nhân viên chỉ nhận ca mẫu, không tạo, sửa, bật/tắt hay xoá được — database cũng chặn, gọi thẳng API sẽ nhận *Bạn không có quyền sửa ca mẫu.* Khi chưa có ca mẫu nào, nhân viên thấy dòng *Chưa có ca mẫu nào — admin sẽ tạo.*
+Bấm **Tạo ca → Quản lý ca mẫu**. **Chỉ admin** thấy lựa chọn này (cần chạy `supabase/008_template_admin.sql`): nhân viên chỉ nhận ca mẫu, không tạo, sửa, bật/tắt hay xoá được — database cũng chặn, gọi thẳng API sẽ nhận *Bạn không có quyền sửa ca mẫu.* Khi chưa có ca mẫu nào, nhân viên thấy dòng *Chưa có ca mẫu nào — admin sẽ tạo.*
 
 - **Tạo ca mẫu**: tiêu đề, giờ bắt đầu/kết thúc, ghi chú.
 - **Lặp vào**: chọn các thứ trong tuần. **Không chọn thứ nào = lặp mọi ngày.**
@@ -353,9 +354,9 @@ Bấm **Quản lý ca mẫu** ở góc phải thanh ca mẫu. **Chỉ admin** th
 - **Đang dùng**: bỏ tích để tạm ngừng — mẫu vẫn được lưu nhưng không ai nhận được nữa.
 - **Xoá ca mẫu**: các ca đã tạo từ mẫu đó **vẫn được giữ nguyên**, chỉ mất liên kết với mẫu.
 
-### Nếu thấy thông báo vàng "Chưa cài đặt tính năng ca mẫu"
+### Nếu lựa chọn "Nhận ca mẫu" mờ đi
 
-Nghĩa là file `supabase/002_shift_templates.sql` chưa được chạy. Mọi phần khác của ứng dụng vẫn hoạt động bình thường.
+Dòng giải thích bên dưới nói rõ lý do: *Chưa có ca mẫu nào* (admin cần tạo ở **Quản lý ca mẫu**), hoặc *Chưa cài đặt ca mẫu* — file `supabase/002_shift_templates.sql` chưa được chạy. Mọi phần khác của ứng dụng vẫn hoạt động bình thường.
 
 ---
 
@@ -560,6 +561,26 @@ Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt
 
 ---
 
+## 9d. Hướng dẫn và bài từng bước
+
+Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**, từ bảng avatar trên điện thoại, hoặc gõ *hướng dẫn* trong Ctrl + K. Trang viết cho nhân viên, có mục lục, ô tìm (gõ không dấu được) và một mục **Dành cho admin** chỉ admin thấy. Có đủ tiếng Việt và tiếng Anh theo ngôn ngữ đang chọn.
+
+**Bài từng bước (wizard)**: bấm một bài ở đầu trang, hoặc **Chỉ tôi từng bước** cạnh từng mục. Bài hướng dẫn tự chuyển tới đúng trang, làm tối màn hình trừ đúng phần cần bấm, và hiện thẻ giải thích ngay cạnh đó. Khi cần, nó tự mở menu, mở một ca, hay chuyển form sang chế độ Đơn giản.
+
+| Bài | Chỉ vào |
+| --- | --- |
+| Làm quen giao diện | Thanh điều hướng, chọn ngày, Ngày / Tuần / Tháng, cách đọc lịch, Tạo ca, menu, Ctrl + K |
+| Nhận ca mẫu | Nút Tạo ca, lựa chọn Nhận ca mẫu, danh sách mẫu, chọn ngày, nút xác nhận |
+| Mở và sửa ca của mình | Mở một ca, Đơn giản / Nâng cao, phần của bạn, điểm danh / rời ca, người khác |
+| Điểm danh | Trang Chờ xác nhận, ô Chỉ ca của tôi, thẻ ca, nút Xác nhận và các luật |
+| Menu và thông báo | Các ô trong nút lưới (điện thoại: chuông và avatar) |
+
+Phím: **→** hoặc **Enter** tiếp, **←** lùi, **Esc** dừng. Trong lúc hướng dẫn, trang phía dưới không bấm được — bài tự bấm hộ những gì cần mở. Phần nào chưa có trên màn hình (ví dụ hôm nay chưa có ca, hay chưa tới giờ điểm danh) thì thẻ nói rõ vì sao.
+
+Lần đăng nhập đầu tiên, góc dưới trái hiện lời mời **Mới dùng Thinkmay Team Board?** — bấm **Bắt đầu** để xem bài Làm quen giao diện, hoặc **Để sau**. Mỗi tài khoản chỉ được hỏi một lần (nhớ trên trình duyệt đó).
+
+---
+
 ## 10. Tra cứu nhanh
 
 ### Đường dẫn
@@ -574,6 +595,7 @@ Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt
 | `/my-shifts` | Ca của tôi |
 | `/pending` | Chờ xác nhận |
 | `/logs` | Nhật ký thao tác |
+| `/help` | Hướng dẫn và các bài từng bước |
 | `/accounts` | Tài khoản (chỉ admin; người khác bị đưa về `/`) |
 | `/login` | Đăng nhập |
 
@@ -720,7 +742,6 @@ Cả hai tự động dựa vào việc `.env` có được cấu hình hay khô
 | Màn hình | Lát cắt |
 | --- | --- |
 | Lịch, Tổng kết | Đúng ngày / tuần / tháng đang xem (tháng của Lịch đệm cho tròn tuần) |
-| Thanh ca mẫu | Ngày đang xem — trùng khoá với Lịch nên không tải thêm |
 | Hộp thoại nhận ca | Các ngày đang hiện trên lịch chọn |
 | Tất cả ca | Từng tháng trong khoảng của tab (thu hẹp thêm bởi bộ lọc), theo chiều sắp xếp, tải khi cuộn tới đáy |
 | Ca của tôi | Ca có mình (lọc ở database) |

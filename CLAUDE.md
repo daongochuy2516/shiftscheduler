@@ -32,7 +32,8 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
     ScheduleProvider        nhân viên + ca mẫu + bộ đệm ca + mọi thao tác ghi
       ShiftEditorProvider   form tạo/sửa ca dùng chung (openCreate / openEdit)
         AppLayout           header, BottomNav (mobile), nút nổi, sheet tài khoản
-          / · /shifts · /summary · /my-shifts · /pending · /logs · /status · /accounts (admin)
+          / · /shifts · /summary · /my-shifts · /pending · /logs · /status · /help · /accounts (admin)
+        TourProvider        (bọc AppLayout) wizard hướng dẫn + lời mời lần đầu
 ```
 
 | Thư mục | Vai trò |
@@ -76,7 +77,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 
 **Giao diện**
 
-- Mọi chuỗi người dùng thấy đều qua `t()` — trừ tên sản phẩm `APP_NAME` (`lib/brand.ts`, giống nhau mọi ngôn ngữ; `<title>` trong `index.html` lặp lại nó). Thêm khoá vào `en` trước (nguồn của `TranslationKey`), rồi `vi` — thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`. Chèn giá trị: `{{name}}`.
+- Mọi chuỗi người dùng thấy đều qua `t()` — trừ tên sản phẩm `APP_NAME` (`lib/brand.ts`, giống nhau mọi ngôn ngữ; `<title>` trong `index.html` lặp lại nó), và nội dung trang Hướng dẫn: `src/help/content.ts` + kịch bản wizard `src/help/tours.ts` là văn bản dài nên viết thẳng dạng `Record<Lang, …>` (thiếu một ngôn ngữ vẫn là lỗi biên dịch). Thêm khoá vào `en` trước (nguồn của `TranslationKey`), rồi `vi` — thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`. Chèn giá trị: `{{name}}`.
 - Chế độ tối làm bằng cách định nghĩa lại biến màu Tailwind dưới `[data-theme='dark']` trong `index.css`, **không** rải `dark:` trong component. Viết class sáng như bình thường. Họ màu đã có bản tối: slate, indigo, rose, amber, emerald, sky, violet, teal, orange, lime, fuchsia, cyan — dùng họ khác thì thêm khối biến tương ứng.
 - Class Tailwind phải viết nguyên chuỗi, không ghép từ mảnh lúc chạy (`bg-${x}-50` sẽ không được sinh). Xem `PALETTE` trong `lib/colors.ts`.
 - Mốc mobile/desktop là `sm` (640px). Dưới mốc: `BottomNav`, nút nổi, `Modal` thành bottom sheet, vùng chạm tối thiểu 44px. Từ mốc trở lên giao diện PC không được đổi theo khi sửa mobile.
@@ -84,6 +85,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Hộp thoại dùng `components/Modal.tsx`; mở form ca bằng `useShiftEditor()`; màu ca lấy từ `useShiftColor()`.
 - Hiệu ứng mở / đóng của `Modal` và ngăn thông báo nằm trong `index.css` (`modal-backdrop`, `modal-panel`, `drawer-panel`, `.is-leaving`). Đóng không cần chờ ở chỗ gọi: `useExitAnimation` để lại một bản sao tĩnh chạy hiệu ứng rồi xoá. Lớp phủ tự làm thì dùng lại hook này thay vì tự giữ state "đang đóng".
 - Kết quả của thao tác ghi (thành công, hay lỗi máy chủ trả về) báo qua `useNotify()` — `success(key, params, body)` / `error(key, err, params)` — không thêm dòng xanh/đỏ trong form. Lỗi giữ form mở, thành công thì đóng. Tiêu đề lưu dạng khoá `t()` (`notif.*`), `body` là chuỗi thô nên đừng đưa chữ phụ thuộc ngôn ngữ vào đó. Lỗi nhập liệu từng ô vẫn hiện tại chỗ.
+- Wizard hướng dẫn chỉ vào phần tử qua thuộc tính `data-tour="…"` (danh sách trong `help/tours.ts`). Đổi tên, xoá, hay chuyển chỗ một phần tử có `data-tour` thì sửa kịch bản cùng lúc và chạy lại bài đó; đổi hành vi mà hướng dẫn mô tả thì sửa `help/content.ts` cùng README.
 - Khoá `localStorage` của theme (`scheduler.theme`) lặp lại trong script chống nháy ở `index.html` — đổi một chỗ phải đổi cả hai.
 
 ## Quy ước

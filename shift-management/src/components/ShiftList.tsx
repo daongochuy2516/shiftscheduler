@@ -180,6 +180,7 @@ export function ShiftList({
               return (
                 <article
                   key={shift.id}
+                  data-tour="shift-card"
                   className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5"
                 >
                   <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 px-4 py-3">
@@ -340,6 +341,7 @@ export function ShiftList({
                                   })
                                 }}
                                 disabled={busyId === assignment.id}
+                                data-tour="confirm"
                                 className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:ml-0 sm:min-h-0 sm:px-2 sm:py-1"
                               >
                                 <Check className="h-3 w-3" />

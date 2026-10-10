@@ -516,6 +516,7 @@ export function ShiftModal({
           <div
             role="group"
             aria-label={t('shift.mode.label')}
+            data-tour="mode-toggle"
             className="flex rounded-md bg-slate-100 p-0.5 sm:inline-flex"
           >
             {(
@@ -531,6 +532,7 @@ export function ShiftModal({
               <button
                 key={id}
                 type="button"
+                data-tour={`mode-${id}`}
                 onClick={() => setMode(id)}
                 aria-pressed={mode === id}
                 className={`inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded px-3 text-sm font-medium transition sm:min-h-0 sm:flex-none sm:py-1 ${

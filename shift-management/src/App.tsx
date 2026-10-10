@@ -12,6 +12,7 @@ import { PendingPage } from './pages/PendingPage'
 import { ActionLogPage } from './pages/ActionLogPage'
 import { StatusPage } from './pages/StatusPage'
 import { AccountsPage } from './pages/AccountsPage'
+import { HelpPage } from './pages/HelpPage'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="logs" element={<ActionLogPage />} />
                 <Route path="status" element={<StatusPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
+                <Route path="help" element={<HelpPage />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

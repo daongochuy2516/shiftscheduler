@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
   Bell,
+  BookOpen,
   Calculator,
   CalendarDays,
   ClipboardCheck,
   Clock3,
+  GraduationCap,
   KeyRound,
   Languages,
+  Layers,
   LayoutList,
   LogOut,
   Monitor,
@@ -33,6 +36,8 @@ import { scrollRoot } from '../lib/scrollRoot'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
 import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
+import { useTour } from '../help/TourProvider'
+import { TOURS, TOUR_ORDER } from '../help/tours'
 
 type Group = 'result' | 'nav' | 'action' | 'staff'
 
@@ -76,11 +81,13 @@ function fold(s: string): string {
 export function CommandPalette({
   onClose,
   onCreateShift,
+  onClaimTemplate,
   onChangePassword,
   onSignOut,
 }: {
   onClose: () => void
   onCreateShift: () => void
+  onClaimTemplate: () => void
   onChangePassword: () => void
   onSignOut: () => void
 }) {
@@ -91,6 +98,7 @@ export function CommandPalette({
   const { setCenterOpen } = useNotifications()
   const navigate = useNavigate()
   const signOut = useTwoStep(onSignOut)
+  const { start: startTour } = useTour()
 
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
@@ -139,11 +147,16 @@ export function CommandPalette({
       { id: 'nav-pending', group: 'nav', icon: Clock3, label: t('nav.pending'), keywords: 'cho xac nhan pending diem danh confirm', run: go('/pending') },
       { id: 'nav-logs', group: 'nav', icon: ScrollText, label: t('nav.actionLog'), keywords: 'nhat ky activity log logs', run: go('/logs') },
       { id: 'nav-status', group: 'nav', icon: Wifi, label: t('nav.status'), keywords: 'trang thai status ket noi connection', run: go('/status') },
+      { id: 'nav-help', group: 'nav', icon: BookOpen, label: t('nav.help'), keywords: 'huong dan help docs tai lieu guide cach dung', run: go('/help') },
       ...(isAdmin
         ? [{ id: 'nav-accounts', group: 'nav' as const, icon: UserCog, label: t('nav.accounts'), keywords: 'tai khoan accounts users nguoi dung an hien', run: go('/accounts') }]
         : []),
       {
-        id: 'act-new', group: 'action', icon: Plus, label: t('nav.newShift'), keywords: 'tao ca moi new shift create them',
+        id: 'act-claim', group: 'action', icon: Layers, label: t('newShift.fromTemplate'), keywords: 'nhan ca mau claim template tao ca new shift',
+        run: () => (onClaimTemplate(), 'close'),
+      },
+      {
+        id: 'act-new', group: 'action', icon: Plus, label: t('newShift.manual'), keywords: 'tao ca moi thu cong new shift create manual them',
         run: () => (onCreateShift(), 'close'),
       },
       {
@@ -163,6 +176,12 @@ export function CommandPalette({
         keywords: 'ngon ngu language tieng viet english doi',
         run: () => (setLang(other), 'keep'),
       },
+      ...TOUR_ORDER.map((id): Command => ({
+        id: `act-tour-${id}`, group: 'action', icon: GraduationCap,
+        label: t('palette.tour', { title: TOURS[id].title[lang] }),
+        keywords: `huong dan tung buoc wizard tour guide ${TOURS[id].title.vi} ${TOURS[id].title.en}`,
+        run: () => (startTour(id), 'close'),
+      })),
       {
         id: 'act-pwd', group: 'action', icon: KeyRound, label: t('pwd.title'), keywords: 'doi mat khau password change',
         run: () => (onChangePassword(), 'close'),
@@ -175,7 +194,7 @@ export function CommandPalette({
       },
     ]
     return list
-  }, [t, lang, pref, isAdmin, navigate, setPref, setLang, setCenterOpen, onCreateShift, onChangePassword, signOut])
+  }, [t, lang, pref, isAdmin, navigate, setPref, setLang, setCenterOpen, onCreateShift, onClaimTemplate, onChangePassword, signOut, startTour])
 
   // ---- kết quả tính nhanh ---------------------------------------------------
   const calc = useMemo(() => quickCalc(query), [query])

@@ -154,7 +154,10 @@ export function Timeline({
   const totalAssignments = shifts.reduce((n, s) => n + s.assignments.length, 0)
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+    <div
+      data-tour="timeline"
+      className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5"
+    >
       <div className="overflow-x-auto">
         <div style={{ minWidth: LEFT_COL + trackWidth }}>
           {/* ---- hour header ---- */}
@@ -273,6 +276,7 @@ export function Timeline({
                         <button
                           key={assignment.id}
                           type="button"
+                          data-tour="timeline-block"
                           onClick={() => onSelectAssignment(shift, assignment.id)}
                           title={`${shift.title} · ${row.profile.display_name} · ${formatRange(
                             assignment.start_time,

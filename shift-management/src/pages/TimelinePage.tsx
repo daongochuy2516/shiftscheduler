@@ -29,7 +29,6 @@ import { useShiftEditor } from '../components/ShiftEditorProvider'
 import { Timeline, type HourRange } from '../components/Timeline'
 import { WeekGrid } from '../components/WeekGrid'
 import { MonthGrid } from '../components/MonthGrid'
-import { TemplateBar } from '../components/TemplateBar'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { useShiftColor } from '../data/useShiftColor'
 import { formatRange, fromDateKey, toDateKey, toMinutes } from '../lib/time'
@@ -228,7 +227,10 @@ export function TimelinePage() {
 
       {/* ---- navigation + view switcher ---- */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center rounded-md bg-white shadow-xs ring-1 ring-slate-200">
+        <div
+          data-tour="date-nav"
+          className="flex items-center rounded-md bg-white shadow-xs ring-1 ring-slate-200"
+        >
           <button
             type="button"
             onClick={() => step(-1)}
@@ -276,7 +278,10 @@ export function TimelinePage() {
         {/* Ngày/Tuần/Tháng là lựa chọn chính nên luôn hiện. Trên mobile nó
             chiếm cả hàng, mỗi nút đủ 44px chiều cao. */}
         <div className="order-3 ml-auto flex w-full items-center gap-2 sm:order-none sm:w-auto">
-          <div className="flex flex-1 rounded-md bg-white p-0.5 shadow-xs ring-1 ring-slate-200 sm:flex-none">
+          <div
+            data-tour="view-switch"
+            className="flex flex-1 rounded-md bg-white p-0.5 shadow-xs ring-1 ring-slate-200 sm:flex-none"
+          >
             {VIEWS.map((v) => (
               <button
                 key={v.id}
@@ -391,9 +396,6 @@ export function TimelinePage() {
           </div>
         </Modal>
       )}
-
-      {/* ---- quick-claim templates (day view only) ---- */}
-      {view === 'day' && <TemplateBar date={date} />}
 
       {/* ---- the view itself ---- */}
       {!shiftsState.loaded && <GridSkeleton />}
