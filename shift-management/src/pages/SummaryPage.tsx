@@ -25,6 +25,7 @@ import {
 } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
+import { Checkbox } from '../components/Checkbox'
 import { SummaryGrid } from '../components/SummaryGrid'
 import { buildSummary } from '../lib/summary'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
@@ -238,11 +239,10 @@ export function SummaryPage() {
           </div>
 
           <label className="flex items-center gap-1.5 text-sm text-slate-600">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 sm:h-3.5 sm:w-3.5"
+            <Checkbox
+              className="h-5 w-5 sm:h-4 sm:w-4"
               checked={includeEmptyStaff}
-              onChange={(e) => setIncludeEmptyStaff(e.target.checked)}
+              onChange={setIncludeEmptyStaff}
             />
             <span className="hidden sm:inline">{t('summary.showAllStaff')}</span>
             <span className="sm:hidden">{t('summary.showAllStaffShort')}</span>

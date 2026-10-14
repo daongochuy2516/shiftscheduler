@@ -627,7 +627,7 @@ Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp
 
 ### Quick Search (Ctrl + K)
 
-Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avatar → **Quick Search**). Gõ để lọc, **↑ ↓** để chọn, **Enter** để chạy, **Esc** để đóng. Gõ không dấu cũng được, tiếng Việt hay tiếng Anh đều tìm ra.
+Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avatar → **Quick Search**). Gõ để lọc, **↑ ↓** để chọn, **Enter** để chạy, **Esc** để đóng. Gõ không dấu cũng được, tiếng Việt hay tiếng Anh đều tìm ra. Gõ tiếng Anh mà bộ gõ tiếng Việt (EVKey, Unikey) tự thêm dấu — *dark* thành *dảk*, *theme* thành *thêm* — thì bảng tự hiểu lại và ghi *Kết quả cho “dark”*. Chữ nào đoán sai thì thêm vào bảng `TYPO_FIXES` trong `src/lib/autocorrect.ts`.
 
 | Gõ | Được |
 | --- | --- |

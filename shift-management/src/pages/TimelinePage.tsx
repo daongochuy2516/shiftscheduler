@@ -33,6 +33,8 @@ import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { useShiftColor } from '../data/useShiftColor'
 import { formatRange, fromDateKey, toDateKey, toMinutes } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
+import { Select } from '../components/Select'
+import { Checkbox } from '../components/Checkbox'
 
 type ViewMode = 'day' | 'week' | 'month'
 type ScaleId = 'fit' | 'work' | 'business' | 'full'
@@ -312,11 +314,10 @@ export function TimelinePage() {
 
           {view !== 'month' && (
             <label className="hidden items-center gap-1.5 text-sm text-slate-600 sm:flex">
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              <Checkbox
+                className="h-4 w-4"
                 checked={hideEmptyStaff}
-                onChange={(e) => setHideEmptyStaff(e.target.checked)}
+                onChange={setHideEmptyStaff}
               />
               {t('timeline.onlyStaffWorking')}
             </label>
@@ -324,18 +325,17 @@ export function TimelinePage() {
 
           {view === 'day' && (
             <>
-              <select
-                aria-label={t('timeline.hourScale')}
-                value={scale}
-                onChange={(e) => setScale(e.target.value as ScaleId)}
-                className="hidden rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:block"
-              >
-                {SCALES.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {t(s.label)}
-                  </option>
-                ))}
-              </select>
+              {/* Bọc ngoài để ẩn trên mobile: ô tự đặt `flex`, gắn `hidden`
+                  thẳng vào ô thì hai lớp display giành nhau. */}
+              <div className="hidden sm:block">
+                <Select<ScaleId>
+                  aria-label={t('timeline.hourScale')}
+                  value={scale}
+                  onChange={setScale}
+                  options={SCALES.map((s) => ({ value: s.id, label: t(s.label) }))}
+                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-xs outline-none transition hover:bg-slate-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
 
               {/* Trên mobile việc này do nút nổi đảm nhiệm, và nút nổi cũng tạo
                   theo đúng ngày đang xem. */}
@@ -360,11 +360,10 @@ export function TimelinePage() {
         >
           <div className="space-y-4">
             <label className="flex min-h-12 items-center gap-3 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              <Checkbox
+                className="h-5 w-5"
                 checked={hideEmptyStaff}
-                onChange={(e) => setHideEmptyStaff(e.target.checked)}
+                onChange={setHideEmptyStaff}
               />
               {t('timeline.onlyStaffWorking')}
             </label>

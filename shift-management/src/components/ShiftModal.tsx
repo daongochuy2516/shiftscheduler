@@ -38,6 +38,7 @@ import {
 } from '../lib/time'
 import { Avatar } from './Avatar'
 import { Modal } from './Modal'
+import { Select } from './Select'
 import {
   ShiftSimpleView,
   type EditorRow,
@@ -758,34 +759,29 @@ export function ShiftModal({
                                   seed={row.user_id}
                                   size="sm"
                                 />
-                                <select
+                                <Select
+                                  aria-label={t('common.staff')}
                                   className={
                                     personLocked ? lockedInputClass : inputClass
                                   }
                                   value={row.user_id}
                                   disabled={personLocked}
-                                  onChange={(e) =>
-                                    patchRow(row.key, { user_id: e.target.value })
+                                  onChange={(user_id) =>
+                                    patchRow(row.key, { user_id })
                                   }
-                                >
-                                  {/* Người đang ẩn không có trong danh sách chọn,
-                                      trừ khi đã nằm sẵn trên dòng này. */}
-                                  {profiles
+                                  // Người đang ẩn không có trong danh sách chọn,
+                                  // trừ khi đã nằm sẵn trên dòng này.
+                                  options={profiles
                                     .filter(
                                       (p) => isListed(p) || p.id === row.user_id,
                                     )
-                                    .map((p) => (
-                                    <option
-                                      key={p.id}
-                                      value={p.id}
-                                      disabled={
-                                        p.id !== row.user_id && usedUserIds.has(p.id)
-                                      }
-                                    >
-                                      {p.display_name}
-                                    </option>
-                                    ))}
-                                </select>
+                                    .map((p) => ({
+                                      value: p.id,
+                                      label: p.display_name,
+                                      disabled:
+                                        p.id !== row.user_id && usedUserIds.has(p.id),
+                                    }))}
+                                />
                               </div>
                             </div>
 
@@ -823,21 +819,17 @@ export function ShiftModal({
                               </label>
                               {/* Nhân viên điểm danh bằng nút Xác nhận ở danh sách
                                   ca, nơi có kiểm tra giờ — không đổi tay ở đây. */}
-                              <select
+                              <Select<AssignmentStatus>
+                                aria-label={t('common.status')}
                                 className={restricted ? lockedInputClass : inputClass}
                                 value={row.status}
                                 disabled={restricted}
-                                onChange={(e) =>
-                                  patchRow(row.key, {
-                                    status: e.target.value as AssignmentStatus,
-                                  })
-                                }
-                              >
-                                <option value="pending">{t('status.pending')}</option>
-                                <option value="confirmed">
-                                  {t('status.confirmed')}
-                                </option>
-                              </select>
+                                onChange={(status) => patchRow(row.key, { status })}
+                                options={[
+                                  { value: 'pending', label: t('status.pending') },
+                                  { value: 'confirmed', label: t('status.confirmed') },
+                                ]}
+                              />
                             </div>
 
                             <button

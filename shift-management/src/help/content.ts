@@ -295,7 +295,7 @@ const vi: HelpSection[] = [
     blocks: [
       {
         type: 'p',
-        text: 'Bấm **Ctrl + K** (Mac: ⌘K; điện thoại: avatar → Quick Search). Gõ để lọc, **↑ ↓** chọn, **Enter** chạy, **Esc** đóng. Gõ không dấu cũng được.',
+        text: 'Bấm **Ctrl + K** (Mac: ⌘K; điện thoại: avatar → Quick Search). Gõ để lọc, **↑ ↓** chọn, **Enter** chạy, **Esc** đóng. Gõ không dấu cũng được. Bộ gõ lỡ thêm dấu khi gõ tiếng Anh ("dark" thành "dảk") thì bảng tự hiểu lại.',
       },
       {
         type: 'table',
@@ -629,7 +629,7 @@ const en: HelpSection[] = [
     blocks: [
       {
         type: 'p',
-        text: 'Press **Ctrl + K** (Mac: ⌘K; phone: avatar → Quick Search). Type to filter, **↑ ↓** to pick, **Enter** to run, **Esc** to close.',
+        text: 'Press **Ctrl + K** (Mac: ⌘K; phone: avatar → Quick Search). Type to filter, **↑ ↓** to pick, **Enter** to run, **Esc** to close. If your Vietnamese keyboard adds accents while you type English ("dark" becomes "dảk"), it figures out what you meant.',
       },
       {
         type: 'table',

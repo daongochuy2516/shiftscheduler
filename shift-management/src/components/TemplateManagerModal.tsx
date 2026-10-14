@@ -14,6 +14,7 @@ import {
 import { formatRange, isInvalidRange } from '../lib/time'
 import { useNotify } from '../notifications/NotificationContext'
 import { Modal } from './Modal'
+import { Checkbox } from './Checkbox'
 
 const inputClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
@@ -326,13 +327,10 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            <Checkbox
+              className="h-4 w-4"
               checked={draft.is_active}
-              onChange={(e) =>
-                setDraft({ ...draft, is_active: e.target.checked })
-              }
+              onChange={(is_active) => setDraft({ ...draft, is_active })}
             />
             {t('tpl.active')}
           </label>

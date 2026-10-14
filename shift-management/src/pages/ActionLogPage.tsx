@@ -16,6 +16,7 @@ import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { Avatar } from '../components/Avatar'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { Select } from '../components/Select'
 import { StaffMultiSelect } from '../components/StaffMultiSelect'
 
 const PAGE_SIZE = 50
@@ -246,38 +247,38 @@ export function ActionLogPage() {
             <label className={labelClass} htmlFor="log-action">
               {t('log.action')}
             </label>
-            <select
+            <Select
               id="log-action"
               className={controlClass}
               value={filters.action ?? ''}
-              onChange={(e) => patch({ action: e.target.value || null })}
-            >
-              <option value="">{t('log.allActions')}</option>
-              {ACTIONS.map((a) => (
-                <option key={a} value={a}>
-                  {t(`log.action.${a}` as TranslationKey)}
-                </option>
-              ))}
-            </select>
+              onChange={(action) => patch({ action: action || null })}
+              options={[
+                { value: '', label: t('log.allActions') },
+                ...ACTIONS.map((a) => ({
+                  value: a,
+                  label: t(`log.action.${a}` as TranslationKey),
+                })),
+              ]}
+            />
           </div>
 
           <div>
             <label className={labelClass} htmlFor="log-entity">
               {t('log.entity')}
             </label>
-            <select
+            <Select
               id="log-entity"
               className={controlClass}
               value={filters.entityType ?? ''}
-              onChange={(e) => patch({ entityType: e.target.value || null })}
-            >
-              <option value="">{t('log.allEntities')}</option>
-              {ENTITY_TYPES.map((e) => (
-                <option key={e} value={e}>
-                  {t(`log.entity.${e}` as TranslationKey)}
-                </option>
-              ))}
-            </select>
+              onChange={(entityType) => patch({ entityType: entityType || null })}
+              options={[
+                { value: '', label: t('log.allEntities') },
+                ...ENTITY_TYPES.map((e) => ({
+                  value: e,
+                  label: t(`log.entity.${e}` as TranslationKey),
+                })),
+              ]}
+            />
           </div>
 
           <div>

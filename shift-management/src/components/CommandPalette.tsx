@@ -38,6 +38,7 @@ import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
 import { useTour } from '../help/TourProvider'
 import { TOURS, TOUR_ORDER } from '../help/tours'
+import { corrections } from '../lib/autocorrect'
 
 type Group = 'result' | 'nav' | 'action' | 'staff'
 
@@ -70,6 +71,40 @@ function fold(s: string): string {
     .replace(/[̀-ͯ]/g, '')
     .replace(/đ/gi, 'd')
     .toLowerCase()
+}
+
+const splitWords = (s: string) => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+
+/**
+ * Một từ gõ vào khớp tốt tới đâu với một chuỗi (nhãn hay từ khoá). Bậc từ cao
+ * xuống thấp: trùng cả dấu → trùng nguyên từ → đầu từ → nằm giữa từ. Trùng cả
+ * dấu đứng đầu để gõ "tối" ra "Giao diện: Tối" trước "Ca của tôi" — hai chữ
+ * chỉ khác nhau ở dấu, bỏ dấu đi là như nhau.
+ */
+function wordScore(text: string, raw: string | null, tok: string): number {
+  if (raw) {
+    const exact = splitWords(text.normalize('NFC').toLowerCase())
+    if (exact.includes(raw)) return 6
+    if (exact.some((w) => w.startsWith(raw))) return 5
+  }
+  const folded = splitWords(fold(text))
+  if (folded.includes(tok)) return 4
+  if (folded.some((w) => w.startsWith(tok))) return 3
+  return fold(text).includes(tok) ? 1 : 0
+}
+
+/**
+ * Điểm của một lệnh cho cả câu gõ. Khớp ở nhãn (thứ người dùng nhìn thấy)
+ * nặng gấp đôi khớp ở từ khoá ẩn. `raws[i]` là từ gốc còn dấu, `null` khi từ
+ * đó đã được tự sửa (lib/autocorrect.ts) — lúc đó dấu gốc không còn ý nghĩa.
+ */
+function commandScore(c: Command, raws: (string | null)[], tokens: string[]): number {
+  return tokens.reduce(
+    (sum, tok, i) =>
+      sum +
+      Math.max(wordScore(c.label, raws[i], tok) * 2, wordScore(c.keywords, raws[i], tok)),
+    0,
+  )
 }
 
 /**
@@ -259,14 +294,10 @@ export function CommandPalette({
   }, [calc, lang, dateLocale, copiedId, t, navigate])
 
   // ---- lọc ------------------------------------------------------------------
-  const items = useMemo<Command[]>(() => {
-    const tokens = fold(query).split(/\s+/).filter(Boolean)
-    const matches = (c: Command) => {
-      const hay = fold(`${c.label} ${c.keywords}`)
-      return tokens.every((tok) => hay.includes(tok))
-    }
+  const { items, corrected } = useMemo(() => {
+    const words = query.trim().split(/\s+/).filter(Boolean)
     // Chỉ gợi ý người khi đã gõ: danh sách cả nhóm ngay từ đầu thì quá dài.
-    const staff: Command[] = tokens.length
+    const staff: Command[] = words.length
       ? profiles.map((p) => ({
           id: `staff-${p.id}`,
           group: 'staff' as const,
@@ -277,7 +308,57 @@ export function CommandPalette({
           run: () => (navigate(`/shifts?staff=${p.id}`), 'close' as const),
         }))
       : []
-    return [...results, ...fixed.filter(matches), ...staff.filter(matches).slice(0, 6)]
+    const hays = [...fixed, ...staff].map((c) => fold(`${c.label} ${c.keywords}`))
+    const known = (tok: string) => hays.some((hay) => hay.includes(tok))
+
+    // Từ nào không khớp lệnh nào thì thử các cách sửa (lib/autocorrect.ts):
+    // gõ nhanh "dark" mà bộ gõ tiếng Việt biến thành "dảk" vẫn ra kết quả.
+    const original = words.map(fold)
+    const tokens = words.map((w, i) => {
+      const tok = original[i]
+      if (known(tok)) return tok
+      return corrections(w).find(known) ?? tok
+    })
+    const changed = tokens.some((tok, i) => tok !== original[i])
+    const matches = (c: Command) => {
+      const hay = fold(`${c.label} ${c.keywords}`)
+      return tokens.every((tok) => hay.includes(tok))
+    }
+
+    const matched = [...fixed.filter(matches), ...staff.filter(matches).slice(0, 6)]
+    if (!tokens.length) {
+      return { items: [...results, ...matched], corrected: null }
+    }
+
+    // Xếp theo độ khớp. Danh sách vẽ tiêu đề nhóm mỗi khi đổi nhóm, nên giữ
+    // các lệnh cùng nhóm liền nhau: nhóm nào có lệnh khớp nhất thì lên trước,
+    // trong nhóm thì lệnh khớp hơn lên trước. Bằng điểm thì giữ thứ tự gốc.
+    const raws = words.map((w, i) =>
+      tokens[i] === original[i] ? w.normalize('NFC').toLowerCase() : null,
+    )
+    const score = new Map(matched.map((c) => [c.id, commandScore(c, raws, tokens)]))
+    const best = new Map<Command['group'], number>()
+    const groupOrder = new Map<Command['group'], number>()
+    matched.forEach((c, i) => {
+      best.set(c.group, Math.max(best.get(c.group) ?? 0, score.get(c.id) ?? 0))
+      if (!groupOrder.has(c.group)) groupOrder.set(c.group, i)
+    })
+    const ranked = matched
+      .map((c, i) => ({ c, i }))
+      .sort(
+        (a, b) =>
+          (best.get(b.c.group) ?? 0) - (best.get(a.c.group) ?? 0) ||
+          // Hai nhóm bằng điểm: giữ thứ tự nhóm gốc, không cho xen kẽ nhau.
+          (groupOrder.get(a.c.group) ?? 0) - (groupOrder.get(b.c.group) ?? 0) ||
+          (score.get(b.c.id) ?? 0) - (score.get(a.c.id) ?? 0) ||
+          a.i - b.i,
+      )
+      .map(({ c }) => c)
+
+    return {
+      items: [...results, ...ranked],
+      corrected: changed ? tokens.join(' ') : null,
+    }
   }, [query, results, fixed, profiles, t, navigate])
 
   const activeIndex = Math.min(active, Math.max(0, items.length - 1))
@@ -344,6 +425,13 @@ export function CommandPalette({
             Esc
           </kbd>
         </div>
+
+        {/* Nói rõ đã tự sửa, để kết quả không trông như tìm bừa. */}
+        {corrected && (
+          <p className="border-b border-slate-100 px-4 py-1.5 text-xs text-slate-500">
+            {t('palette.correctedTo', { query: corrected })}
+          </p>
+        )}
 
         <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-2">
           {items.length === 0 ? (

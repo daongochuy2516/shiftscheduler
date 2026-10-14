@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ShiftList } from '../components/ShiftList'
+import { Checkbox } from '../components/Checkbox'
 import { PageSkeleton } from '../components/PageSkeleton'
 
 export function PendingPage() {
@@ -50,12 +51,7 @@ export function PendingPage() {
           data-tour="pending-only-mine"
           className="ml-auto flex items-center gap-1.5 text-sm text-slate-600"
         >
-          <input
-            type="checkbox"
-            className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-            checked={onlyMine}
-            onChange={(e) => setOnlyMine(e.target.checked)}
-          />
+          <Checkbox className="h-4 w-4" checked={onlyMine} onChange={setOnlyMine} />
           {t('timeline.onlyMine')}
         </label>
       </div>
