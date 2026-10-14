@@ -107,7 +107,7 @@ const vi: HelpSection[] = [
         items: [
           'Trên máy tính, các trang nằm ở thanh trên cùng; **nút lưới** ở góc phải chứa thông báo, giao diện, ngôn ngữ, Trạng thái, Hướng dẫn, đổi mật khẩu và đăng xuất.',
           'Trên điện thoại, bốn trang chính nằm ở **thanh dưới**; các mục còn lại nằm trong bảng mở ra khi bấm **avatar**.',
-          'Bấm **Ctrl + K** (Mac: ⌘K) ở bất cứ đâu để tìm nhanh — xem mục Tìm nhanh.',
+          'Bấm **Ctrl + K** (Mac: ⌘K) ở bất cứ đâu để mở Quick Search — xem mục Quick Search.',
         ],
       },
     ],
@@ -290,12 +290,12 @@ const vi: HelpSection[] = [
   },
   {
     id: 'palette',
-    title: 'Tìm nhanh (Ctrl + K)',
+    title: 'Quick Search (Ctrl + K)',
     summary: 'Đi tới trang, chạy thao tác, và tính giờ / ngày.',
     blocks: [
       {
         type: 'p',
-        text: 'Bấm **Ctrl + K** (Mac: ⌘K; điện thoại: avatar → Tìm nhanh). Gõ để lọc, **↑ ↓** chọn, **Enter** chạy, **Esc** đóng. Gõ không dấu cũng được.',
+        text: 'Bấm **Ctrl + K** (Mac: ⌘K; điện thoại: avatar → Quick Search). Gõ để lọc, **↑ ↓** chọn, **Enter** chạy, **Esc** đóng. Gõ không dấu cũng được.',
       },
       {
         type: 'table',
@@ -441,7 +441,7 @@ const en: HelpSection[] = [
         items: [
           'On a computer the pages are in the top bar; the **grid button** on the right holds notifications, theme, language, Status, Help, change password and sign out.',
           'On a phone the four main pages are in the **bottom bar**; everything else is in the sheet behind your **avatar**.',
-          'Press **Ctrl + K** (Mac: ⌘K) anywhere for quick search — see Quick search.',
+          'Press **Ctrl + K** (Mac: ⌘K) anywhere to open Quick Search — see Quick Search.',
         ],
       },
     ],
@@ -624,12 +624,12 @@ const en: HelpSection[] = [
   },
   {
     id: 'palette',
-    title: 'Quick search (Ctrl + K)',
+    title: 'Quick Search (Ctrl + K)',
     summary: 'Jump to pages, run actions, and do time / date maths.',
     blocks: [
       {
         type: 'p',
-        text: 'Press **Ctrl + K** (Mac: ⌘K; phone: avatar → Quick search). Type to filter, **↑ ↓** to pick, **Enter** to run, **Esc** to close.',
+        text: 'Press **Ctrl + K** (Mac: ⌘K; phone: avatar → Quick Search). Type to filter, **↑ ↓** to pick, **Enter** to run, **Esc** to close.',
       },
       {
         type: 'table',

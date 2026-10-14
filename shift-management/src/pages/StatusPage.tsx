@@ -8,7 +8,7 @@ import {
   KeyRound,
   RotateCw,
   UserRound,
-  Wifi,
+  Network,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { IS_MOCK_BACKEND } from '../data'
@@ -188,7 +188,7 @@ export function StatusPage() {
       <div className="flex flex-wrap items-start gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <Wifi className="h-5 w-5 shrink-0 text-slate-400" />
+            <Network className="h-5 w-5 shrink-0 text-slate-400" />
             {t('status.title')}
           </h1>
           <p className="text-sm text-slate-500">{t('status.subtitle')}</p>
@@ -427,7 +427,7 @@ function Card({
   label,
   children,
 }: {
-  icon: typeof Wifi
+  icon: typeof Network
   title: string
   tone: Tone
   label: string
@@ -465,7 +465,7 @@ function Row({
         <span className="block text-slate-600">{label}</span>
         {hint && <span className="block text-xs text-slate-400">{hint}</span>}
       </dt>
-      <dd className="ml-auto flex min-w-0 justify-end text-slate-800">{children}</dd>
+      <dd className="ml-auto flex min-w-0 justify-end text-slate-800 select-text">{children}</dd>
     </div>
   )
 }

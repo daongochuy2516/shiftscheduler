@@ -169,7 +169,7 @@ export function ActionLogPage() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
+        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
           {error}
         </p>
       )}
@@ -421,7 +421,7 @@ function LogRow({ row }: { row: ActionLog }) {
 
         {/* break-words: mô tả chứa tên ca do người dùng đặt, có thể là một
             chuỗi dài không dấu cách và sẽ làm tràn ngang cả trang. */}
-        <p className="mt-1.5 min-w-0 text-sm break-words text-slate-700 sm:mt-0 sm:flex-1">
+        <p className="mt-1.5 min-w-0 text-sm break-words text-slate-700 select-text sm:mt-0 sm:flex-1">
           {row.summary}
         </p>
 
@@ -495,7 +495,7 @@ function JsonBlock({
       <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
         {title}
       </p>
-      <pre className="overflow-x-auto rounded-md bg-white py-2 text-[11px] leading-relaxed text-slate-700 ring-1 ring-slate-200">
+      <pre className="overflow-x-auto rounded-md bg-white py-2 text-[11px] leading-relaxed text-slate-700 ring-1 ring-slate-200 select-text">
         {diff && tone ? (
           // w-max + min-w-full: dòng được tô phủ hết bề ngang kể cả khi phải
           // cuộn ngang, thay vì dừng ở mép khung.

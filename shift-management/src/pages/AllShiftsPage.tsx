@@ -265,7 +265,7 @@ function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
       </div>
 
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
+        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
           {error}
         </p>
       )}

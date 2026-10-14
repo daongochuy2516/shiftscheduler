@@ -186,11 +186,11 @@ export const TOURS: Record<TourId, Tour> = {
         screen: 'desktop',
         text: {
           vi: {
-            title: 'Tìm nhanh — Ctrl + K',
+            title: 'Quick Search — Ctrl + K',
             body: 'Bấm Ctrl + K ở bất cứ đâu để đi tới trang, chạy thao tác hay tính nhanh, ví dụ "08:00 + 4h30m" hay "hôm nay + 7 ngày". Xong rồi! Xem lại bất cứ lúc nào ở Menu → Hướng dẫn.',
           },
           en: {
-            title: 'Quick search — Ctrl + K',
+            title: 'Quick Search — Ctrl + K',
             body: 'Press Ctrl + K anywhere to jump to a page, run an action or do quick maths like "08:00 + 4h30m" or "today + 7 days". That\'s it! Find this again under Menu → Help.',
           },
         },

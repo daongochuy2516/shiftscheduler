@@ -178,7 +178,7 @@ export function ShiftSimpleView({
           · <span className="tabular-nums">{formatRange(shiftStart, shiftEnd)}</span>
         </p>
         {shift.note && (
-          <p className="mt-1.5 flex items-start gap-1.5 text-sm text-slate-600">
+          <p className="mt-1.5 flex items-start gap-1.5 text-sm text-slate-600 select-text">
             <NotebookPen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
             {shift.note}
           </p>

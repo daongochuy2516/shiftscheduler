@@ -23,7 +23,7 @@ import {
   User,
   UserCog,
   Users,
-  Wifi,
+  Network,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule } from '../data/ScheduleContext'
@@ -146,7 +146,7 @@ export function CommandPalette({
       { id: 'nav-mine', group: 'nav', icon: User, label: t('nav.myShifts'), keywords: 'ca cua toi my shifts', run: go('/my-shifts') },
       { id: 'nav-pending', group: 'nav', icon: Clock3, label: t('nav.pending'), keywords: 'cho xac nhan pending diem danh confirm', run: go('/pending') },
       { id: 'nav-logs', group: 'nav', icon: ScrollText, label: t('nav.actionLog'), keywords: 'nhat ky activity log logs', run: go('/logs') },
-      { id: 'nav-status', group: 'nav', icon: Wifi, label: t('nav.status'), keywords: 'trang thai status ket noi connection', run: go('/status') },
+      { id: 'nav-status', group: 'nav', icon: Network, label: t('nav.status'), keywords: 'trang thai status ket noi connection', run: go('/status') },
       { id: 'nav-help', group: 'nav', icon: BookOpen, label: t('nav.help'), keywords: 'huong dan help docs tai lieu guide cach dung', run: go('/help') },
       ...(isAdmin
         ? [{ id: 'nav-accounts', group: 'nav' as const, icon: UserCog, label: t('nav.accounts'), keywords: 'tai khoan accounts users nguoi dung an hien', run: go('/accounts') }]
@@ -168,13 +168,13 @@ export function CommandPalette({
         label: t('palette.theme', { theme: t(th.label) }),
         hint: pref === th.id ? t('palette.current') : undefined,
         keywords: th.kw,
-        run: () => (setPref(th.id), 'keep'),
+        run: () => (setPref(th.id), 'close'),
       })),
       {
         id: 'act-lang', group: 'action', icon: Languages,
         label: t('palette.lang', { lang: LANG_NAME[other] }),
         keywords: 'ngon ngu language tieng viet english doi',
-        run: () => (setLang(other), 'keep'),
+        run: () => (setLang(other), 'close'),
       },
       ...TOUR_ORDER.map((id): Command => ({
         id: `act-tour-${id}`, group: 'action', icon: GraduationCap,

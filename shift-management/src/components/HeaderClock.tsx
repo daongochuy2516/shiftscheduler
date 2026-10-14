@@ -9,18 +9,6 @@ const OPEN_DELAY_MS = 250
 /** Dừng chuột giữa đường (trong vùng tam giác) quá ngần này thì đóng. */
 const REST_MS = 300
 
-const FORMAT_KEY = 'scheduler.clockFormat'
-
-function readHour12(): boolean {
-  try {
-    return localStorage.getItem(FORMAT_KEY) === '12'
-  } catch {
-    return false
-  }
-}
-
-const timeFormat = (hour12: boolean) => (hour12 ? 'h:mm:ss a' : 'HH:mm:ss')
-
 interface Point {
   x: number
   y: number
@@ -42,14 +30,12 @@ function inTriangle(p: Point, a: Point, b: Point, c: Point): boolean {
  * Đồng hồ nhỏ trên header PC, kiểu đồng hồ taskbar Windows: giờ ở trên, ngày
  * ở dưới. Chạy theo giờ máy chủ — đồng hồ mà luật điểm danh dùng.
  *
- * Tooltip tự vẽ thay cho `title`: `title` hiện chậm, không có hiệu ứng, đứng
- * yên trong khi đồng hồ vẫn chạy, và không bấm được vào trong.
+ * Tooltip tự vẽ thay cho `title`: `title` hiện chậm, không có hiệu ứng, và
+ * đứng yên trong khi đồng hồ vẫn chạy.
  */
 export function HeaderClock() {
-  const { dateLocale } = useI18n()
   const { now, source } = useServerClock()
   const [open, setOpen] = useState(false)
-  const [hour12, setHour12State] = useState(readHour12)
   const openTimer = useRef(0)
   const stopTracking = useRef<(() => void) | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -125,16 +111,6 @@ export function HeaderClock() {
     }
   }
 
-  function setHour12(next: boolean) {
-    setHour12State(next)
-    try {
-      if (next) localStorage.setItem(FORMAT_KEY, '12')
-      else localStorage.removeItem(FORMAT_KEY)
-    } catch {
-      // Không lưu được thì lần sau về 24h, không sao.
-    }
-  }
-
   return (
     <div
       tabIndex={0}
@@ -159,7 +135,7 @@ export function HeaderClock() {
         {source === 'device' && (
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
         )}
-        {format(now, timeFormat(hour12), { locale: dateLocale })}
+        {format(now, 'HH:mm:ss')}
       </time>
       <span className="text-[11px] text-slate-500">
         {format(now, 'dd/MM/yyyy')}
@@ -171,8 +147,6 @@ export function HeaderClock() {
           panelRef={panelRef}
           now={now}
           source={source}
-          hour12={hour12}
-          onHour12={setHour12}
         />
       )}
     </div>
@@ -188,76 +162,38 @@ function ClockTooltip({
   panelRef,
   now,
   source,
-  hour12,
-  onHour12,
 }: {
   id: string
   panelRef: RefObject<HTMLDivElement | null>
   now: Date
   source: ClockSource
-  hour12: boolean
-  onHour12: (hour12: boolean) => void
 }) {
   const { t, dateLocale } = useI18n()
   useExitAnimation(panelRef, 160, { freezePosition: true })
-
-  const formats = [
-    { hour12: false, label: t('clock.24h') },
-    { hour12: true, label: t('clock.12h') },
-  ]
 
   return (
     <div
       ref={panelRef}
       id={id}
-      // Không có bước "bấm ra ngoài": tooltip đóng theo chuột / tiêu điểm.
-      // Chặn mousedown để bấm nút đổi kiểu giờ không cướp mất tiêu điểm.
-      onMouseDown={(e) => e.preventDefault()}
+      role="tooltip"
       // nowrap: lúc đóng, bản sao của useExitAnimation bị ghim bề rộng bằng
       // offsetWidth (làm tròn xuống) — hụt một phần pixel là dòng ngày xuống hàng.
       className="tooltip-panel absolute top-full right-0 z-50 mt-2 w-max cursor-default rounded-xl bg-white px-3.5 py-2.5 text-left whitespace-nowrap shadow-lg ring-1 ring-slate-900/10"
     >
       <p className="text-xl font-semibold text-slate-900 tabular-nums">
-        {format(now, timeFormat(hour12), { locale: dateLocale })}
+        {format(now, 'HH:mm:ss')}
       </p>
       <p className="text-sm text-slate-600 first-letter:uppercase">
         {format(now, 'PPPP', { locale: dateLocale })}
       </p>
-      <div className="mt-1.5 flex items-center gap-3 border-t border-slate-100 pt-1.5">
-        <p className="flex items-center gap-1.5 text-xs text-slate-500">
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              source === 'server' ? 'bg-emerald-500' : 'bg-amber-500'
-            }`}
-          />
-          {t(source === 'server' ? 'clock.server' : 'clock.device')}
-        </p>
-        <div
-          role="radiogroup"
-          aria-label={t('clock.format')}
-          className="ml-auto flex rounded-md bg-slate-100 p-0.5"
-        >
-          {formats.map((f) => {
-            const active = f.hour12 === hour12
-            return (
-              <button
-                key={f.label}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                onClick={() => onHour12(f.hour12)}
-                className={`rounded px-2 py-0.5 text-xs font-semibold transition ${
-                  active
-                    ? 'bg-white text-indigo-700 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {f.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <p className="mt-1.5 flex items-center gap-1.5 border-t border-slate-100 pt-1.5 text-xs text-slate-500">
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            source === 'server' ? 'bg-emerald-500' : 'bg-amber-500'
+          }`}
+        />
+        {t(source === 'server' ? 'clock.server' : 'clock.device')}
+      </p>
     </div>
   )
 }

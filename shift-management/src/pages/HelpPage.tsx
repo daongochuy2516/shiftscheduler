@@ -280,7 +280,9 @@ function SectionCard({
       {!collapsed && (
         <div
           id={`help-${s.id}-body`}
-          className="mt-3 space-y-3 text-sm leading-relaxed text-slate-700"
+          // Nội dung để đọc như tài liệu: cho bôi đen, copy (khác phần còn lại
+          // của app — xem index.css).
+          className="mt-3 space-y-3 text-sm leading-relaxed text-slate-700 select-text"
         >
           {s.blocks.map((b, i) => (
             <Block key={i} block={b} />

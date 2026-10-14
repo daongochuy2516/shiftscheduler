@@ -22,6 +22,38 @@
   }
 }
 
+/*
+ * Cảm giác app thay vì trang web: mặc định không bôi đen được chữ — lướt qua
+ * nút, nhãn, tiêu đề mà sáng xanh lên là lộ ngay "đây là web". Chỗ nào có
+ * thông tin đáng copy (ghi chú, email, lỗi máy chủ, JSON nhật ký, nội dung
+ * Hướng dẫn…) thì tự gắn `select-text` ở component.
+ *
+ * Ô nhập liệu phải bật lại tường minh: Safari iOS kế thừa `none` vào input là
+ * không gõ được chữ.
+ */
+@layer base {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    /* Bấm giữ link / ảnh trên điện thoại không bật menu "Mở trong tab mới". */
+    -webkit-touch-callout: none;
+    /* Bỏ ô xám nháy lên khi chạm — nút đã có trạng thái nhấn riêng. */
+    -webkit-tap-highlight-color: transparent;
+  }
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable='false']) {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  /* Kéo nhầm một link điều hướng hay icon thì ra cái bóng mờ của trình duyệt. */
+  a,
+  img,
+  svg {
+    -webkit-user-drag: none;
+  }
+}
+
 html,
 body,
 #root {

@@ -404,7 +404,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {template.note && (
-                  <p className="mt-1 text-sm text-slate-500">{template.note}</p>
+                  <p className="mt-1 text-sm text-slate-500 select-text">{template.note}</p>
                 )}
 
                 {isConfirming && (

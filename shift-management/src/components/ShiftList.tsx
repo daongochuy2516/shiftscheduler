@@ -208,7 +208,7 @@ export function ShiftList({
                   </header>
 
                   {shift.note && (
-                    <p className="flex items-start gap-2 border-b border-slate-100 bg-slate-50/70 px-4 py-2 text-sm text-slate-600">
+                    <p className="flex items-start gap-2 border-b border-slate-100 bg-slate-50/70 px-4 py-2 text-sm text-slate-600 select-text">
                       <NotebookPen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
                       {shift.note}
                     </p>
@@ -263,7 +263,7 @@ export function ShiftList({
                                 )}
                               </p>
                               {assignment.note && (
-                                <p className="truncate text-xs text-slate-500">
+                                <p className="truncate text-xs text-slate-500 select-text">
                                   {assignment.note}
                                 </p>
                               )}

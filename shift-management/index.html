@@ -1,31 +1,30 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    />
-    <title>Thinkmay Team Board</title>
-    <!-- Áp theme trước khi vẽ để không nháy trắng khi đang ở chế độ tối.
-         Khoá và logic phải khớp src/theme/ThemeContext.tsx. -->
-    <script>
-      (function () {
-        var pref = null
-        try {
-          pref = localStorage.getItem('scheduler.theme')
-        } catch (e) {}
-        var dark =
-          pref === 'dark' ||
-          (pref !== 'light' &&
-            window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      })()
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Thinkmay Team Board</title>
+  <!-- dark theme flash fix src/theme/ThemeContext.tsx. -->
+  <script>
+    (function () {
+      var pref = null
+      try {
+        pref = localStorage.getItem('scheduler.theme')
+      } catch (e) { }
+      var dark =
+        pref === 'dark' ||
+        (pref !== 'light' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    })()
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

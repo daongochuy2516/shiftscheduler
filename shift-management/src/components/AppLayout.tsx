@@ -15,7 +15,7 @@ import {
   Search,
   User,
   UserCog,
-  Wifi,
+  Network,
 } from 'lucide-react'
 import { ChangePasswordModal } from './ChangePasswordModal'
 import { useAuth } from '../auth/AuthContext'
@@ -283,7 +283,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       {displayName}
                       <RoleBadge role={user.role} />
                     </p>
-                    <p className="text-[11px] text-slate-500">{user.email}</p>
+                    <p className="text-[11px] text-slate-500 select-text">{user.email}</p>
                   </div>
                 </div>
 
@@ -379,7 +379,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <Wifi className="h-5 w-5 text-slate-400" />
+              <Network className="h-5 w-5 text-slate-400" />
               {t('nav.status')}
             </NavLink>
 

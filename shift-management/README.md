@@ -144,7 +144,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Ca của tôi** | Chỉ những ca bạn được phân công |
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
-| Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. Rê chuột (hoặc Tab tới) để xem bảng nhỏ có giờ to, ngày đầy đủ kèm thứ, và nút chuyển **24 giờ / 12 giờ** (trình duyệt nhớ lựa chọn). Đưa chuột từ đồng hồ xuống bảng thì bảng không tắt. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
+| Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. Rê chuột (hoặc Tab tới) để xem bảng nhỏ có giờ to, ngày đầy đủ kèm thứ. Đưa chuột từ đồng hồ xuống bảng thì bảng không tắt. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
 | **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định **hôm nay**) |
 | ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) |
@@ -622,17 +622,17 @@ Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp
 | Bấm nền tối ngoài form | Đóng form |
 | Bấm khối / chip ca | Mở form sửa ca đó |
 | Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |
-| `Ctrl + K` (Mac: `⌘K`) | Mở / đóng **bảng tìm nhanh** (xem bên dưới) |
+| `Ctrl + K` (Mac: `⌘K`) | Mở / đóng **Quick Search** (xem bên dưới) |
 | Bấm số ngày (Tháng) | Sang chế độ Ngày |
 
-### Tìm nhanh (Ctrl + K)
+### Quick Search (Ctrl + K)
 
-Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avatar → **Tìm nhanh**). Gõ để lọc, **↑ ↓** để chọn, **Enter** để chạy, **Esc** để đóng. Gõ không dấu cũng được, tiếng Việt hay tiếng Anh đều tìm ra.
+Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avatar → **Quick Search**). Gõ để lọc, **↑ ↓** để chọn, **Enter** để chạy, **Esc** để đóng. Gõ không dấu cũng được, tiếng Việt hay tiếng Anh đều tìm ra.
 
 | Gõ | Được |
 | --- | --- |
 | Tên trang: *lịch tuần*, *tổng kết*, *nhật ký*… | Đi tới trang đó (Lịch ngày / tuần / tháng, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản với admin) |
-| *tạo ca*, *thông báo*, *giao diện tối*, *ngôn ngữ*, *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó. Đăng xuất phải Enter hai lần |
+| *tạo ca*, *thông báo*, *giao diện tối*, *ngôn ngữ*, *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó rồi đóng bảng. Đăng xuất phải Enter hai lần |
 | Tên một người: *mai* | **Ca của Mai Le** — mở Tất cả ca, lọc sẵn theo người đó |
 | Phép tính: `12*3+4`, `(1+2)^3` | Kết quả — Enter để chép |
 | Giờ ± thời lượng: `08:00 + 4h30m`, `22:00 + 3h` | `12:30`, `01:00 (+1 ngày)` |

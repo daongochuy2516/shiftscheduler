@@ -11,7 +11,7 @@ import {
   Moon,
   Sun,
   UserCog,
-  Wifi,
+  Network,
 } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -161,7 +161,7 @@ export function HeaderMenu({
               onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
             />
             <Tile
-              icon={Wifi}
+              icon={Network}
               tone="bg-emerald-50 text-emerald-600"
               tour="menu-status"
               label={t('nav.status')}
@@ -195,7 +195,7 @@ export function HeaderMenu({
           {/* Cho người chưa biết có bảng lệnh nhanh. */}
           <p className="px-3 pt-2 pb-1 text-center text-xs text-slate-500">
             {t('menu.paletteHint', {
-              keys: /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl K',
+              keys: /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl + K',
             })}
           </p>
         </MenuPanel>

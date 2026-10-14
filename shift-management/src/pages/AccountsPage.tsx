@@ -43,7 +43,7 @@ export function AccountsPage() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
+        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
           {error}
         </p>
       )}
@@ -178,7 +178,7 @@ function AccountRow({
             </p>
           )}
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
-            <span className="truncate">{profile.email}</span>
+            <span className="truncate select-text">{profile.email}</span>
             <RoleBadge role={profile.role} />
             {isMe && (
               <span className="font-medium text-indigo-600">
