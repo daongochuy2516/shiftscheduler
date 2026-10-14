@@ -1,9 +1,16 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react'
-import { BookOpen, GraduationCap, Info, Play, Search } from 'lucide-react'
+import {
+  BookOpen,
+  ChevronDown,
+  GraduationCap,
+  Info,
+  Play,
+  Search,
+} from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import { HELP, type HelpBlock, type HelpSection } from '../help/content'
-import { TOURS, TOUR_ORDER, stepsFor } from '../help/tours'
+import { TOURS, TOUR_ORDER, stepsFor, type TourId } from '../help/tours'
 import { useTour } from '../help/TourProvider'
 
 /** Bỏ dấu, chữ thường — để tìm không dấu vẫn ra. */
@@ -71,11 +78,13 @@ export function HelpPage() {
   const { start } = useTour()
   const [query, setQuery] = useState('')
 
-  const sections = useMemo(
+  const visible = useMemo(
     () =>
       HELP[lang].filter((s) => !s.adminOnly || user?.role === 'admin'),
     [lang, user?.role],
   )
+  const pinned = useMemo(() => visible.filter((s) => s.pinned), [visible])
+  const sections = useMemo(() => visible.filter((s) => !s.pinned), [visible])
   const shown = useMemo(() => {
     const tokens = fold(query).split(/\s+/).filter(Boolean)
     if (!tokens.length) return sections
@@ -100,6 +109,10 @@ export function HelpPage() {
         </h1>
         <p className="text-sm text-slate-500">{t('help.subtitle')}</p>
       </div>
+
+      {pinned.map((s) => (
+        <SectionCard key={s.id} section={s} onTour={start} collapsible />
+      ))}
 
       {/* ---- các bài từng bước ---- */}
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
@@ -173,44 +186,108 @@ export function HelpPage() {
             </p>
           )}
           {shown.map((s) => (
-            <article
-              key={s.id}
-              id={`help-${s.id}`}
-              className="scroll-mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-5"
-            >
-              <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-semibold text-slate-900">
-                    {s.title}
-                    {s.adminOnly && (
-                      <span className="ml-2 rounded-full bg-violet-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200 ring-inset">
-                        Admin
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-sm text-slate-500">{s.summary}</p>
-                </div>
-                {s.tour && (
-                  <button
-                    type="button"
-                    onClick={() => start(s.tour!)}
-                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 sm:min-h-0 sm:py-1.5"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    {t('help.startTour')}
-                  </button>
-                )}
-              </div>
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-700">
-                {s.blocks.map((b, i) => (
-                  <Block key={i} block={b} />
-                ))}
-              </div>
-            </article>
+            <SectionCard key={s.id} section={s} onTour={start} />
           ))}
         </div>
       </div>
     </div>
+  )
+}
+
+const collapsedKey = (id: string) => `scheduler.help.collapsed.${id}`
+
+function readCollapsed(id: string): boolean {
+  try {
+    return localStorage.getItem(collapsedKey(id)) === '1'
+  } catch {
+    return false
+  }
+}
+
+function SectionCard({
+  section: s,
+  onTour,
+  collapsible = false,
+}: {
+  section: HelpSection
+  onTour: (id: TourId) => void
+  /** Bấm đầu thẻ để thu / mở; nhớ theo trình duyệt. */
+  collapsible?: boolean
+}) {
+  const { t } = useI18n()
+  const [collapsed, setCollapsed] = useState(
+    () => collapsible && readCollapsed(s.id),
+  )
+
+  function toggle() {
+    const next = !collapsed
+    setCollapsed(next)
+    try {
+      if (next) localStorage.setItem(collapsedKey(s.id), '1')
+      else localStorage.removeItem(collapsedKey(s.id))
+    } catch {
+      // Không lưu được thì lần sau mục lại mở, không sao.
+    }
+  }
+
+  const heading = (
+    <>
+      <h2 className="text-base font-semibold text-slate-900">
+        {s.title}
+        {s.adminOnly && (
+          <span className="ml-2 rounded-full bg-violet-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200 ring-inset">
+            Admin
+          </span>
+        )}
+      </h2>
+      <p className="text-sm text-slate-500">{s.summary}</p>
+    </>
+  )
+
+  return (
+    <article
+      id={`help-${s.id}`}
+      className="scroll-mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-5"
+    >
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!collapsed}
+            aria-controls={`help-${s.id}-body`}
+            className="-m-2 flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-lg p-2 text-left transition hover:bg-slate-50"
+          >
+            <span className="min-w-0 flex-1">{heading}</span>
+            <ChevronDown
+              className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+            />
+          </button>
+        ) : (
+          <div className="min-w-0 flex-1">{heading}</div>
+        )}
+        {s.tour && (
+          <button
+            type="button"
+            onClick={() => onTour(s.tour!)}
+            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 sm:min-h-0 sm:py-1.5"
+          >
+            <Play className="h-3.5 w-3.5" />
+            {t('help.startTour')}
+          </button>
+        )}
+      </div>
+      {!collapsed && (
+        <div
+          id={`help-${s.id}-body`}
+          className="mt-3 space-y-3 text-sm leading-relaxed text-slate-700"
+        >
+          {s.blocks.map((b, i) => (
+            <Block key={i} block={b} />
+          ))}
+        </div>
+      )}
+    </article>
   )
 }
 

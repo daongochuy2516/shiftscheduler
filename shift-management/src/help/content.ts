@@ -27,9 +27,59 @@ export interface HelpSection {
   tour?: TourId
   /** Chỉ admin thấy mục này. */
   adminOnly?: boolean
+  /**
+   * Ghim ở đầu trang, trên ô bài từng bước. Luôn hiện, không nằm trong mục
+   * lục và ô tìm — ô tìm ở phía dưới, ẩn mục phía trên sẽ làm ô tìm nhảy.
+   */
+  pinned?: boolean
 }
 
 const vi: HelpSection[] = [
+  {
+    id: 'rules',
+    pinned: true,
+    title: 'Luật điểm danh',
+    summary: 'Mốc giờ, việc được và không được làm, và vì sao.',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Ví dụ: lúc 14:00 hôm nay bạn nhận ca **08:00–12:00 ngày mai**.',
+      },
+      {
+        type: 'table',
+        head: ['Mốc', 'Bạn làm được'],
+        rows: [
+          ['14:00 hôm nay', 'Nhận ca. Sửa được giờ của mình, **rời ca** được'],
+          ['14:30 hôm nay', 'Hết 30 phút: không rời ca được nữa'],
+          ['07:30 ngày mai', '**Mở điểm danh** — 30 phút trước giờ vào của riêng bạn'],
+          ['12:00 ngày mai', '**Đóng điểm danh** — không điểm danh bù (nếu bạn có làm việc vào ca này nhưng quên điểm danh thì nhắn admin xem xét điểm danh bù)'],
+          ['Đã điểm danh', 'Lượt bị **khoá**: không bỏ điểm danh, không sửa giờ, không rời ca'],
+        ],
+      },
+      {
+        type: 'table',
+        head: ['Việc', 'Được khi'],
+        rows: [
+          ['Điểm danh', 'Lượt của mình, từ 30 phút trước giờ vào tới giờ kết thúc'],
+          ['Bỏ điểm danh', 'Không được'],
+          ['Sửa giờ của mình', 'Chưa điểm danh'],
+          ['Rời ca', 'Trong 30 phút sau khi nhận, và chưa điểm danh'],
+          ['Thêm / sửa / gỡ người khác', 'Không được — bạn chỉ thêm được chính mình'],
+          ['Sửa tên / ngày / giờ ca', 'Ca không có người khác. Đổi ngày thì còn cần chưa ai điểm danh'],
+          ['Xoá ca', 'Ca trống: luôn được. Chỉ có mình: khi còn rời được. Có người khác: không'],
+          ['Ca mẫu', 'Chỉ nhận, không tạo / sửa / xoá'],
+        ],
+      },
+      {
+        type: 'list',
+        items: [
+          '**Vì sao không tự bỏ điểm danh?** Bỏ được thì cứ bỏ rồi bấm lại — luật không điểm danh trễ thành vô nghĩa.',
+          '**Vì sao khoá giờ sau khi điểm danh?** Để không ai điểm danh 08:00–12:00 rồi sửa thành 08:00–20:00 cho phồng Tổng kết.',
+          '**Vì sao xoá ca theo cùng hạn với rời ca?** Không thì xoá cả ca thành đường vòng để rời ca sau 30 phút.',
+        ],
+      },
+    ],
+  },
   {
     id: 'start',
     title: 'Bắt đầu nhanh',
@@ -55,7 +105,7 @@ const vi: HelpSection[] = [
       {
         type: 'list',
         items: [
-          'Trên máy tính, các trang nằm ở thanh trên cùng; **nút lưới** ở góc phải chứa thông báo, giao diện, Trạng thái, Hướng dẫn, đổi mật khẩu và đăng xuất.',
+          'Trên máy tính, các trang nằm ở thanh trên cùng; **nút lưới** ở góc phải chứa thông báo, giao diện, ngôn ngữ, Trạng thái, Hướng dẫn, đổi mật khẩu và đăng xuất.',
           'Trên điện thoại, bốn trang chính nằm ở **thanh dưới**; các mục còn lại nằm trong bảng mở ra khi bấm **avatar**.',
           'Bấm **Ctrl + K** (Mac: ⌘K) ở bất cứ đâu để tìm nhanh — xem mục Tìm nhanh.',
         ],
@@ -171,6 +221,7 @@ const vi: HelpSection[] = [
           'Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.',
           'Giờ tính theo **đồng hồ máy chủ** — chỉnh giờ máy mình không có tác dụng.',
           '**Tổng kết** chỉ tính những lượt đã điểm danh **và** đã qua giờ kết thúc.',
+          'Luật về rời ca, sửa giờ, xoá ca: xem **Luật điểm danh** ở đầu trang.',
         ],
       },
     ],
@@ -273,7 +324,7 @@ const vi: HelpSection[] = [
         items: [
           '**Đổi mật khẩu**: nút lưới → Đổi mật khẩu (điện thoại: avatar). Cần mật khẩu hiện tại; mật khẩu mới ít nhất 6 ký tự.',
           '**Đăng xuất**: phải bấm **hai lần** — lần đầu ô chuyển đỏ, bấm tiếp trong 4 giây mới đăng xuất.',
-          '**Giao diện**: Hệ thống / Sáng / Tối. **Ngôn ngữ**: VI / EN trên thanh trên (điện thoại: trong bảng avatar).',
+          '**Giao diện**: Hệ thống / Sáng / Tối. **Ngôn ngữ**: tiếng Việt / tiếng Anh. Cả hai nằm trong nút lưới (điện thoại: trong bảng avatar).',
           'Quên mật khẩu: không tự đặt lại được — nhờ admin đặt mật khẩu mới.',
         ],
       },
@@ -319,6 +370,51 @@ const vi: HelpSection[] = [
 
 const en: HelpSection[] = [
   {
+    id: 'rules',
+    pinned: true,
+    title: 'Check-in rules',
+    summary: 'The deadlines, what you can and cannot do, and why.',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Example: at 14:00 today you join a shift **08:00–12:00 tomorrow**.',
+      },
+      {
+        type: 'table',
+        head: ['When', 'You can'],
+        rows: [
+          ['14:00 today', 'Join. You can change your own hours and **leave**'],
+          ['14:30 today', '30 minutes are up: you can no longer leave'],
+          ['07:30 tomorrow', '**Check-in opens** — 30 minutes before your own start'],
+          ['12:00 tomorrow', '**Check-in closes** — no checking in afterwards'],
+          ['Checked in', 'Your assignment is **locked**: no un-checking, no hour changes, no leaving'],
+        ],
+      },
+      {
+        type: 'table',
+        head: ['Action', 'Allowed when'],
+        rows: [
+          ['Check in', 'Your own assignment, from 30 minutes before your start until your end'],
+          ['Un-check', 'Never'],
+          ['Change your hours', 'Not checked in yet'],
+          ['Leave', 'Within 30 minutes of joining, and not checked in'],
+          ['Add / edit / remove others', 'Never — you can only add yourself'],
+          ['Change shift title / date / hours', 'Nobody else is on the shift. Moving the date also needs nobody checked in'],
+          ['Delete a shift', 'Empty: always. Only you: while you can still leave. Others on it: no'],
+          ['Templates', 'Claim only — no creating, editing or deleting'],
+        ],
+      },
+      {
+        type: 'list',
+        items: [
+          '**Why no un-checking?** If you could, you would just un-check and check in again — the no-late-check-in rule would mean nothing.',
+          '**Why lock hours after check-in?** So nobody checks in for 08:00–12:00 and then stretches it to 08:00–20:00 to pad the Summary.',
+          '**Why does deleting follow the leaving deadline?** Otherwise deleting the whole shift becomes a way to leave after 30 minutes.',
+        ],
+      },
+    ],
+  },
+  {
     id: 'start',
     title: 'Getting started',
     summary: 'What this site is for, and how to move around.',
@@ -343,7 +439,7 @@ const en: HelpSection[] = [
       {
         type: 'list',
         items: [
-          'On a computer the pages are in the top bar; the **grid button** on the right holds notifications, theme, Status, Help, change password and sign out.',
+          'On a computer the pages are in the top bar; the **grid button** on the right holds notifications, theme, language, Status, Help, change password and sign out.',
           'On a phone the four main pages are in the **bottom bar**; everything else is in the sheet behind your **avatar**.',
           'Press **Ctrl + K** (Mac: ⌘K) anywhere for quick search — see Quick search.',
         ],
@@ -459,6 +555,7 @@ const en: HelpSection[] = [
           'Checking in before your start (within the 30 early minutes) asks once more.',
           'Time follows the **server clock** — changing your device clock does nothing.',
           '**Summary** only counts assignments that are checked in **and** past their end time.',
+          'Rules on leaving, changing hours and deleting: see **Check-in rules** at the top of this page.',
         ],
       },
     ],
@@ -561,7 +658,7 @@ const en: HelpSection[] = [
         items: [
           '**Change password**: grid button → Change password (phone: avatar). You need your current password; the new one needs at least 6 characters.',
           '**Sign out**: press **twice** — the first press turns it red, a second press within 4 seconds signs you out.',
-          '**Theme**: System / Light / Dark. **Language**: VI / EN in the top bar (phone: in the avatar sheet).',
+          '**Theme**: System / Light / Dark. **Language**: Vietnamese / English. Both are in the grid button (phone: in the avatar sheet).',
           'Forgot your password: there is no self-service reset — ask an admin to set a new one.',
         ],
       },

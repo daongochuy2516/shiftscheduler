@@ -5,6 +5,7 @@ import {
   Bell,
   Grip,
   KeyRound,
+  Languages,
   LogOut,
   Monitor,
   Moon,
@@ -27,8 +28,9 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
 
 /**
  * Nút lưới trên header PC, kiểu trình mở ứng dụng của Google: gom trang Tài
- * khoản (chỉ admin), thông báo, giao diện, trang Trạng thái, đổi mật khẩu và
- * đăng xuất vào một ô lưới, để header đỡ chật. Số thông báo chưa đọc hiện ngay trên nút.
+ * khoản (chỉ admin), thông báo, giao diện, ngôn ngữ, trang Trạng thái, đổi mật
+ * khẩu và đăng xuất vào một ô lưới, để header đỡ chật. Số thông báo chưa đọc
+ * hiện ngay trên nút.
  *
  * Mobile không dùng: ở đó đã có nút chuông và sheet tài khoản.
  */
@@ -43,7 +45,7 @@ export function HeaderMenu({
   onSignOut: () => void
   signingOut: boolean
 }) {
-  const { t } = useI18n()
+  const { t, lang, setLang } = useI18n()
   const { pref, setPref } = useTheme()
   const { unreadCount, setCenterOpen } = useNotifications()
   const navigate = useNavigate()
@@ -76,7 +78,10 @@ export function HeaderMenu({
   const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
   const badge = unreadCount > 99 ? '99+' : String(unreadCount)
 
-  /** Bấm một ô là xong việc của menu — trừ ô giao diện, bấm tiếp để đổi tiếp. */
+  /**
+   * Bấm một ô là xong việc của menu — trừ ô giao diện và ngôn ngữ, bấm tiếp
+   * để đổi tiếp.
+   */
   function run(action: () => void) {
     setOpen(false)
     action()
@@ -113,7 +118,7 @@ export function HeaderMenu({
 
       {open && (
         <MenuPanel label={t('menu.label')}>
-          {/* Nhân viên 6 ô (3×2), admin thêm ô Tài khoản. */}
+          {/* Nhân viên 7 ô, admin thêm ô Tài khoản; lưới 3 cột. */}
           <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-2">
             {isAdmin && (
               <Tile
@@ -145,6 +150,15 @@ export function HeaderMenu({
               sub={t(theme.label)}
               title={t('menu.themeNext', { theme: t(nextTheme.label) })}
               onClick={() => setPref(nextTheme.id)}
+            />
+            <Tile
+              icon={Languages}
+              tone="bg-indigo-50 text-indigo-600"
+              tour="menu-language"
+              label={t('nav.language')}
+              sub={t('menu.langName')}
+              title={t('menu.langNext')}
+              onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
             />
             <Tile
               icon={Wifi}

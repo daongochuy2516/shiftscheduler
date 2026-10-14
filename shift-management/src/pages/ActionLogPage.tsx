@@ -41,10 +41,30 @@ const ACTIONS = [
 
 const ENTITY_TYPES = ['shift', 'assignment', 'template'] as const
 
+/**
+ * Hành động để hiển thị. Đổi trạng thái thực chất chỉ có hai chiều nên gọi
+ * thẳng tên việc: điểm danh, hay gỡ điểm danh. Chỉ đổi nhãn — bộ lọc và dữ
+ * liệu vẫn là `assignment.status_changed`.
+ */
+function displayAction(row: ActionLog): string {
+  if (row.action !== 'assignment.status_changed') return row.action
+  const from = row.old_data?.status
+  const to = row.new_data?.status
+  if (from !== 'confirmed' && to === 'confirmed') return 'assignment.confirmed'
+  if (from === 'confirmed' && to !== 'confirmed') return 'assignment.unconfirmed'
+  return row.action
+}
+
 /** Màu theo tính chất việc làm: tạo, sửa, xoá. */
 function actionTone(action: string): string {
-  if (action.endsWith('.deleted')) return 'bg-rose-50 text-rose-700 ring-rose-200'
-  if (action.endsWith('.created') || action.endsWith('.claimed')) {
+  if (action.endsWith('.deleted') || action.endsWith('.unconfirmed')) {
+    return 'bg-rose-50 text-rose-700 ring-rose-200'
+  }
+  if (
+    action.endsWith('.created') ||
+    action.endsWith('.claimed') ||
+    action.endsWith('.confirmed')
+  ) {
     return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
   }
   if (action.endsWith('.status_changed') || action.endsWith('.toggled')) {
@@ -359,7 +379,8 @@ function LogRow({ row }: { row: ActionLog }) {
 
   const at = new Date(row.created_at)
   const actorName = row.actor_name ?? (row.actor_id ? t('log.unknownActor') : t('log.system'))
-  const actionLabel = t(`log.action.${row.action}` as TranslationKey)
+  const action = displayAction(row)
+  const actionLabel = t(`log.action.${action}` as TranslationKey)
   const entityLabel = t(`log.entity.${row.entity_type}` as TranslationKey)
   const hasDetails = row.old_data !== null || row.new_data !== null
 
@@ -388,7 +409,7 @@ function LogRow({ row }: { row: ActionLog }) {
 
         <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:mt-0 sm:contents">
           <span
-            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${actionTone(row.action)}`}
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${actionTone(action)}`}
           >
             {actionLabel}
           </span>
@@ -422,10 +443,18 @@ function LogRow({ row }: { row: ActionLog }) {
       {open && hasDetails && (
         <div className="grid gap-3 border-t border-slate-100 bg-slate-50/70 px-4 py-3 md:grid-cols-2">
           {row.old_data && (
-            <JsonBlock title={t('log.before')} value={row.old_data} />
+            <JsonBlock
+              title={t('log.before')}
+              value={row.old_data}
+              diff={row.new_data && { against: row.new_data, side: 'old' }}
+            />
           )}
           {row.new_data && (
-            <JsonBlock title={t('log.after')} value={row.new_data} />
+            <JsonBlock
+              title={t('log.after')}
+              value={row.new_data}
+              diff={row.old_data && { against: row.old_data, side: 'new' }}
+            />
           )}
           {Object.keys(row.metadata).length > 0 && (
             <div className="md:col-span-2">
@@ -438,20 +467,60 @@ function LogRow({ row }: { row: ActionLog }) {
   )
 }
 
+const DIFF_TONE = {
+  old: { mark: '-', line: 'bg-rose-50 text-rose-800' },
+  new: { mark: '+', line: 'bg-emerald-50 text-emerald-800' },
+} as const
+
+/** Một trường của bản ghi, dạng `"key": value,` như JSON.stringify(…, null, 2). */
+function jsonEntry(key: string, value: unknown, last: boolean): string {
+  const body = JSON.stringify(value, null, 2) ?? 'null'
+  return ` "${key}": ${body.replaceAll('\n', '\n  ')}${last ? '' : ','}`
+}
+
 function JsonBlock({
   title,
   value,
+  diff,
 }: {
   title: string
   value: Record<string, unknown>
+  /** Có cả bản trước lẫn sau: tô những trường khác nhau giữa hai bản. */
+  diff?: { against: Record<string, unknown>; side: 'old' | 'new' } | null
 }) {
+  const keys = Object.keys(value)
+  const tone = diff ? DIFF_TONE[diff.side] : null
   return (
-    <div>
+    <div className="min-w-0">
       <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
         {title}
       </p>
-      <pre className="overflow-x-auto rounded-md bg-white p-2 text-[11px] leading-relaxed text-slate-700 ring-1 ring-slate-200">
-        {JSON.stringify(value, null, 2)}
+      <pre className="overflow-x-auto rounded-md bg-white py-2 text-[11px] leading-relaxed text-slate-700 ring-1 ring-slate-200">
+        {diff && tone ? (
+          // w-max + min-w-full: dòng được tô phủ hết bề ngang kể cả khi phải
+          // cuộn ngang, thay vì dừng ở mép khung.
+          <code className="block w-max min-w-full">
+            <span className="block px-2">{'{'}</span>
+            {keys.map((key, i) => {
+              // So bằng chuỗi JSON: dữ liệu là ảnh chụp jsonb, thứ tự khoá ổn định.
+              const changed =
+                !(key in diff.against) ||
+                JSON.stringify(value[key]) !== JSON.stringify(diff.against[key])
+              return (
+                <span
+                  key={key}
+                  className={`block px-2 ${changed ? tone.line : ''}`}
+                >
+                  {changed ? tone.mark : ' '}
+                  {jsonEntry(key, value[key], i === keys.length - 1)}
+                </span>
+              )
+            })}
+            <span className="block px-2">{'}'}</span>
+          </code>
+        ) : (
+          <code className="block px-2">{JSON.stringify(value, null, 2)}</code>
+        )}
       </pre>
     </div>
   )

@@ -31,6 +31,7 @@ import { BottomNav } from './BottomNav'
 import { Modal } from './Modal'
 import { useShiftEditor } from './ShiftEditorProvider'
 import { ThemeSegmented } from './ThemeMenu'
+import { HeaderClock } from './HeaderClock'
 import { HeaderMenu } from './HeaderMenu'
 import { CommandPalette } from './CommandPalette'
 import { NewShiftButton, NewShiftChooser } from './NewShiftMenu'
@@ -227,27 +228,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
-            <div
-              role="group"
-              aria-label={t('nav.language')}
-              className="hidden rounded-md bg-white p-0.5 shadow-xs ring-1 ring-slate-200 sm:flex"
-            >
-              {LANGS.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setLang(option.id)}
-                  aria-pressed={lang === option.id}
-                  className={`rounded px-1.5 py-1 text-xs font-semibold transition ${
-                    lang === option.id
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            {/* Ngôn ngữ trên PC nằm trong nút lưới (HeaderMenu). */}
+            <HeaderClock />
 
             {/* Bấm là xổ menu: nhận ca mẫu, hay tạo ca thủ công. */}
             <NewShiftButton

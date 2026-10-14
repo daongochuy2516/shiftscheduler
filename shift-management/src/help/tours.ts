@@ -502,6 +502,15 @@ export const TOURS: Record<TourId, Tour> = {
         },
       },
       {
+        targets: ['menu-language'],
+        ensure: ['menu'],
+        screen: 'desktop',
+        text: {
+          vi: { title: 'Ngôn ngữ', body: 'Bấm để đổi giữa tiếng Việt và tiếng Anh.' },
+          en: { title: 'Language', body: 'Press to switch between Vietnamese and English.' },
+        },
+      },
+      {
         targets: ['menu-help'],
         ensure: ['menu'],
         screen: 'desktop',

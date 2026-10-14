@@ -43,7 +43,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 | `src/auth/` | Cùng kiểu: interface + bản Supabase + bản mock |
 | `src/lib/` | Hàm thuần: `time.ts`, `colors.ts`, `summary.ts`, `shiftChunks.ts`, các probe của trang Trạng thái |
 | `src/i18n/` | Từ điển `en` / `vi` và `t()` |
-| `supabase/` | `schema.sql` rồi `002`…`008`, chạy tay theo thứ tự trong SQL Editor |
+| `supabase/` | `schema.sql` rồi `002`…`009`, chạy tay theo thứ tự trong SQL Editor |
 
 **Hai backend.** Có `VITE_SUPABASE_URL` + key trong `shift-management/.env` thì dùng Supabase, không thì dùng mock lưu `localStorage` (băng vàng "Đang chạy dữ liệu mẫu"). Chọn ở `src/data/index.ts` và `src/auth/index.ts`.
 
@@ -58,7 +58,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Thêm một `kind` cho `ShiftQuery` thì sửa cả `shiftQueryKey`, `parseShiftQueryKey` và `listShifts` ở hai backend.
 - Snapshot trả cho `useSyncExternalStore` phải giữ nguyên tham chiếu khi dữ liệu không đổi — trả object mới mỗi lần gọi là render vô hạn.
 - Lọc ca theo người là **AND** và không được cắt danh sách người trong ca: bản Supabase nhúng `shift_assignments!inner` thêm lần nữa dưới tên `match_N` để lọc, còn `assignments` vẫn trả đủ.
-- Migration 002–008 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`, `displayed`) đọc về là `null`.
+- Migration 002–009 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`), hàm chưa có thì `serverTime` trả `null` (`isMissingFunction`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`, `displayed`) đọc về là `null`.
 - `profiles` gồm cả người đang ẩn (`displayed = false`, ví dụ tài khoản quản lý). Danh sách để **chọn / lọc** nhân viên dùng `rosterProfiles`; bảng xếp ca lọc hàng bằng `showRow` trong `lib/profiles.ts` (người ẩn vẫn hiện nếu có ca). Tra tên theo id thì dùng `profilesById` như cũ.
 
 **Ngày giờ**

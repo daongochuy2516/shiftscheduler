@@ -101,6 +101,12 @@ export interface SchedulerBackend {
   listActionLogs(query: ActionLogQuery): Promise<ActionLogPage | null>
 
   /**
+   * Giờ hiện tại của máy chủ — đồng hồ mà luật điểm danh dùng. `null` khi
+   * migration 009 chưa chạy; phía gọi tự lùi về giờ máy.
+   */
+  serverTime(): Promise<Date | null>
+
+  /**
    * Calls `onChange` whenever shifts or assignments change elsewhere.
    * Returns an unsubscribe function.
    */

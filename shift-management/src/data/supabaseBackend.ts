@@ -94,6 +94,15 @@ function isMissingTable(error: PostgrestError): boolean {
   )
 }
 
+/** Hàm SQL chưa có (migration chưa chạy) — PostgREST báo PGRST202. */
+function isMissingFunction(error: PostgrestError): boolean {
+  return (
+    error.code === 'PGRST202' ||
+    error.code === '42883' ||
+    /could not find the function/i.test(error.message)
+  )
+}
+
 /** Columns sent to `shift_assignments`, minus the local-only `id`. */
 function assignmentRow(shiftId: UUID, input: AssignmentInput) {
   return {
@@ -488,6 +497,18 @@ export const supabaseBackend: SchedulerBackend = {
       })),
       total: count ?? 0,
     }
+  },
+
+  async serverTime() {
+    const { data, error } = await getSupabase().rpc('server_now')
+    if (error) {
+      if (isMissingFunction(error)) return null
+      fail('Không lấy được giờ máy chủ', error)
+    }
+    // timestamptz tới micro giây; cắt còn mili giây cho chắc mọi trình duyệt
+    // đều đọc được.
+    const at = new Date(String(data).replace(/(\.\d{3})\d+/, '$1'))
+    return Number.isNaN(at.getTime()) ? null : at
   },
 
   subscribe(onChange: () => void) {

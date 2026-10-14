@@ -784,6 +784,11 @@ export const mockBackend: SchedulerBackend = {
     })
   },
 
+  // Bản mock không có máy chủ: "máy chủ" chính là trình duyệt này.
+  async serverTime() {
+    return new Date()
+  },
+
   subscribe(onChange: () => void) {
     listeners.add(onChange)
     return () => listeners.delete(onChange)

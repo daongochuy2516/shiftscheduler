@@ -71,6 +71,7 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/006_shift_rules.sql` | Nhân viên chỉ thao tác phần của mình: rời ca trong 30 phút, không thêm / sửa / gỡ người khác, không sửa / xoá ca có người khác ([mục 8b](#8b-chấm-công-và-tính-công)). Cần 005 trước; thay luật "ca tạo quá 30 phút không xoá được" của 005 |
 | `supabase/007_accounts.sql` | Trang Tài khoản: cột `profiles.displayed` (hiện / ẩn trên bảng), admin sửa được mọi tài khoản, người khác không sửa được ([mục 11](#trang-tài-khoản)). Cần 005 trước |
 | `supabase/008_template_admin.sql` | Chỉ admin tạo / sửa / bật-tắt / xoá ca mẫu; nhân viên vẫn nhận ca mẫu bình thường ([mục 7](#quản-lý-ca-mẫu)). Cần 002 và 005 trước |
+| `supabase/009_server_time.sql` | Hàm `server_now()` cho đồng hồ trên thanh trên chạy theo giờ máy chủ. Chưa chạy thì đồng hồ dùng giờ máy, có chấm vàng cạnh giờ. Không cần file nào trước |
 
 Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký. Chưa chạy 005 thì không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước.
 
@@ -143,12 +144,12 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Ca của tôi** | Chỉ những ca bạn được phân công |
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
-| **VI / EN** | Đổi ngôn ngữ giao diện |
+| Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. Rê chuột (hoặc Tab tới) để xem bảng nhỏ có giờ to, ngày đầy đủ kèm thứ, và nút chuyển **24 giờ / 12 giờ** (trình duyệt nhớ lựa chọn). Đưa chuột từ đồng hồ xuống bảng thì bảng không tắt. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
 | **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định **hôm nay**) |
-| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) |
 
-Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng, còn giao diện, đổi mật khẩu, đăng xuất nằm trong bảng mở ra khi bấm avatar.
+Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng, còn giao diện, ngôn ngữ, đổi mật khẩu, đăng xuất nằm trong bảng mở ra khi bấm avatar.
 
 Màn hình chưa đủ rộng để xếp cả hàng (dưới 1320px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn.
 
@@ -451,7 +452,7 @@ Ca mẫu chỉ admin quản lý (sau khi chạy `008_template_admin.sql`, xem [m
 
 ## 9. Đa ngôn ngữ và cập nhật thời gian thực
 
-**Ngôn ngữ.** Mặc định tiếng Việt. Nút **VI / EN** ở thanh trên đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
+**Ngôn ngữ.** Mặc định tiếng Việt. Ô **Ngôn ngữ** trong nút lưới (điện thoại: bảng avatar) đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
 
 **Thời gian thực.** Ứng dụng lắng nghe thay đổi trên `shifts`, `shift_assignments` và `shift_templates` qua Supabase Realtime. Khi đồng nghiệp tạo ca, nhận ca hay xác nhận, màn hình của bạn **tự cập nhật** — không cần F5.
 
@@ -461,7 +462,7 @@ Ca mẫu chỉ admin quản lý (sau khi chạy `008_template_admin.sql`, xem [m
 
 Trang **Nhật ký** ghi lại mọi thay đổi dữ liệu: tạo/sửa/xoá ca, thêm/gỡ nhân viên, nhận ca, đổi trạng thái, và tạo/sửa/xoá/bật-tắt ca mẫu.
 
-Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem `old_data` / `new_data` / ngữ cảnh dạng JSON — đủ để đối chiếu chính xác đã đổi trường nào.
+Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem `old_data` / `new_data` / ngữ cảnh dạng JSON. Với thao tác sửa (có cả trước lẫn sau), những trường bị đổi được tô màu: đỏ kèm dấu `-` ở bản trước, xanh kèm dấu `+` ở bản sau.
 
 ### Một thao tác = một dòng
 
@@ -563,9 +564,9 @@ Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt
 
 ## 9d. Hướng dẫn và bài từng bước
 
-Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**, từ bảng avatar trên điện thoại, hoặc gõ *hướng dẫn* trong Ctrl + K. Trang viết cho nhân viên, có mục lục, ô tìm (gõ không dấu được) và một mục **Dành cho admin** chỉ admin thấy. Có đủ tiếng Việt và tiếng Anh theo ngôn ngữ đang chọn.
+Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**, từ bảng avatar trên điện thoại, hoặc gõ *hướng dẫn* trong Ctrl + K. Trang viết cho nhân viên. Trên cùng là mục **Luật điểm danh** (mốc giờ, việc được và không được làm, vì sao), bấm vào đầu mục để thu gọn (trình duyệt nhớ lựa chọn); dưới là các bài từng bước, rồi mục lục, ô tìm (gõ không dấu được) và một mục **Dành cho admin** chỉ admin thấy. Có đủ tiếng Việt và tiếng Anh theo ngôn ngữ đang chọn.
 
-**Bài từng bước (wizard)**: bấm một bài ở đầu trang, hoặc **Chỉ tôi từng bước** cạnh từng mục. Bài hướng dẫn tự chuyển tới đúng trang, làm tối màn hình trừ đúng phần cần bấm, và hiện thẻ giải thích ngay cạnh đó. Khi cần, nó tự mở menu, mở một ca, hay chuyển form sang chế độ Đơn giản.
+**Bài từng bước (wizard)**: bấm một bài ngay dưới Luật điểm danh, hoặc **Chỉ tôi từng bước** cạnh từng mục. Bài hướng dẫn tự chuyển tới đúng trang, làm tối màn hình trừ đúng phần cần bấm, và hiện thẻ giải thích ngay cạnh đó. Khi cần, nó tự mở menu, mở một ca, hay chuyển form sang chế độ Đơn giản.
 
 | Bài | Chỉ vào |
 | --- | --- |
