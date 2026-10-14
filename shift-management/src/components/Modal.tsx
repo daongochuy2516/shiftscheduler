@@ -15,6 +15,7 @@ import { useExitAnimation } from './useExitAnimation'
  */
 export function Modal({
   title,
+  titleAside,
   subtitle,
   onClose,
   children,
@@ -22,6 +23,8 @@ export function Modal({
   width = 'max-w-3xl',
 }: {
   title: string
+  /** Vẽ ngay sau tiêu đề, cùng hàng (ví dụ nhãn vai trò). */
+  titleAside?: ReactNode
   subtitle?: string
   onClose: () => void
   children: ReactNode
@@ -79,9 +82,12 @@ export function Modal({
 
         <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-slate-900">
-              {title}
-            </h2>
+            <div className="flex min-w-0 items-center gap-2">
+              <h2 className="truncate text-base font-semibold text-slate-900">
+                {title}
+              </h2>
+              {titleAside}
+            </div>
             {subtitle && (
               <p className="mt-0.5 truncate text-sm text-slate-500">{subtitle}</p>
             )}

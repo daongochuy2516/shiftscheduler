@@ -10,6 +10,7 @@ import {
   BellOff,
   CheckCheck,
   CheckCircle2,
+  HardDrive,
   Info,
   Mail,
   MailOpen,
@@ -49,8 +50,15 @@ export function NotificationIcon({ kind }: { kind: NotificationKind }) {
 }
 
 /**
+ * Tạm tắt phần đã đọc / chưa đọc: thông báo nào cũng là kết quả việc người
+ * dùng vừa tự bấm, đánh dấu đọc cho nó là thừa. Dữ liệu `read` vẫn được giữ
+ * trong NotificationContext — bật lại chỉ cần đổi cờ này.
+ */
+const READ_STATE = false
+
+/**
  * Ngăn thông báo, kiểu Action Center của Windows: trượt ra từ mép phải, liệt
- * kê mọi kết quả thao tác đã nhận, xem lại / đánh dấu đã đọc / xoá được.
+ * kê mọi kết quả thao tác đã nhận, xem lại / xoá được.
  *
  * Mobile: chiếm cả màn hình. Từ 640px: một cột rộng 24rem bên phải.
  */
@@ -134,11 +142,13 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
             <h2 className="text-base font-semibold text-slate-900">
               {t('notif.title')}
             </h2>
-            <p className="text-sm text-slate-500">
-              {unreadCount > 0
-                ? t('notif.unread', { count: unreadCount })
-                : t('notif.allRead')}
-            </p>
+            {READ_STATE && (
+              <p className="text-sm text-slate-500">
+                {unreadCount > 0
+                  ? t('notif.unread', { count: unreadCount })
+                  : t('notif.allRead')}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -151,15 +161,25 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
         </header>
 
         <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-2 py-1">
-          <button
-            type="button"
-            onClick={markAllRead}
-            disabled={unreadCount === 0}
-            className={toolButton}
-          >
-            <CheckCheck className="h-4 w-4" />
-            {t('notif.markAllRead')}
-          </button>
+          {READ_STATE && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              disabled={unreadCount === 0}
+              className={toolButton}
+            >
+              <CheckCheck className="h-4 w-4" />
+              {t('notif.markAllRead')}
+            </button>
+          )}
+          {/* Chỗ của nút Đánh dấu tất cả đã đọc khi tắt phần đã đọc: để trống
+              thì hàng công cụ lệch hẳn sang phải. Dòng này vốn ở chân ngăn. */}
+          {!READ_STATE && (
+            <span className="inline-flex min-w-0 items-center gap-1.5 px-2.5 text-xs text-slate-400">
+              <HardDrive className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('notif.localOnly')}</span>
+            </span>
+          )}
           <button
             type="button"
             onClick={clearAll}
@@ -171,7 +191,15 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+          // Không còn chân ngăn thì danh sách tự chừa vùng an toàn đáy máy.
+          style={
+            READ_STATE
+              ? undefined
+              : { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }
+          }
+        >
           {groups.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
               <BellOff className="h-7 w-7 text-slate-300" />
@@ -193,7 +221,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                       <li
                         key={item.id}
                         className={`group flex items-start gap-3 rounded-lg p-3 shadow-xs ring-1 transition ${
-                          item.read
+                          item.read || !READ_STATE
                             ? 'bg-white ring-slate-200'
                             : 'bg-indigo-50 ring-indigo-200'
                         }`}
@@ -201,12 +229,12 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                         <NotificationIcon kind={item.kind} />
                         <button
                           type="button"
-                          onClick={() => setRead(item.id, true)}
-                          className="min-w-0 flex-1 text-left"
+                          onClick={() => READ_STATE && setRead(item.id, true)}
+                          className="min-w-0 flex-1 cursor-default text-left"
                         >
                           <p
                             className={`text-sm text-slate-900 ${
-                              item.read ? 'font-medium' : 'font-semibold'
+                              item.read || !READ_STATE ? 'font-medium' : 'font-semibold'
                             }`}
                           >
                             {t(item.title, item.params)}
@@ -229,7 +257,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                               'HH:mm:ss d/M/yyyy',
                             )}
                           >
-                            {!item.read && (
+                            {READ_STATE && !item.read && (
                               <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
                             )}
                             {relativeTime(item.createdAt)}
@@ -239,6 +267,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                         {/* Chuột: hiện khi rê vào. Màn cảm ứng không có rê
                             chuột nên luôn hiện. */}
                         <div className="-my-1 -mr-1 flex shrink-0 flex-col transition sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+                          {READ_STATE && (
                           <button
                             type="button"
                             onClick={() => setRead(item.id, !item.read)}
@@ -256,6 +285,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                               <MailOpen className="h-4 w-4" />
                             )}
                           </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => remove(item.id)}
@@ -275,12 +305,14 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <footer
-          className="border-t border-slate-200 bg-white px-4 py-2 text-center text-xs text-slate-400"
-          style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
-        >
-          {t('notif.localOnly')}
-        </footer>
+        {READ_STATE && (
+          <footer
+            className="border-t border-slate-200 bg-white px-4 py-2 text-center text-xs text-slate-400"
+            style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+          >
+            {t('notif.localOnly')}
+          </footer>
+        )}
       </aside>
     </div>
   )

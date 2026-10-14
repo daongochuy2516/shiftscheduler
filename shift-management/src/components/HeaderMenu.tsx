@@ -47,7 +47,7 @@ export function HeaderMenu({
 }) {
   const { t, lang, setLang } = useI18n()
   const { pref, setPref } = useTheme()
-  const { unreadCount, setCenterOpen } = useNotifications()
+  const { setCenterOpen } = useNotifications()
   const navigate = useNavigate()
   // Đăng xuất phải bấm hai lần: lỡ tay một lần là mất phiên đang làm.
   const signOut = useTwoStep(onSignOut)
@@ -76,7 +76,6 @@ export function HeaderMenu({
 
   const theme = THEMES.find((o) => o.id === pref) ?? THEMES[0]
   const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
-  const badge = unreadCount > 99 ? '99+' : String(unreadCount)
 
   /**
    * Bấm một ô là xong việc của menu — trừ ô giao diện và ngôn ngữ, bấm tiếp
@@ -95,11 +94,7 @@ export function HeaderMenu({
           setOpen((v) => !v)
           signOut.reset()
         }}
-        aria-label={
-          unreadCount > 0
-            ? `${t('menu.label')} · ${t('notif.unread', { count: unreadCount })}`
-            : t('menu.label')
-        }
+        aria-label={t('menu.label')}
         title={t('menu.label')}
         data-tour="menu"
         aria-haspopup="menu"
@@ -109,11 +104,6 @@ export function HeaderMenu({
         }`}
       >
         <Grip className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] leading-none font-semibold text-white">
-            {badge}
-          </span>
-        )}
       </button>
 
       {open && (
@@ -134,12 +124,6 @@ export function HeaderMenu({
               tone="bg-sky-50 text-sky-600"
               tour="menu-notifications"
               label={t('notif.title')}
-              sub={
-                unreadCount > 0
-                  ? t('notif.unread', { count: unreadCount })
-                  : t('notif.allRead')
-              }
-              badge={unreadCount > 0 ? badge : null}
               onClick={() => run(() => setCenterOpen(true))}
             />
             <Tile

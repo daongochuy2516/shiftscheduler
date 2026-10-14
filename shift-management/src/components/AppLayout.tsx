@@ -8,11 +8,15 @@ import {
   ClipboardCheck,
   Clock3,
   KeyRound,
+  Languages,
   LayoutList,
   LogOut,
+  Monitor,
+  Moon,
   Plus,
   ScrollText,
   Search,
+  Sun,
   User,
   UserCog,
   Network,
@@ -22,15 +26,15 @@ import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { IS_MOCK_BACKEND } from '../data'
 import { useI18n } from '../i18n/I18nContext'
-import type { Lang, TranslationKey } from '../i18n/translations'
+import type { TranslationKey } from '../i18n/translations'
 import { useNotifications } from '../notifications/NotificationContext'
+import { useTheme } from '../theme/ThemeContext'
 import { SCROLL_ROOT_ID } from '../lib/scrollRoot'
 import { fromDateKey, toDateKey } from '../lib/time'
 import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
 import { Modal } from './Modal'
 import { useShiftEditor } from './ShiftEditorProvider'
-import { ThemeSegmented } from './ThemeMenu'
 import { HeaderClock } from './HeaderClock'
 import { HeaderMenu } from './HeaderMenu'
 import { CommandPalette } from './CommandPalette'
@@ -58,11 +62,6 @@ const NAV: {
   // (HeaderMenu), cho thanh điều hướng đỡ dài.
 ]
 
-const LANGS: { id: Lang; label: string }[] = [
-  { id: 'vi', label: 'VI' },
-  { id: 'en', label: 'EN' },
-]
-
 /**
  * Which part of the day it is, using the Vietnamese split: sáng / trưa /
  * chiều / tối. Late night falls under "tối" because "chào buổi đêm" isn't
@@ -74,6 +73,30 @@ function greetingKey(): TranslationKey {
   if (hour >= 11 && hour < 13) return 'greeting.noon'
   if (hour >= 13 && hour < 18) return 'greeting.afternoon'
   return 'greeting.evening'
+}
+
+const THEME_ICON = { system: Monitor, light: Sun, dark: Moon } as const
+/** Cùng thứ tự đổi với ô Giao diện trên PC: Hệ thống → Sáng → Tối. */
+const THEME_NEXT = { system: 'light', light: 'dark', dark: 'system' } as const
+const THEME_LABEL = {
+  system: 'theme.systemShort',
+  light: 'theme.light',
+  dark: 'theme.dark',
+} as const satisfies Record<keyof typeof THEME_ICON, TranslationKey>
+
+/**
+ * Icon trong vòng tròn màu ở bảng avatar (mobile). Cùng màu với ô tương ứng
+ * trong nút lưới trên PC (HeaderMenu) để hai bản nhìn như một app.
+ * `tone` viết nguyên chuỗi để Tailwind sinh class.
+ */
+function SheetIcon({ icon: Icon, tone }: { icon: typeof Sun; tone: string }) {
+  return (
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition ${tone}`}
+    >
+      <Icon className="h-[18px] w-[18px]" />
+    </span>
+  )
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -90,8 +113,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     ? (profilesById.get(user.id)?.display_name ?? user.display_name)
     : ''
   const { openCreate } = useShiftEditor()
-  const { unreadCount, setCenterOpen } = useNotifications()
+  const { setCenterOpen } = useNotifications()
   const { t, lang, setLang } = useI18n()
+  const { pref: themePref, setPref: setThemePref } = useTheme()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [signingOut, setSigningOut] = useState(false)
@@ -241,22 +265,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setCenterOpen(true)}
-              aria-label={
-                unreadCount > 0
-                  ? `${t('notif.title')} · ${t('notif.unread', { count: unreadCount })}`
-                  : t('notif.title')
-              }
+              aria-label={t('notif.title')}
               title={t('notif.title')}
               // Từ 640px chuông nằm trong nút lưới (HeaderMenu).
               data-tour="bell-mobile"
               className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:hidden"
             >
               <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] leading-none font-semibold text-white">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
             </button>
 
             {user && (
@@ -347,6 +362,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {accountOpen && user && (
         <Modal
           title={displayName}
+          titleAside={<RoleBadge role={user.role} />}
           subtitle={user.email}
           width="max-w-md"
           onClose={() => setAccountOpen(false)}
@@ -361,7 +377,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <ClipboardCheck className="h-5 w-5 text-slate-400" />
+              <SheetIcon icon={ClipboardCheck} tone="bg-orange-50 text-orange-600" />
               {t('nav.summary')}
             </NavLink>
 
@@ -370,7 +386,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <ScrollText className="h-5 w-5 text-slate-400" />
+              <SheetIcon icon={ScrollText} tone="bg-fuchsia-50 text-fuchsia-600" />
               {t('nav.actionLog')}
             </NavLink>
 
@@ -379,7 +395,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <Network className="h-5 w-5 text-slate-400" />
+              <SheetIcon icon={Network} tone="bg-emerald-50 text-emerald-600" />
               {t('nav.status')}
             </NavLink>
 
@@ -388,7 +404,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <BookOpen className="h-5 w-5 text-slate-400" />
+              <SheetIcon icon={BookOpen} tone="bg-cyan-50 text-cyan-600" />
               {t('nav.help')}
             </NavLink>
 
@@ -398,7 +414,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 onClick={() => setAccountOpen(false)}
                 className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
               >
-                <UserCog className="h-5 w-5 text-slate-400" />
+                <SheetIcon icon={UserCog} tone="bg-teal-50 text-teal-600" />
                 {t('nav.accounts')}
               </NavLink>
             )}
@@ -411,7 +427,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               }}
               className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <Search className="h-5 w-5 text-slate-400" />
+              <SheetIcon icon={Search} tone="bg-slate-100 text-slate-600" />
               {t('palette.title')}
             </button>
 
@@ -423,43 +439,37 @@ export function AppLayout({ children }: { children: ReactNode }) {
               }}
               className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <KeyRound className="h-5 w-5 text-slate-400" />
+              <SheetIcon icon={KeyRound} tone="bg-amber-50 text-amber-600" />
               {t('pwd.title')}
             </button>
 
-            <div className="flex min-h-12 items-center gap-3 rounded-lg px-3">
-              <span className="text-sm font-medium text-slate-700">
-                {t('nav.language')}
+            {/* Bấm để đổi như ô trên PC; giá trị đang dùng ghi ở bên phải.
+                Sheet giữ mở để bấm tiếp nếu cần. */}
+            <button
+              type="button"
+              onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+              aria-label={`${t('nav.language')}: ${t('menu.langName')} · ${t('menu.langNext')}`}
+              className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <SheetIcon icon={Languages} tone="bg-indigo-50 text-indigo-600" />
+              {t('nav.language')}
+              <span className="ml-auto text-sm font-normal text-slate-500">
+                {t('menu.langName')}
               </span>
-              <div
-                role="group"
-                aria-label={t('nav.language')}
-                className="ml-auto flex rounded-md bg-slate-100 p-1"
-              >
-                {LANGS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setLang(option.id)}
-                    aria-pressed={lang === option.id}
-                    className={`min-h-9 min-w-12 rounded px-3 text-sm font-semibold transition ${
-                      lang === option.id
-                        ? 'bg-white text-indigo-700 shadow-xs'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            </button>
 
-            <div className="flex min-h-12 items-center gap-3 rounded-lg px-3">
-              <span className="text-sm font-medium text-slate-700">
-                {t('theme.label')}
+            <button
+              type="button"
+              onClick={() => setThemePref(THEME_NEXT[themePref])}
+              aria-label={`${t('theme.label')}: ${t(THEME_LABEL[themePref])} · ${t('menu.themeNext', { theme: t(THEME_LABEL[THEME_NEXT[themePref]]) })}`}
+              className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <SheetIcon icon={THEME_ICON[themePref]} tone="bg-violet-50 text-violet-600" />
+              {t('theme.label')}
+              <span className="ml-auto text-sm font-normal text-slate-500">
+                {t(THEME_LABEL[themePref])}
               </span>
-              <ThemeSegmented />
-            </div>
+            </button>
 
             {/* Đăng xuất tách khỏi nhóm trên và dùng màu cảnh báo: nó đưa người
                 dùng ra khỏi ứng dụng, không nên nằm lẫn với các mục thường. */}
@@ -475,7 +485,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     : 'font-medium active:bg-rose-50'
                 }`}
               >
-                <LogOut className="h-5 w-5" />
+                <SheetIcon
+                  icon={LogOut}
+                  tone={
+                    signOutStep.armed
+                      ? 'bg-rose-600 text-white'
+                      : 'bg-rose-50 text-rose-600'
+                  }
+                />
                 {signOutStep.armed
                   ? t('auth.signOutAgain')
                   : t('auth.signOut')}

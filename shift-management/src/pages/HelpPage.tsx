@@ -260,7 +260,7 @@ function SectionCard({
           >
             <span className="min-w-0 flex-1">{heading}</span>
             <ChevronDown
-              className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+              className={`mt-0.5 h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ${collapsed ? '' : 'rotate-180'}`}
             />
           </button>
         ) : (
@@ -277,18 +277,30 @@ function SectionCard({
           </button>
         )}
       </div>
-      {!collapsed && (
-        <div
-          id={`help-${s.id}-body`}
-          // Nội dung để đọc như tài liệu: cho bôi đen, copy (khác phần còn lại
-          // của app — xem index.css).
-          className="mt-3 space-y-3 text-sm leading-relaxed text-slate-700 select-text"
-        >
-          {s.blocks.map((b, i) => (
-            <Block key={i} block={b} />
-          ))}
+      {/* Xổ ra / thu lại bằng grid-rows 0fr ↔ 1fr: chiều cao chạy mượt theo
+          đúng nội dung mà không phải đo bằng JS. Luôn vẽ sẵn nội dung; lúc thu
+          thì `inert` để Tab và trình đọc màn hình không lọt vào phần ẩn. */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+          collapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div
+            id={`help-${s.id}-body`}
+            inert={collapsed}
+            // Nội dung để đọc như tài liệu: cho bôi đen, copy (khác phần còn
+            // lại của app — xem index.css).
+            className={`space-y-3 pt-3 text-sm leading-relaxed text-slate-700 transition duration-300 select-text motion-reduce:transition-none ${
+              collapsed ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+            }`}
+          >
+            {s.blocks.map((b, i) => (
+              <Block key={i} block={b} />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </article>
   )
 }

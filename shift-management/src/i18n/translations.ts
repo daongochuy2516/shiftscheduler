@@ -147,24 +147,16 @@ export const en = {
   'shift.lockedByTemplate':
     'Fixed by the shift template. Adjust each person’s own hours below instead.',
   'shift.rowLocked':
-    'Checked in — you don’t have permission to change the hours or remove this person.',
+    'Checked in — you don’t have permission to change your shift details.',
   'shift.dateLocked':
     'Someone has checked in — you don’t have permission to move this shift to another day.',
   'shift.deleteLockedConfirmed':
     'Someone has checked in — you don’t have permission to delete this shift.',
-  'shift.deleteLockedOthers':
-    'Other people are on this shift — you don’t have permission to delete it.',
-  'shift.rowLockedOther':
-    'Someone else’s part — you don’t have permission to change or remove it.',
   'shift.deleteLockedLate':
     'Joined more than 30 minutes ago — you no longer have permission to delete this shift.',
-  'shift.infoLocked':
-    'Other people are on this shift — you don’t have permission to change its title, date or time. The note stays editable.',
-  'shift.addMe': 'Add me',
-  'shift.noPermissionAddOthers':
-    'You don’t have permission to add other people to a shift.',
   'shift.rowLockedLate':
     'Joined more than 30 minutes ago — you no longer have permission to leave.',
+  'shift.addMe': 'Add me',
   'shift.everyoneAssigned': 'Every staff member is already on this shift.',
   'shift.noStaffAccounts':
     'No staff accounts exist yet — an administrator needs to create them before anyone can be assigned.',
@@ -174,6 +166,8 @@ export const en = {
   'shift.mode.simple': 'Simple',
   'shift.mode.advanced': 'Advanced',
   'shiftSimple.yourPart': 'Your part',
+  'shiftSimple.hoursLocked':
+    'Checked in — you don’t have permission to change your shift details.',
   'shiftSimple.notOnShift': 'You’re not on this shift yet.',
   'shiftSimple.join': 'Join this shift',
   'shiftSimple.joining': 'Joining…',
@@ -185,8 +179,6 @@ export const en = {
   'shiftSimple.leave': 'Leave shift',
   'shiftSimple.leaveConfirm': 'Take yourself off this shift?',
   'shiftSimple.leaveUntil': 'until {{time}}',
-  'shiftSimple.hoursLocked':
-    'Checked in — you don’t have permission to change your hours or leave.',
   'shiftSimple.others': 'Others on this shift',
   'shiftSimple.noOthers': 'No one else yet.',
   'shiftSimple.advancedHint':
@@ -234,6 +226,13 @@ export const en = {
 
   // ---- lists ----
   'list.today': 'Today',
+  'date.pick': 'Pick a date',
+  'date.clear': 'Clear',
+  'date.prevMonth': 'Previous month',
+  'date.nextMonth': 'Next month',
+  'date.prevYears': 'Back',
+  'date.nextYears': 'Forward',
+  'date.placeholder': 'dd/mm/yyyy',
   'list.tomorrow': 'Tomorrow',
   'list.yesterday': 'Yesterday',
   'list.noStaffAssigned': 'No staff assigned yet.',
@@ -262,7 +261,6 @@ export const en = {
   'allShifts.filter.sort': 'Sort',
   'allShifts.filter.add': 'Filter',
   'allShifts.filter.chooseField': 'Filter by',
-  'allShifts.filter.apply': 'Apply',
   'allShifts.filter.remove': 'Remove {{name}} filter',
   'allShifts.filter.clear': 'Clear search and filters',
   'allShifts.filter.searchMore': 'Search…',
@@ -421,6 +419,7 @@ export const en = {
   'palette.group.nav': 'Go to',
   'palette.group.action': 'Actions',
   'palette.group.staff': 'Staff',
+  'palette.group.help': 'Help',
   'palette.weekView': 'Schedule — week',
   'palette.monthView': 'Schedule — month',
   'palette.theme': 'Theme: {{theme}}',
@@ -527,6 +526,7 @@ export const en = {
   'log.loading': 'Loading…',
   'log.empty': 'No entries match these filters.',
   'log.emptyHint': 'Widen the date range or clear the filters.',
+  'log.emptyPage': 'Nothing on this page matches — try another page.',
   'log.emptyFresh': 'Nothing has been recorded yet.',
   'log.emptyFreshHint':
     'The next time someone creates, edits or claims a shift it will show up here.',
@@ -719,20 +719,15 @@ export const vi: Record<DictKey, string> = {
   'shift.lockedByTemplate':
     'Không thể sửa giờ của ca được tạo từ ca mẫu, chỉ có thể sửa giờ của từng nhân viên bên dưới.',
   'shift.rowLocked':
-    'Đã điểm danh — bạn không có quyền sửa giờ hay gỡ người này.',
+    'Đã điểm danh — bạn không có quyền thay đổi thông tin ca của bạn.',
   'shift.dateLocked':
     'Ca đã có người điểm danh — bạn không có quyền dời sang ngày khác.',
   'shift.deleteLockedConfirmed':
     'Ca đã có người điểm danh — bạn không có quyền xoá ca này.',
-  'shift.deleteLockedOthers': 'Ca có người khác — bạn không có quyền xoá ca này.',
-  'shift.rowLockedOther': 'Lượt của người khác — bạn không có quyền sửa hay gỡ.',
   'shift.deleteLockedLate':
     'Đã nhận ca quá 30 phút — bạn không còn quyền xoá ca này.',
-  'shift.infoLocked':
-    'Ca có người khác — bạn không có quyền sửa tên, ngày và giờ. Ghi chú thì vẫn sửa được.',
-  'shift.addMe': 'Thêm tôi vào ca',
-  'shift.noPermissionAddOthers': 'Bạn không có quyền thêm người khác vào ca.',
   'shift.rowLockedLate': 'Đã nhận ca quá 30 phút — bạn không còn quyền rời ca.',
+  'shift.addMe': 'Thêm tôi vào ca',
   'shift.everyoneAssigned': 'Tất cả nhân viên đều đã có trong ca này.',
   'shift.noStaffAccounts':
     'Chưa có tài khoản nhân viên nào — quản trị viên cần tạo trước khi phân công.',
@@ -742,6 +737,8 @@ export const vi: Record<DictKey, string> = {
   'shift.mode.simple': 'Đơn giản',
   'shift.mode.advanced': 'Nâng cao',
   'shiftSimple.yourPart': 'Phần của bạn',
+  'shiftSimple.hoursLocked':
+    'Đã điểm danh — bạn không có quyền thay đổi thông tin ca của bạn.',
   'shiftSimple.notOnShift': 'Bạn chưa có trong ca này.',
   'shiftSimple.join': 'Nhận ca này',
   'shiftSimple.joining': 'Đang nhận…',
@@ -753,8 +750,6 @@ export const vi: Record<DictKey, string> = {
   'shiftSimple.leave': 'Rời ca',
   'shiftSimple.leaveConfirm': 'Rút bạn khỏi ca này?',
   'shiftSimple.leaveUntil': 'tới {{time}}',
-  'shiftSimple.hoursLocked':
-    'Đã điểm danh — bạn không có quyền sửa giờ hay rời ca.',
   'shiftSimple.others': 'Người khác trong ca',
   'shiftSimple.noOthers': 'Chưa có ai khác.',
   'shiftSimple.advancedHint':
@@ -803,6 +798,13 @@ export const vi: Record<DictKey, string> = {
 
   // ---- lists ----
   'list.today': 'Hôm nay',
+  'date.pick': 'Chọn ngày',
+  'date.clear': 'Xoá',
+  'date.prevMonth': 'Tháng trước',
+  'date.nextMonth': 'Tháng sau',
+  'date.prevYears': 'Lùi',
+  'date.nextYears': 'Tới',
+  'date.placeholder': 'dd/mm/yyyy',
   'list.tomorrow': 'Ngày mai',
   'list.yesterday': 'Hôm qua',
   'list.noStaffAssigned': 'Chưa phân công nhân viên.',
@@ -831,7 +833,6 @@ export const vi: Record<DictKey, string> = {
   'allShifts.filter.sort': 'Sắp xếp',
   'allShifts.filter.add': 'Lọc',
   'allShifts.filter.chooseField': 'Lọc theo',
-  'allShifts.filter.apply': 'Áp dụng',
   'allShifts.filter.remove': 'Bỏ lọc {{name}}',
   'allShifts.filter.clear': 'Xoá tìm kiếm và bộ lọc',
   'allShifts.filter.searchMore': 'Tìm…',
@@ -987,6 +988,7 @@ export const vi: Record<DictKey, string> = {
   'palette.group.nav': 'Đi tới',
   'palette.group.action': 'Thao tác',
   'palette.group.staff': 'Nhân viên',
+  'palette.group.help': 'Hướng dẫn',
   'palette.weekView': 'Lịch tuần',
   'palette.monthView': 'Lịch tháng',
   'palette.theme': 'Giao diện: {{theme}}',
@@ -1094,6 +1096,7 @@ export const vi: Record<DictKey, string> = {
   'log.loading': 'Đang tải…',
   'log.empty': 'Không có dòng nào khớp bộ lọc.',
   'log.emptyHint': 'Thử nới rộng khoảng ngày hoặc xoá bộ lọc.',
+  'log.emptyPage': 'Trang này không có dòng nào khớp — thử trang khác.',
   'log.emptyFresh': 'Chưa ghi nhận thao tác nào.',
   'log.emptyFreshHint':
     'Lần tới có người tạo, sửa hoặc nhận ca thì sẽ xuất hiện ở đây.',

@@ -479,8 +479,8 @@ export const TOURS: Record<TourId, Tour> = {
         targets: ['menu'],
         screen: 'desktop',
         text: {
-          vi: { title: 'Nút lưới', body: 'Mọi thứ về tài khoản và thông báo nằm sau nút này. Số đỏ trên nút là số thông báo chưa đọc.' },
-          en: { title: 'The grid button', body: 'Everything about your account and notifications is behind this button. The red number is your unread notifications.' },
+          vi: { title: 'Nút lưới', body: 'Mọi thứ về tài khoản và thông báo nằm sau nút này.' },
+          en: { title: 'The grid button', body: 'Everything about your account and notifications is behind this button.' },
         },
       },
       {
@@ -488,8 +488,8 @@ export const TOURS: Record<TourId, Tour> = {
         ensure: ['menu'],
         screen: 'desktop',
         text: {
-          vi: { title: 'Thông báo', body: 'Kết quả mọi thao tác — lưu ca, nhận ca, điểm danh, kể cả lỗi — được giữ ở đây: xem lại, đánh dấu đã đọc, xoá.' },
-          en: { title: 'Notifications', body: 'The result of everything you do — saving, claiming, checking in, errors too — is kept here to review, mark as read or delete.' },
+          vi: { title: 'Thông báo', body: 'Kết quả mọi thao tác — lưu ca, nhận ca, điểm danh, kể cả lỗi — được giữ ở đây: xem lại hoặc xoá.' },
+          en: { title: 'Notifications', body: 'The result of everything you do — saving, claiming, checking in, errors too — is kept here to review or delete.' },
         },
       },
       {
@@ -532,8 +532,8 @@ export const TOURS: Record<TourId, Tour> = {
         targets: ['bell-mobile'],
         screen: 'mobile',
         text: {
-          vi: { title: 'Thông báo', body: 'Kết quả mọi thao tác được giữ ở chuông này: xem lại, đánh dấu đã đọc, xoá.' },
-          en: { title: 'Notifications', body: 'The result of everything you do is kept behind this bell to review, mark as read or delete.' },
+          vi: { title: 'Thông báo', body: 'Kết quả mọi thao tác được giữ ở chuông này: xem lại hoặc xoá.' },
+          en: { title: 'Notifications', body: 'The result of everything you do is kept behind this bell to review or delete.' },
         },
       },
       {

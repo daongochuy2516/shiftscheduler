@@ -40,7 +40,11 @@ import { useTour } from '../help/TourProvider'
 import { TOURS, TOUR_ORDER } from '../help/tours'
 import { corrections } from '../lib/autocorrect'
 
-type Group = 'result' | 'nav' | 'action' | 'staff'
+/**
+ * `help`: trang Hướng dẫn và các bài từng bước. Tách riêng để luôn xếp cuối —
+ * gõ "điểm danh" là muốn tới chỗ điểm danh, không phải đọc bài về nó.
+ */
+type Group = 'result' | 'nav' | 'action' | 'staff' | 'help'
 
 interface Command {
   id: string
@@ -59,10 +63,17 @@ const GROUP_LABEL: Record<Group, TranslationKey> = {
   nav: 'palette.group.nav',
   action: 'palette.group.action',
   staff: 'palette.group.staff',
+  help: 'palette.group.help',
 }
 
 /** Tên ngôn ngữ viết bằng chính ngôn ngữ đó — giống nhau ở mọi giao diện. */
 const LANG_NAME: Record<Lang, string> = { vi: 'Tiếng Việt', en: 'English' }
+
+/** Từ khoá riêng của từng ngôn ngữ (đã bỏ dấu), gồm cả mã `vi` / `en`. */
+const LANG_COMMANDS: { id: Lang; kw: string }[] = [
+  { id: 'vi', kw: 'vi tieng viet vietnamese' },
+  { id: 'en', kw: 'en english tieng anh' },
+]
 
 /** "Ngày" → "ngay": gõ không dấu vẫn tìm được. */
 function fold(s: string): string {
@@ -171,7 +182,6 @@ export function CommandPalette({
       { id: 'dark', icon: Moon, label: 'theme.dark', kw: 'giao dien toi theme dark' },
       { id: 'system', icon: Monitor, label: 'theme.systemShort', kw: 'giao dien he thong theme system auto' },
     ]
-    const other: Lang = lang === 'vi' ? 'en' : 'vi'
     const list: Command[] = [
       { id: 'nav-day', group: 'nav', icon: CalendarDays, label: t('nav.timeline'), keywords: 'lich ngay schedule calendar day timeline', run: go('/') },
       { id: 'nav-week', group: 'nav', icon: CalendarDays, label: t('palette.weekView'), keywords: 'lich tuan schedule calendar week', run: go('/?view=week') },
@@ -182,7 +192,7 @@ export function CommandPalette({
       { id: 'nav-pending', group: 'nav', icon: Clock3, label: t('nav.pending'), keywords: 'cho xac nhan pending diem danh confirm', run: go('/pending') },
       { id: 'nav-logs', group: 'nav', icon: ScrollText, label: t('nav.actionLog'), keywords: 'nhat ky activity log logs', run: go('/logs') },
       { id: 'nav-status', group: 'nav', icon: Network, label: t('nav.status'), keywords: 'trang thai status ket noi connection', run: go('/status') },
-      { id: 'nav-help', group: 'nav', icon: BookOpen, label: t('nav.help'), keywords: 'huong dan help docs tai lieu guide cach dung', run: go('/help') },
+      { id: 'nav-help', group: 'help', icon: BookOpen, label: t('nav.help'), keywords: 'huong dan help docs tai lieu guide cach dung', run: go('/help') },
       ...(isAdmin
         ? [{ id: 'nav-accounts', group: 'nav' as const, icon: UserCog, label: t('nav.accounts'), keywords: 'tai khoan accounts users nguoi dung an hien', run: go('/accounts') }]
         : []),
@@ -205,14 +215,17 @@ export function CommandPalette({
         keywords: th.kw,
         run: () => (setPref(th.id), 'close'),
       })),
-      {
-        id: 'act-lang', group: 'action', icon: Languages,
-        label: t('palette.lang', { lang: LANG_NAME[other] }),
-        keywords: 'ngon ngu language tieng viet english doi',
-        run: () => (setLang(other), 'close'),
-      },
+      // Mỗi ngôn ngữ một lệnh, đặt thẳng chứ không đảo: gõ "en" rồi Enter hai
+      // lần vẫn là tiếng Anh.
+      ...LANG_COMMANDS.map(({ id, kw }): Command => ({
+        id: `act-lang-${id}`, group: 'action', icon: Languages,
+        label: t('palette.lang', { lang: LANG_NAME[id] }),
+        hint: lang === id ? t('palette.current') : undefined,
+        keywords: `ngon ngu language doi ${kw}`,
+        run: () => (setLang(id), 'close'),
+      })),
       ...TOUR_ORDER.map((id): Command => ({
-        id: `act-tour-${id}`, group: 'action', icon: GraduationCap,
+        id: `act-tour-${id}`, group: 'help', icon: GraduationCap,
         label: t('palette.tour', { title: TOURS[id].title[lang] }),
         keywords: `huong dan tung buoc wizard tour guide ${TOURS[id].title.vi} ${TOURS[id].title.en}`,
         run: () => (startTour(id), 'close'),
@@ -325,7 +338,14 @@ export function CommandPalette({
       return tokens.every((tok) => hay.includes(tok))
     }
 
-    const matched = [...fixed.filter(matches), ...staff.filter(matches).slice(0, 6)]
+    // Nhóm Hướng dẫn luôn xuống cuối, kể cả khi chưa gõ gì (sort giữ ổn định
+    // thứ tự các lệnh còn lại).
+    const docsLast = (a: Command, b: Command) =>
+      Number(a.group === 'help') - Number(b.group === 'help')
+    const matched = [
+      ...fixed.filter(matches),
+      ...staff.filter(matches).slice(0, 6),
+    ].sort(docsLast)
     if (!tokens.length) {
       return { items: [...results, ...matched], corrected: null }
     }
@@ -347,6 +367,8 @@ export function CommandPalette({
       .map((c, i) => ({ c, i }))
       .sort(
         (a, b) =>
+          // Tính năng trước tài liệu, dù bài hướng dẫn trùng chữ hơn.
+          docsLast(a.c, b.c) ||
           (best.get(b.c.group) ?? 0) - (best.get(a.c.group) ?? 0) ||
           // Hai nhóm bằng điểm: giữ thứ tự nhóm gốc, không cho xen kẽ nhau.
           (groupOrder.get(a.c.group) ?? 0) - (groupOrder.get(b.c.group) ?? 0) ||

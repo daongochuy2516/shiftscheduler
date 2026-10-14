@@ -39,6 +39,7 @@ import {
 import { Avatar } from './Avatar'
 import { Modal } from './Modal'
 import { Select } from './Select'
+import { DateInput } from './DateInput'
 import {
   ShiftSimpleView,
   type EditorRow,
@@ -103,15 +104,19 @@ const lockedInputClass =
 
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
-const DELETE_LOCK_TEXT: Record<DeleteBlock, TranslationKey> = {
-  others: 'shift.deleteLockedOthers',
+/**
+ * Chỉ báo lý do khi bị khoá theo luật (đã điểm danh, quá 30 phút) — để biết vì
+ * sao và lúc nào thì hết được làm. Khoá chỉ vì ca có người khác thì không ghi
+ * gì: nhân viên mở ca nào của nhóm cũng gặp, một loạt "bạn không có quyền"
+ * chỉ làm rối.
+ */
+const DELETE_LOCK_TEXT: Partial<Record<DeleteBlock, TranslationKey>> = {
   confirmed: 'shift.deleteLockedConfirmed',
   late: 'shift.deleteLockedLate',
 }
 
-const ROW_LOCK_TEXT: Record<RemoveBlock, TranslationKey> = {
+const ROW_LOCK_TEXT: Partial<Record<RemoveBlock, TranslationKey>> = {
   confirmed: 'shift.rowLocked',
-  other: 'shift.rowLockedOther',
   late: 'shift.rowLockedLate',
 }
 
@@ -471,7 +476,7 @@ export function ShiftModal({
           </>
         ) : (
           <>
-            {isEdit && deleteLock && (
+            {isEdit && deleteLock && DELETE_LOCK_TEXT[deleteLock] && (
               <span className="mr-auto inline-flex items-start gap-1.5 text-xs text-slate-500">
                 <Lock className="mt-0.5 h-3 w-3 shrink-0" />
                 {t(DELETE_LOCK_TEXT[deleteLock])}
@@ -587,16 +592,15 @@ export function ShiftModal({
                 <label className={labelClass} htmlFor="shift-date">
                   {t('common.date')}
                 </label>
-                <input
+                <DateInput
                   id="shift-date"
-                  type="date"
                   className={
                     dateLocked || infoLocked ? lockedInputClass : inputClass
                   }
                   value={form.date}
                   disabled={dateLocked || infoLocked}
                   aria-describedby={dateLocked ? 'shift-date-lock' : undefined}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  onChange={(date) => setForm({ ...form, date })}
                 />
               </div>
 
@@ -644,13 +648,6 @@ export function ShiftModal({
                 >
                   <Lock className="mt-0.5 h-3 w-3 shrink-0" />
                   {t('shift.lockedByTemplate')}
-                </p>
-              )}
-
-              {infoLocked && (
-                <p className="inline-flex items-start gap-1.5 text-xs text-slate-500 sm:col-span-2">
-                  <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-                  {t('shift.infoLocked')}
                 </p>
               )}
 
@@ -874,14 +871,10 @@ export function ShiftModal({
                                 {warning}
                               </span>
                             )}
-                            {removeLock && (
+                            {removeLock && !othersRow && ROW_LOCK_TEXT[removeLock] && (
                               <span className="inline-flex items-center gap-1 text-slate-500">
                                 <Lock className="h-3 w-3" />
-                                {t(
-                                  othersRow
-                                    ? 'shift.rowLockedOther'
-                                    : ROW_LOCK_TEXT[removeLock],
-                                )}
+                                {t(ROW_LOCK_TEXT[removeLock])}
                               </span>
                             )}
                           </div>
@@ -896,11 +889,7 @@ export function ShiftModal({
                 <p className="mt-2 text-xs text-slate-500">
                   {t('shift.noStaffAccounts')}
                 </p>
-              ) : restricted ? (
-                <p className="mt-2 text-xs text-slate-500">
-                  {t('shift.noPermissionAddOthers')}
-                </p>
-              ) : availableProfiles.length === 0 && rows.length > 0 ? (
+              ) : restricted ? null : availableProfiles.length === 0 && rows.length > 0 ? (
                 <p className="mt-2 text-xs text-slate-500">
                   {t('shift.everyoneAssigned')}
                 </p>

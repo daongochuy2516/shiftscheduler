@@ -10,6 +10,7 @@ import {
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 import { useExitAnimation } from './useExitAnimation'
+import { placePopover, type Placement } from './popoverPlacement'
 
 export interface SelectOption<T extends string> {
   value: T
@@ -23,7 +24,6 @@ export interface SelectOption<T extends string> {
 const TYPEAHEAD_MS = 600
 /** Danh sách cao tối đa (max-h-64) — để quyết định mở xuống hay mở lên. */
 const PANEL_MAX_H = 256
-const GAP = 4
 
 /** So chữ không dấu, không phân biệt hoa thường: gõ "ngu" ra "Nguyễn". */
 function fold(s: string): string {
@@ -33,25 +33,6 @@ function fold(s: string): string {
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D')
     .toLowerCase()
-}
-
-interface Placement {
-  left: number
-  width: number
-  top?: number
-  bottom?: number
-  up: boolean
-}
-
-function place(trigger: HTMLElement): Placement {
-  const r = trigger.getBoundingClientRect()
-  const vh = window.innerHeight
-  const below = vh - r.bottom - GAP
-  // Mở lên chỉ khi phía dưới chật mà phía trên rộng hơn — như select gốc.
-  const up = below < Math.min(PANEL_MAX_H, 160) && r.top > below
-  return up
-    ? { left: r.left, width: r.width, bottom: vh - r.top + GAP, up }
-    : { left: r.left, width: r.width, top: r.bottom + GAP, up }
 }
 
 /**
@@ -99,7 +80,7 @@ export function Select<T extends string>({
 
   function show() {
     if (disabled || !triggerRef.current) return
-    setPlacement(place(triggerRef.current))
+    setPlacement(placePopover(triggerRef.current, PANEL_MAX_H))
     setActive(selectedIndex >= 0 ? selectedIndex : firstEnabled(1, -1))
     setOpen(true)
   }
@@ -305,7 +286,7 @@ function SelectPanel<T extends string>({
     let frame = 0
     const update = () => {
       cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => onReposition(place(trigger)))
+      frame = requestAnimationFrame(() => onReposition(placePopover(trigger, PANEL_MAX_H)))
     }
     window.addEventListener('scroll', update, true)
     window.addEventListener('resize', update)

@@ -2,7 +2,7 @@ import type { Profile } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 
 /**
- * Nhãn vai trò: Admin / Staff — giữ tiếng Anh ở cả hai ngôn ngữ. Dùng ở
+ * Nhãn vai trò: Admin / Staff — giữ tiếng Anh ở cả hai ngôn ngữ. Dùng ở bảng avatar (mobile),
  * header (cạnh tên người đang đăng nhập) và trang Tài khoản. `role` là `null` khi migration 005 chưa chạy —
  * chưa có vai trò thì không hiện gì.
  */

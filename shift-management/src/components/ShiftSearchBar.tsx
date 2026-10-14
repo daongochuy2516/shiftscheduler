@@ -16,6 +16,8 @@ import { fromDateKey } from '../lib/time'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { Avatar } from './Avatar'
+import { Calendar } from './Calendar'
+import { formatDateText, maskDateText, parseDateText } from '../lib/dateText'
 
 type Field = keyof ShiftFilters
 
@@ -74,7 +76,6 @@ export function ShiftSearchBar({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [popover, setPopover] = useState<Popover>(null)
-  const [draftDate, setDraftDate] = useState('')
 
   // Bấm ra ngoài hoặc Esc thì đóng, như mọi menu thả xuống.
   useEffect(() => {
@@ -150,7 +151,6 @@ export function ShiftSearchBar({
     t(FIELDS.find((f) => f.id === field)!.label)
 
   function openEditor(field: Field) {
-    if (field === 'from' || field === 'to') setDraftDate(filters[field] ?? '')
     setPopover({ step: 'edit', field })
   }
 
@@ -302,39 +302,13 @@ export function ShiftSearchBar({
 
           {/* ---- bước 2: chọn giá trị ---- */}
           {(editing === 'from' || editing === 'to') && (
-            <form
-              className="space-y-2 p-1"
-              onSubmit={(e) => {
-                e.preventDefault()
-                apply({ [editing]: draftDate || null })
-              }}
-            >
-              <label
-                htmlFor="shift-filter-date"
-                className="block text-xs font-medium text-slate-600"
-              >
-                {t(editing === 'from' ? 'allShifts.filter.from' : 'allShifts.filter.to')}
-              </label>
-              <input
-                id="shift-filter-date"
-                type="date"
-                autoFocus
-                value={draftDate}
-                min={dateLimits[editing].min ?? undefined}
-                max={dateLimits[editing].max ?? undefined}
-                onChange={(e) => setDraftDate(e.target.value)}
-                className="w-full min-h-11 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base text-slate-900 shadow-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:min-h-0 sm:text-sm"
-              />
-              {/* Nút áp dụng chứ không áp ngay khi đổi: gõ tay từng chữ số năm
-                  thì ô ngày đã phát giá trị như năm 0002. */}
-              <button
-                type="submit"
-                disabled={!draftDate}
-                className="w-full min-h-10 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8"
-              >
-                {t('allShifts.filter.apply')}
-              </button>
-            </form>
+            <DateFilterEditor
+              label={t(editing === 'from' ? 'allShifts.filter.from' : 'allShifts.filter.to')}
+              value={filters[editing] ?? ''}
+              min={dateLimits[editing].min}
+              max={dateLimits[editing].max}
+              onApply={(date) => apply({ [editing]: date })}
+            />
           )}
 
           {editing === 'staffIds' && (
@@ -383,6 +357,65 @@ export function ShiftSearchBar({
             })}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Chọn một mốc ngày cho bộ lọc: gõ `dd/mm/yyyy` rồi Enter, hoặc bấm một ngày
+ * trên lịch bên dưới. Lịch nhảy theo ngày vừa gõ đủ.
+ */
+function DateFilterEditor({
+  label,
+  value,
+  min,
+  max,
+  onApply,
+}: {
+  label: string
+  value: string
+  min: string | null
+  max: string | null
+  onApply: (date: string) => void
+}) {
+  const { t } = useI18n()
+  const [text, setText] = useState(() => formatDateText(value))
+  const key = parseDateText(text)
+  const ok = !!key && !(min && key < min) && !(max && key > max)
+
+  return (
+    <div className="space-y-1.5 p-1">
+      <label htmlFor="shift-filter-date" className="block text-xs font-medium text-slate-600">
+        {label}
+      </label>
+      <input
+        id="shift-filter-date"
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        autoFocus
+        placeholder={t('date.placeholder')}
+        value={text}
+        aria-invalid={(text.length === 10 && !ok) || undefined}
+        onChange={(e) => setText(maskDateText(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            if (ok && key) onApply(key)
+          }
+        }}
+        className={`w-full min-h-11 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base tabular-nums shadow-xs outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:min-h-0 sm:text-sm ${
+          text.length === 10 && !ok ? 'text-rose-600' : 'text-slate-900'
+        }`}
+      />
+      {/* key: gõ đủ một ngày hợp lệ thì lịch mở đúng tháng đó. */}
+      <Calendar
+        key={ok ? key : 'none'}
+        value={ok && key ? key : value}
+        min={min}
+        max={max}
+        onChange={onApply}
+      />
     </div>
   )
 }

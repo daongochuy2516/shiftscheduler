@@ -17,7 +17,9 @@ import type { TranslationKey } from '../i18n/translations'
 import { Avatar } from '../components/Avatar'
 import { PageSkeleton } from '../components/PageSkeleton'
 import { Select } from '../components/Select'
+import { DateInput } from '../components/DateInput'
 import { StaffMultiSelect } from '../components/StaffMultiSelect'
+import { effectiveAction, isCheckInAction } from '../lib/actionLog'
 
 const PAGE_SIZE = 50
 
@@ -33,6 +35,9 @@ const ACTIONS = [
   'assignment.claimed',
   'assignment.updated',
   'assignment.status_changed',
+  // Hai chiều của đổi trạng thái, lọc riêng được (lib/actionLog.ts).
+  'assignment.confirmed',
+  'assignment.unconfirmed',
   'assignment.deleted',
   'template.created',
   'template.updated',
@@ -41,20 +46,6 @@ const ACTIONS = [
 ] as const
 
 const ENTITY_TYPES = ['shift', 'assignment', 'template'] as const
-
-/**
- * Hành động để hiển thị. Đổi trạng thái thực chất chỉ có hai chiều nên gọi
- * thẳng tên việc: điểm danh, hay gỡ điểm danh. Chỉ đổi nhãn — bộ lọc và dữ
- * liệu vẫn là `assignment.status_changed`.
- */
-function displayAction(row: ActionLog): string {
-  if (row.action !== 'assignment.status_changed') return row.action
-  const from = row.old_data?.status
-  const to = row.new_data?.status
-  if (from !== 'confirmed' && to === 'confirmed') return 'assignment.confirmed'
-  if (from === 'confirmed' && to !== 'confirmed') return 'assignment.unconfirmed'
-  return row.action
-}
 
 /** Màu theo tính chất việc làm: tạo, sửa, xoá. */
 function actionTone(action: string): string {
@@ -109,9 +100,18 @@ export function ActionLogPage() {
     setPageIndex(0)
   }, [filters])
 
+  // Điểm danh / Gỡ điểm danh không có trong dữ liệu (đều là "Đổi trạng
+  // thái"): hỏi máy chủ hành động gốc, rồi lọc chiều ngay trong trang tải về.
+  const checkInFilter =
+    filters.action && isCheckInAction(filters.action) ? filters.action : null
   const query = useMemo<ActionLogQuery>(
-    () => ({ ...filters, page: pageIndex, pageSize: PAGE_SIZE }),
-    [filters, pageIndex],
+    () => ({
+      ...filters,
+      action: checkInFilter ? 'assignment.status_changed' : filters.action,
+      page: pageIndex,
+      pageSize: PAGE_SIZE,
+    }),
+    [filters, checkInFilter, pageIndex],
   )
 
   const { page, available, loading, error, reload } = useActionLogs(query)
@@ -150,7 +150,10 @@ export function ActionLogPage() {
   }
 
   const total = page?.total ?? 0
-  const rows = page?.rows ?? []
+  const pageRows = page?.rows ?? []
+  const rows = checkInFilter
+    ? pageRows.filter((row) => effectiveAction(row) === checkInFilter)
+    : pageRows
   const first = total === 0 ? 0 : pageIndex * PAGE_SIZE + 1
   const last = Math.min(total, (pageIndex + 1) * PAGE_SIZE)
   const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
@@ -208,12 +211,13 @@ export function ActionLogPage() {
             <label className={labelClass} htmlFor="log-from">
               {t('log.from')}
             </label>
-            <input
+            <DateInput
               id="log-from"
-              type="date"
+              clearable
               className={controlClass}
               value={filters.from ?? ''}
-              onChange={(e) => patch({ from: e.target.value || null })}
+              max={filters.to}
+              onChange={(from) => patch({ from: from || null })}
             />
           </div>
 
@@ -221,12 +225,13 @@ export function ActionLogPage() {
             <label className={labelClass} htmlFor="log-to">
               {t('log.to')}
             </label>
-            <input
+            <DateInput
               id="log-to"
-              type="date"
+              clearable
               className={controlClass}
               value={filters.to ?? ''}
-              onChange={(e) => patch({ to: e.target.value || null })}
+              min={filters.from}
+              onChange={(to) => patch({ to: to || null })}
             />
           </div>
 
@@ -310,7 +315,10 @@ export function ActionLogPage() {
       </section>
 
       {/* ---- kết quả ---- */}
-      {rows.length === 0 ? (
+      {/* Lọc Điểm danh / Gỡ điểm danh làm trên từng trang tải về, nên một
+          trang có thể trống mà trang sau vẫn có: chỉ hiện màn hình trống khi
+          chính máy chủ không trả gì, còn lại vẫn giữ nút chuyển trang. */}
+      {pageRows.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white px-6 py-16 text-center shadow-sm ring-1 ring-slate-900/5">
           <ScrollText className="h-7 w-7 text-slate-300" />
           <p className="text-sm font-medium text-slate-700">
@@ -326,12 +334,21 @@ export function ActionLogPage() {
             {rows.map((row) => (
               <LogRow key={row.id} row={row} />
             ))}
+            {rows.length === 0 && (
+              <li className="px-4 py-8 text-center text-sm text-slate-500">
+                {t('log.emptyPage')}
+              </li>
+            )}
           </ul>
 
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-slate-500 tabular-nums">
-              {t('log.showing', { first, last, total })}
-            </p>
+            {/* Tổng của máy chủ là tổng "Đổi trạng thái" — đếm sai khi đang
+                lọc một chiều, nên không hiện. */}
+            {!checkInFilter && (
+              <p className="text-sm text-slate-500 tabular-nums">
+                {t('log.showing', { first, last, total })}
+              </p>
+            )}
             <div className="ml-auto flex items-center rounded-md bg-white shadow-xs ring-1 ring-slate-200">
               <button
                 type="button"
@@ -380,7 +397,7 @@ function LogRow({ row }: { row: ActionLog }) {
 
   const at = new Date(row.created_at)
   const actorName = row.actor_name ?? (row.actor_id ? t('log.unknownActor') : t('log.system'))
-  const action = displayAction(row)
+  const action = effectiveAction(row)
   const actionLabel = t(`log.action.${action}` as TranslationKey)
   const entityLabel = t(`log.entity.${row.entity_type}` as TranslationKey)
   const hasDetails = row.old_data !== null || row.new_data !== null

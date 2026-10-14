@@ -146,10 +146,10 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
 | Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. Rê chuột (hoặc Tab tới) để xem bảng nhỏ có giờ to, ngày đầy đủ kèm thứ. Đưa chuột từ đồng hồ xuống bảng thì bảng không tắt. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
 | **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định **hôm nay**) |
-| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** (số đỏ trên nút là số chưa đọc, [mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) |
 
-Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng, còn giao diện, ngôn ngữ, đổi mật khẩu, đăng xuất nằm trong bảng mở ra khi bấm avatar.
+Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng; bấm avatar mở bảng có tên, nhãn vai trò **Admin** / **Staff** và email ở đầu, rồi tới các mục cùng màu với ô trên PC: Tổng kết, Nhật ký, Trạng thái, Hướng dẫn, Quick Search, đổi mật khẩu, **Ngôn ngữ** và **Giao diện** (bấm để đổi, giống ô trên PC — giá trị đang dùng ghi bên phải), đăng xuất.
 
 Màn hình chưa đủ rộng để xếp cả hàng (dưới 1320px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn.
 
@@ -265,6 +265,8 @@ Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâ
 
 **Tiêu đề**, **Ngày**, **Bắt đầu**, **Kết thúc**, **Ghi chú** (không bắt buộc).
 
+Ô **Ngày** gõ được bằng phím như ô ngày thường: `dd/mm/yyyy`, dấu `/` tự chèn, **↑ ↓** tăng giảm phần ngày / tháng / năm ở chỗ con trỏ. Bấm icon lịch (hoặc **Alt + ↓**) để mở lịch; trên lịch bấm tên tháng để chọn nhanh tháng, bấm tiếp năm để chọn năm.
+
 Khung giờ ở đây là khung giờ *tổng* của ca. Từng nhân viên vẫn có giờ riêng bên dưới.
 
 ### Phần nhân viên trong ca
@@ -375,7 +377,7 @@ Danh sách đầy đủ, **nhóm theo ngày**, tiêu đề nhóm ghi rõ *Hôm n
 
   | Bộ lọc | Ghi chú |
   | --- | --- |
-  | **Từ ngày / Đến ngày** | Thu hẹp **bên trong** tab: tab *Sắp tới* không chọn được ngày đã qua, và ngược lại |
+  | **Từ ngày / Đến ngày** | Thu hẹp **bên trong** tab: tab *Sắp tới* không chọn được ngày đã qua, và ngược lại. Gõ `dd/mm/yyyy` rồi Enter, hoặc bấm một ngày trên lịch ngay bên dưới (bấm tên tháng để chọn nhanh tháng, năm) |
   | **Nhân viên** | Chọn được nhiều người, mỗi người một chip. **AND**: ca phải có **tất cả** người đã chọn. Lọc ở database; thẻ ca vẫn hiện đủ mọi người trong ca |
   | **Sắp xếp** | Mặc định Cũ → mới; chỉ hiện chip khi chọn Mới → cũ |
 - **Cuộn vô hạn**: danh sách tải từng tháng một **theo chiều sắp xếp** — Cũ → mới thì tiến dần từ đầu khoảng, Mới → cũ thì lùi dần từ cuối khoảng. Tháng mới luôn nối vào cuối. Tới hết thì hiện *"Đã hết ca trong khoảng này."*
@@ -442,7 +444,7 @@ Trên giao diện, thay cho nút **Xác nhận** bạn sẽ thấy:
 | *Hết giờ điểm danh — bạn không có quyền điểm danh trễ* | Đã qua giờ kết thúc của bạn |
 | *lúc 07:42 8/9* cạnh nhãn **Đã xác nhận** | Thời điểm điểm danh, do máy chủ ghi |
 
-Trong form sửa ca, dòng đã điểm danh bị khoá kèm biểu tượng 🔒, ô **Trạng thái** không đổi tay được, và nút **Xoá** được thay bằng câu giải thích khi ca không còn xoá được. Dòng của người khác bị khoá toàn bộ, dòng của bạn đã quá 30 phút thì khoá nút thùng rác, kèm lý do bên dưới. Ô chọn người luôn khoá với nhân viên thường. Ca có người khác thì tên, ngày và giờ của ca cũng bị khoá — ô ghi chú của ca vẫn mở.
+Trong form sửa ca, ô bị khoá chuyển xám. Khoá **theo luật** thì kèm một dòng 🔒 nói rõ lý do: dòng đã điểm danh (không sửa giờ, không gỡ), dòng của bạn đã nhận quá 30 phút (không rời được), ca đã có người điểm danh (không dời ngày, không xoá), ca bạn nhận quá 30 phút (không xoá). Khoá chỉ vì **ca có người khác** (tên, ngày, giờ của ca; dòng của người khác; nút Xoá) hay vì không phải admin (ô chọn người, thêm người khác) thì chỉ khoá / ẩn, không kèm câu giải thích. Ô ghi chú của ca vẫn mở.
 
 Giờ tính theo **đồng hồ máy chủ, múi giờ Việt Nam** — chỉnh đồng hồ máy mình không có tác dụng. Mọi luật nằm trong trigger của database nên gọi thẳng Supabase API cũng không lách được; giao diện chỉ ẩn sẵn những gì database sẽ từ chối. Mọi can thiệp của admin đều vào [Nhật ký](#9b-nhật-ký-thao-tác).
 
@@ -498,7 +500,7 @@ Cách làm: trigger trên bảng `shifts` **cố ý bỏ qua** những ca có `t
 
 > Kèm theo đó, nếu bước thêm phân công thất bại sau khi ca đã được tạo, ứng dụng **xoá luôn ca vừa tạo**. Nếu để lại thì sẽ có một ca không nằm trong bất kỳ dòng nhật ký nào.
 
-**Bộ lọc**: từ ngày, đến ngày, nhân viên liên quan, hành động, loại đối tượng, và tìm kiếm trong phần mô tả. Phân trang 50 dòng mỗi trang, không tải toàn bộ.
+**Bộ lọc**: từ ngày, đến ngày (gõ `dd/mm/yyyy` hoặc bấm icon lịch, có nút ✕ để bỏ; *Từ* không chọn được sau *Đến* và ngược lại), nhân viên liên quan, hành động, loại đối tượng, và tìm kiếm trong phần mô tả. Phân trang 50 dòng mỗi trang, không tải toàn bộ. Ô **Hành động** có thêm **Điểm danh** và **Gỡ điểm danh**, tách hai chiều của *Đổi trạng thái* (lọc *Đổi trạng thái* vẫn ra cả hai). Hai mục này lọc ngay trên từng trang tải về, nên một trang có thể ít hơn 50 dòng hoặc trống, và không hiện tổng số dòng.
 
 **Nhân viên liên quan** chọn được nhiều người, theo **AND**: dòng phải dính tới **tất cả** người đã chọn. Một người được coi là liên quan tới một dòng khi họ là:
 
@@ -545,16 +547,14 @@ Mọi thao tác ghi dữ liệu — tạo / lưu / xoá ca, nhận ca, rời ca,
 
 Rê chuột vào popup thì nó dừng đếm giờ. Bấm **✕** chỉ ẩn popup — thông báo vẫn nằm trong ngăn. Bấm vào nội dung popup thì mở ngăn thông báo.
 
-**Ngăn thông báo** (nút lưới → **Thông báo**; trên điện thoại là nút 🔔. Số đỏ là số chưa đọc). Giống Action Center của Windows: trượt ra từ mép phải, thông báo nhóm theo ngày, mới nhất ở trên.
+**Ngăn thông báo** (nút lưới → **Thông báo**; trên điện thoại là nút 🔔). Không có đã đọc / chưa đọc, nút lưới và chuông cũng không đếm số — thông báo nào cũng là kết quả việc bạn vừa tự bấm. Giống Action Center của Windows: trượt ra từ mép phải, thông báo nhóm theo ngày, mới nhất ở trên.
 
 | Thao tác | Cách làm |
 | --- | --- |
-| Đánh dấu đã đọc | Bấm vào thông báo, hoặc nút phong bì bên phải nó |
-| Đánh dấu chưa đọc lại | Nút phong bì trên thông báo đã đọc |
 | Xoá một thông báo | Nút **✕** bên phải nó |
-| Đánh dấu tất cả đã đọc / Xoá tất cả | Hai nút ở đầu ngăn |
+| Xoá tất cả | Nút ở đầu ngăn |
 
-Trên máy tính, hai nút của từng thông báo chỉ hiện khi rê chuột vào; trên điện thoại chúng luôn hiện.
+Trên máy tính, nút ✕ của từng thông báo chỉ hiện khi rê chuột vào; trên điện thoại nó luôn hiện.
 
 **Lưu ở đâu.** Thông báo nằm trong `localStorage` của trình duyệt, riêng cho từng tài khoản (`scheduler.notifications.<id>`), giữ tối đa 200 cái gần nhất. **Không đồng bộ** giữa các máy và không gửi lên máy chủ: xoá dữ liệu trình duyệt là mất. Các tab cùng trình duyệt thì thấy chung. Muốn biết chắc ai đã làm gì, xem [Nhật ký](#9b-nhật-ký-thao-tác) — đó mới là bản ghi của máy chủ.
 
@@ -564,7 +564,7 @@ Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt
 
 ## 9d. Hướng dẫn và bài từng bước
 
-Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**, từ bảng avatar trên điện thoại, hoặc gõ *hướng dẫn* trong Ctrl + K. Trang viết cho nhân viên. Trên cùng là mục **Luật điểm danh** (mốc giờ, việc được và không được làm, vì sao), bấm vào đầu mục để thu gọn (trình duyệt nhớ lựa chọn); dưới là các bài từng bước, rồi mục lục, ô tìm (gõ không dấu được) và một mục **Dành cho admin** chỉ admin thấy. Có đủ tiếng Việt và tiếng Anh theo ngôn ngữ đang chọn.
+Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**, từ bảng avatar trên điện thoại, hoặc gõ *hướng dẫn* trong Ctrl + K. Trang viết cho nhân viên. Trên cùng là mục **Luật điểm danh** (mốc giờ, việc được và không được làm), bấm vào đầu mục để thu gọn (trình duyệt nhớ lựa chọn); dưới là các bài từng bước, rồi mục lục, ô tìm (gõ không dấu được) và một mục **Dành cho admin** chỉ admin thấy. Có đủ tiếng Việt và tiếng Anh theo ngôn ngữ đang chọn.
 
 **Bài từng bước (wizard)**: bấm một bài ngay dưới Luật điểm danh, hoặc **Chỉ tôi từng bước** cạnh từng mục. Bài hướng dẫn tự chuyển tới đúng trang, làm tối màn hình trừ đúng phần cần bấm, và hiện thẻ giải thích ngay cạnh đó. Khi cần, nó tự mở menu, mở một ca, hay chuyển form sang chế độ Đơn giản.
 
@@ -632,7 +632,7 @@ Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avata
 | Gõ | Được |
 | --- | --- |
 | Tên trang: *lịch tuần*, *tổng kết*, *nhật ký*… | Đi tới trang đó (Lịch ngày / tuần / tháng, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản với admin) |
-| *tạo ca*, *thông báo*, *giao diện tối*, *ngôn ngữ*, *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó rồi đóng bảng. Đăng xuất phải Enter hai lần |
+| *tạo ca*, *thông báo*, *giao diện tối*, *en* / *vi* (đặt ngôn ngữ), *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó rồi đóng bảng. Đăng xuất phải Enter hai lần |
 | Tên một người: *mai* | **Ca của Mai Le** — mở Tất cả ca, lọc sẵn theo người đó |
 | Phép tính: `12*3+4`, `(1+2)^3` | Kết quả — Enter để chép |
 | Giờ ± thời lượng: `08:00 + 4h30m`, `22:00 + 3h` | `12:30`, `01:00 (+1 ngày)` |
