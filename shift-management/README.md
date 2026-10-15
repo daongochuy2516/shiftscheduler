@@ -566,7 +566,7 @@ Lỗi nhập liệu (thiếu tiêu đề, giờ kết thúc trước giờ bắt
 
 Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**, từ bảng avatar trên điện thoại, hoặc gõ *hướng dẫn* trong Ctrl + K. Trang viết cho nhân viên. Trên cùng là mục **Luật điểm danh** (mốc giờ, việc được và không được làm), bấm vào đầu mục để thu gọn (trình duyệt nhớ lựa chọn); dưới là các bài từng bước, rồi mục lục, ô tìm (gõ không dấu được) và một mục **Dành cho admin** chỉ admin thấy. Có đủ tiếng Việt và tiếng Anh theo ngôn ngữ đang chọn.
 
-**Bài từng bước (wizard)**: bấm một bài ngay dưới Luật điểm danh, hoặc **Chỉ tôi từng bước** cạnh từng mục. Bài hướng dẫn tự chuyển tới đúng trang, làm tối màn hình trừ đúng phần cần bấm, và hiện thẻ giải thích ngay cạnh đó. Khi cần, nó tự mở menu, mở một ca, hay chuyển form sang chế độ Đơn giản.
+**Bài từng bước (wizard)**: bấm một bài ngay dưới Luật điểm danh, hoặc **Xem từng bước** cạnh từng mục. Bài hướng dẫn tự chuyển tới đúng trang, làm tối màn hình trừ đúng phần cần bấm, và hiện thẻ giải thích ngay cạnh đó. Khi cần, nó tự mở menu, mở một ca, hay chuyển form sang chế độ Đơn giản.
 
 | Bài | Chỉ vào |
 | --- | --- |

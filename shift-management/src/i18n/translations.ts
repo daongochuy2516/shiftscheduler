@@ -384,13 +384,13 @@ export const en = {
   // ---- help & guided tours ----
   'help.title': 'Help',
   'help.subtitle':
-    'How to use Thinkmay Team Board — with step-by-step tours that point at exactly what to press.',
+    'How to use Thinkmay Team Board — with step-by-step tours.',
   'help.tours': 'Step-by-step tours',
   'help.toursHint':
     'The tour opens the right page and highlights each thing to press. Use → / ← or the buttons, Esc to stop.',
   'help.stepCount_one': '{{count}} step',
   'help.stepCount_other': '{{count}} steps',
-  'help.startTour': 'Show me step by step',
+  'help.startTour': 'Step by step',
   'help.contents': 'Contents',
   'help.search': 'Search the guide',
   'help.noResults': 'Nothing in the guide matches that.',
@@ -399,7 +399,7 @@ export const en = {
   'tour.done': 'Done',
   'tour.skip': 'End tour',
   'tour.welcomeTitle': 'New to Thinkmay Team Board?',
-  'tour.welcomeBody': 'Take the one-minute tour — it points at everything you need.',
+  'tour.welcomeBody': 'Take the one-minute tour of everything you need.',
   'tour.later': 'Later',
   'tour.start': 'Start the tour',
   'palette.tour': 'Tour: {{title}}',
@@ -953,13 +953,13 @@ export const vi: Record<DictKey, string> = {
   // ---- help & guided tours ----
   'help.title': 'Hướng dẫn',
   'help.subtitle':
-    'Cách dùng Thinkmay Team Board — kèm các bài từng bước chỉ tận tay vào chỗ cần bấm.',
+    'Cách dùng Thinkmay Team Board — kèm các bài hướng dẫn từng bước.',
   'help.tours': 'Hướng dẫn từng bước',
   'help.toursHint':
     'Bài hướng dẫn tự mở đúng trang và làm nổi phần cần bấm. Dùng → / ← hoặc các nút, Esc để dừng.',
   'help.stepCount_one': '{{count}} bước',
   'help.stepCount_other': '{{count}} bước',
-  'help.startTour': 'Chỉ tôi từng bước',
+  'help.startTour': 'Xem từng bước',
   'help.contents': 'Mục lục',
   'help.search': 'Tìm trong hướng dẫn',
   'help.noResults': 'Không có mục nào khớp.',
@@ -968,7 +968,7 @@ export const vi: Record<DictKey, string> = {
   'tour.done': 'Xong',
   'tour.skip': 'Dừng hướng dẫn',
   'tour.welcomeTitle': 'Mới dùng Thinkmay Team Board?',
-  'tour.welcomeBody': 'Xem hướng dẫn 1 phút — chỉ tận tay những gì bạn cần.',
+  'tour.welcomeBody': 'Xem hướng dẫn 1 phút về những gì bạn cần.',
   'tour.later': 'Để sau',
   'tour.start': 'Bắt đầu',
   'palette.tour': 'Hướng dẫn: {{title}}',

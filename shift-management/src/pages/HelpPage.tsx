@@ -69,7 +69,7 @@ function sectionText(s: HelpSection): string {
 
 /**
  * Trang Hướng dẫn: tài liệu dùng web cho nhân viên, kèm các bài từng bước
- * (wizard) chỉ tận tay vào phần cần bấm. Nội dung ở help/content.ts, kịch
+ * (wizard) chỉ vào phần cần bấm. Nội dung ở help/content.ts, kịch
  * bản wizard ở help/tours.ts.
  */
 export function HelpPage() {

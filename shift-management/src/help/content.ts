@@ -52,7 +52,7 @@ const vi: HelpSection[] = [
           ['14:00 hôm nay', 'Nhận ca. Sửa được giờ của mình, **rời ca** được'],
           ['14:30 hôm nay', 'Hết 30 phút: không rời ca được nữa'],
           ['07:30 ngày mai', '**Mở điểm danh** — 30 phút trước giờ vào của riêng bạn'],
-          ['12:00 ngày mai', '**Đóng điểm danh** — không điểm danh bù (nếu bạn có làm việc vào ca này nhưng quên điểm danh thì nhắn admin xem xét điểm danh bù)'],
+          ['12:00 ngày mai', '**Đóng điểm danh** — không thể tự điểm danhp (nếu bạn có làm việc vào ca này nhưng quên điểm danh thì nhắn admin xem xét điểm danh bù)'],
           ['Đã điểm danh', 'Lượt bị **khoá**: không bỏ điểm danh, không sửa giờ, không rời ca'],
         ],
       },
