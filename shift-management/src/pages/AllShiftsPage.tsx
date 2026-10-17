@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays } from 'date-fns'
-import { useSearchParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { useSchedule, useShiftChunks } from '../data/ScheduleContext'
 import { ShiftList } from '../components/ShiftList'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { ShiftSearchBar } from '../components/ShiftSearchBar'
-import { DEFAULT_SHIFT_FILTERS, type ShiftFilters } from '../lib/shiftFilters'
+import type { ShiftFilters } from '../lib/shiftFilters'
+import { dateParam, useUrlParams, type UrlValue } from '../lib/urlParams'
 import { planMonthChunks } from '../lib/shiftChunks'
 import { scrollRoot } from '../lib/scrollRoot'
 import { fromDateKey, toDateKey } from '../lib/time'
@@ -36,20 +36,15 @@ function earlierOf(a: string | null, b: string | null): string | null {
 }
 
 /**
- * `?staff=<id>` (có thể lặp lại) đặt sẵn bộ lọc nhân viên — bảng lệnh nhanh
- * (Ctrl + K) dùng để mở "ca của một người". Chỉ là giá trị ban đầu: lọc tiếp
- * trên trang không ghi ngược lại URL. `key` theo tham số để mở lại từ bảng
- * lệnh khi đang đứng sẵn ở trang này vẫn áp bộ lọc mới.
+ * Mọi thứ trong thanh tìm kiếm và tab đều nằm trên URL, để copy link gửi
+ * người khác là ra đúng danh sách mình đang xem:
+ *
+ * - `q` chữ tìm · `tab` = `past` / `all` (bỏ trống = Sắp tới)
+ * - `from` / `to` (yyyy-MM-dd) · `staff` (lặp lại, AND) · `order=desc`
+ *
+ * Bảng lệnh nhanh (Ctrl + K) mở "ca của một người" bằng `?staff=<id>`.
  */
 export function AllShiftsPage() {
-  const [params] = useSearchParams()
-  const staffIds = params.getAll('staff')
-  return (
-    <AllShiftsView key={staffIds.join('+')} initialStaffIds={staffIds} />
-  )
-}
-
-function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
   const {
     rosterProfiles,
     profilesById,
@@ -59,14 +54,23 @@ function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
   } = useSchedule()
   const { user } = useAuth()
   const { t } = useI18n()
-  const [query, setQuery] = useState('')
-  const [window, setWindow] = useState<Window>('upcoming')
-  const [filters, setFilters] = useState<ShiftFilters>(() => ({
-    ...DEFAULT_SHIFT_FILTERS,
-    staffIds: initialStaffIds,
-  }))
-  /** Số lát tháng đã tải theo chiều sắp xếp; cuộn tới đáy thì tăng. */
-  const [chunkCount, setChunkCount] = useState(1)
+  const [params, updateParams] = useUrlParams()
+  const query = params.get('q') ?? ''
+  const setQuery = (q: string) => updateParams({ q: q || null })
+  const tabParam = params.get('tab')
+  const window: Window =
+    tabParam === 'past' || tabParam === 'all' ? tabParam : 'upcoming'
+  // Một object cho mỗi URL: giữ tham chiếu để các useMemo phía dưới không
+  // chạy lại ở mỗi lần vẽ.
+  const filters = useMemo<ShiftFilters>(
+    () => ({
+      from: dateParam(params.get('from')),
+      to: dateParam(params.get('to')),
+      staffIds: params.getAll('staff'),
+      order: params.get('order') === 'desc' ? 'desc' : 'asc',
+    }),
+    [params],
+  )
 
   const today = toDateKey(new Date())
   const yesterday = toDateKey(addDays(fromDateKey(today), -1))
@@ -81,25 +85,33 @@ function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
   const from = laterOf(windowRange.from, filters.from)
   const to = earlierOf(windowRange.to, filters.to)
 
-  // Đổi tab / khoảng / người / chiều thì bắt đầu lại từ lát đầu tiên. Đã cuộn
-  // sâu 12 tháng rồi đổi tab thì không nên bắn 12 yêu cầu cùng lúc.
   function changeWindow(next: Window) {
-    setWindow(next)
-    setChunkCount(1)
+    updateParams({ tab: next === 'upcoming' ? null : next })
   }
   function patch(next: Partial<ShiftFilters>) {
-    setFilters((f) => ({ ...f, ...next }))
-    setChunkCount(1)
+    const url: Record<string, UrlValue> = {}
+    if ('from' in next) url.from = next.from
+    if ('to' in next) url.to = next.to
+    if ('staffIds' in next) url.staff = next.staffIds
+    if ('order' in next) url.order = next.order === 'desc' ? 'desc' : null
+    updateParams(url)
   }
   /** Xoá hết trong thanh tìm kiếm: chữ và bộ lọc. Tab giữ nguyên. */
   function clearSearch() {
-    setQuery('')
-    setFilters(DEFAULT_SHIFT_FILTERS)
-    setChunkCount(1)
+    updateParams({ q: null, from: null, to: null, staff: null, order: null })
   }
 
   /** Cùng một nhóm người luôn ra cùng một khoá, bất kể thứ tự chọn. */
   const staffKey = [...filters.staffIds].sort().join('+')
+
+  // Đổi tab / khoảng / người / chiều thì bắt đầu lại từ lát đầu tiên. Đã cuộn
+  // sâu 12 tháng rồi đổi tab thì không nên bắn 12 yêu cầu cùng lúc. Gắn số
+  // lát với khoá của bộ lọc thay vì reset tay ở từng chỗ: bộ lọc đổi từ đâu
+  // (thanh tìm, link, bảng lệnh nhanh) cũng về lát đầu.
+  const chunkKey = [window, filters.from, filters.to, staffKey, filters.order].join('|')
+  /** Số lát tháng đã tải theo chiều sắp xếp; cuộn tới đáy thì tăng. */
+  const [chunks, setChunks] = useState({ key: chunkKey, count: 1 })
+  const chunkCount = chunks.key === chunkKey ? chunks.count : 1
 
   // ---- điểm dừng ----------------------------------------------------------
   // Ngày ca sớm nhất / muộn nhất (của người đang lọc). Hỏi lại mỗi khi dữ liệu
@@ -191,7 +203,10 @@ function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
         if (!entries.some((e) => e.isIntersecting)) return
         // Ngắt ngay để một lần chạm đáy chỉ tải đúng một lát.
         observer.disconnect()
-        setChunkCount((n) => n + 1)
+        setChunks((prev) => ({
+          key: chunkKey,
+          count: (prev.key === chunkKey ? prev.count : 1) + 1,
+        }))
       },
       // root phải là khung cuộn thật: với viewport, rootMargin không nới
       // được qua phần bị khung cuộn nội dung cắt, nên mất tải trước 600px.
@@ -201,7 +216,7 @@ function AllShiftsView({ initialStaffIds }: { initialStaffIds: string[] }) {
     // ca, đáy vẫn trong tầm nhìn, thì lát sau tự tải tiếp mà không cần cuộn.
     observer.observe(el)
     return () => observer.disconnect()
-  }, [canLoadMore, chunkCount])
+  }, [canLoadMore, chunkCount, chunkKey])
 
   /**
    * Khung xương khi chưa có gì để hiện. Chưa khớp ca nào nhưng vẫn còn lát

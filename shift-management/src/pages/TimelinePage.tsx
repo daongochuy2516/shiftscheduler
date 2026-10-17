@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import {
   addDays,
   addMonths,
@@ -34,6 +33,7 @@ import { useShiftColor } from '../data/useShiftColor'
 import { formatRange, fromDateKey, toDateKey, toMinutes } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
 import { Select } from '../components/Select'
+import { useUrlParams } from '../lib/urlParams'
 import { Checkbox } from '../components/Checkbox'
 
 type ViewMode = 'day' | 'week' | 'month'
@@ -81,14 +81,22 @@ function stepDate(view: ViewMode, d: Date, direction: 1 | -1): Date {
 }
 
 export function TimelinePage() {
-  const [params, setParams] = useSearchParams()
+  // Ngày, chế độ xem, thang giờ, "chỉ nhân viên có ca" đều nằm trên URL:
+  // gửi link là người khác mở ra đúng như mình đang xem.
+  const [params, updateParams] = useUrlParams()
   const { profiles, loading, error } = useSchedule()
   const shiftColor = useShiftColor()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
   const { openCreate, openEdit } = useShiftEditor()
-  const [scale, setScale] = useState<ScaleId>('fit')
-  const [hideEmptyStaff, setHideEmptyStaff] = useState(false)
+  const scaleParam = params.get('scale')
+  const scale: ScaleId =
+    SCALES.find((s) => s.id === scaleParam)?.id ?? 'fit'
+  const setScale = (next: ScaleId) =>
+    updateParams({ scale: next === 'fit' ? null : next })
+  const hideEmptyStaff = params.get('working') === '1'
+  const setHideEmptyStaff = (on: boolean) =>
+    updateParams({ working: on ? '1' : null })
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const view = ((): ViewMode => {
@@ -109,10 +117,10 @@ export function TimelinePage() {
 
   /** Writes date + view back to the URL, keeping both linkable. */
   function navigate(next: Date, nextView: ViewMode = view) {
-    const query: Record<string, string> = {}
-    if (toDateKey(next) !== toDateKey(new Date())) query.date = toDateKey(next)
-    if (nextView !== 'day') query.view = nextView
-    setParams(query, { replace: true })
+    updateParams({
+      date: toDateKey(next) !== toDateKey(new Date()) ? toDateKey(next) : null,
+      view: nextView !== 'day' ? nextView : null,
+    })
   }
 
   // ---- the visible window, per view --------------------------------------

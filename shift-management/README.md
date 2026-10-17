@@ -600,7 +600,18 @@ Lần đăng nhập đầu tiên, góc dưới trái hiện lời mời **Mới 
 | `/accounts` | Tài khoản (chỉ admin; người khác bị đưa về `/`) |
 | `/login` | Đăng nhập |
 
-Ngày và chế độ xem nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình bạn đang xem**.
+Ngày, chế độ xem **và mọi bộ lọc** nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình, đúng bộ lọc bạn đang để**. Đổi bộ lọc không tạo thêm bước trong lịch sử trình duyệt — bấm Back là về trang trước, không lùi qua từng lần tích.
+
+| Trang | Tham số |
+| --- | --- |
+| Lịch | `date`, `view` (`week` / `month`), `scale` (thang giờ: `work` / `business` / `full`), `working=1` (Chỉ nhân viên có ca) |
+| Tổng kết | `date`, `view` (`day` / `month`), `all=1` (hiện cả người không có ca) |
+| Tất cả ca | `q` (chữ tìm), `tab` (`past` / `all`), `from`, `to`, `staff` (lặp lại được), `order=desc` |
+| Chờ xác nhận | `all=1` (bỏ tích Chỉ ca của tôi) |
+| Nhật ký | `from`, `to`, `staff` (lặp lại được), `action`, `entity`, `q`, `page` |
+| Hướng dẫn | `q` (chữ tìm) |
+
+Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫn gọn như cũ. Ví dụ `/shifts?tab=past&staff=<id>&order=desc` mở Tất cả ca, tab Đã qua, chỉ ca có người đó, mới nhất lên đầu.
 
 ### Quy ước hiển thị
 

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ShiftList } from '../components/ShiftList'
 import { Checkbox } from '../components/Checkbox'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { useUrlParams } from '../lib/urlParams'
 
 export function PendingPage() {
   const { user } = useAuth()
@@ -14,8 +15,11 @@ export function PendingPage() {
   const { shifts } = pending
   const { t } = useI18n()
   // Opens filtered to your own assignments, matching what the nav badge
-  // counts. Untick to see the whole team's.
-  const [onlyMine, setOnlyMine] = useState(true)
+  // counts. Untick to see the whole team's — kept in the URL (`?all=1`) so a
+  // shared link opens the same list.
+  const [params, updateParams] = useUrlParams()
+  const onlyMine = params.get('all') !== '1'
+  const setOnlyMine = (on: boolean) => updateParams({ all: on ? null : '1' })
 
   const matches = useMemo(() => {
     const keep = (userId: string) => !onlyMine || userId === user?.id

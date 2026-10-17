@@ -20,6 +20,7 @@ import { Select } from '../components/Select'
 import { DateInput } from '../components/DateInput'
 import { StaffMultiSelect } from '../components/StaffMultiSelect'
 import { effectiveAction, isCheckInAction } from '../lib/actionLog'
+import { dateParam, useUrlParams, type UrlValue } from '../lib/urlParams'
 
 const PAGE_SIZE = 50
 
@@ -65,15 +66,6 @@ function actionTone(action: string): string {
   return 'bg-sky-50 text-sky-700 ring-sky-200'
 }
 
-const emptyFilters: ActionLogFilters = {
-  from: null,
-  to: null,
-  staffIds: [],
-  action: null,
-  entityType: null,
-  search: null,
-}
-
 const controlClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
@@ -82,23 +74,36 @@ export function ActionLogPage() {
   const { t } = useI18n()
   const { profiles } = useSchedule()
 
-  const [filters, setFilters] = useState<ActionLogFilters>(emptyFilters)
-  const [searchInput, setSearchInput] = useState('')
-  const [pageIndex, setPageIndex] = useState(0)
+  // Bộ lọc và số trang nằm trên URL — copy link gửi người khác là ra đúng
+  // những dòng mình đang xem: `from` `to` `staff` (lặp lại) `action`
+  // `entity` `q` `page` (từ 1, bỏ trống = trang 1).
+  const [params, updateParams] = useUrlParams()
+  const filters = useMemo<ActionLogFilters>(
+    () => ({
+      from: dateParam(params.get('from')),
+      to: dateParam(params.get('to')),
+      staffIds: params.getAll('staff'),
+      action: params.get('action'),
+      entityType: params.get('entity'),
+      search: params.get('q'),
+    }),
+    [params],
+  )
+  const pageIndex = Math.max(0, Number(params.get('page') ?? 1) - 1 || 0)
+  const setPageIndex = (index: number) =>
+    updateParams({ page: index > 0 ? String(index + 1) : null })
+  const [searchInput, setSearchInput] = useState(() => params.get('q') ?? '')
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Gõ tới đâu gọi API tới đó thì quá tốn; chờ người dùng ngừng gõ.
+  // Gõ tới đâu gọi API tới đó thì quá tốn; chờ người dùng ngừng gõ rồi mới
+  // ghi lên URL (và về trang 1).
+  const urlSearch = filters.search ?? ''
   useEffect(() => {
-    const id = setTimeout(() => {
-      setFilters((f) => ({ ...f, search: searchInput.trim() || null }))
-    }, 300)
+    const next = searchInput.trim()
+    if (next === urlSearch) return
+    const id = setTimeout(() => updateParams({ q: next || null, page: null }), 300)
     return () => clearTimeout(id)
-  }, [searchInput])
-
-  // Đổi bộ lọc mà giữ nguyên số trang sẽ cho ra một trang trống khó hiểu.
-  useEffect(() => {
-    setPageIndex(0)
-  }, [filters])
+  }, [searchInput, urlSearch, updateParams])
 
   // Điểm danh / Gỡ điểm danh không có trong dữ liệu (đều là "Đổi trạng
   // thái"): hỏi máy chủ hành động gốc, rồi lọc chiều ngay trong trang tải về.
@@ -116,12 +121,28 @@ export function ActionLogPage() {
 
   const { page, available, loading, error, reload } = useActionLogs(query)
 
+  // Đổi bộ lọc mà giữ nguyên số trang sẽ cho ra một trang trống khó hiểu:
+  // mọi lần đổi bộ lọc đều về trang 1.
   function patch(next: Partial<ActionLogFilters>) {
-    setFilters((f) => ({ ...f, ...next }))
+    const url: Record<string, UrlValue> = { page: null }
+    if ('from' in next) url.from = next.from
+    if ('to' in next) url.to = next.to
+    if ('staffIds' in next) url.staff = next.staffIds
+    if ('action' in next) url.action = next.action
+    if ('entityType' in next) url.entity = next.entityType
+    updateParams(url)
   }
 
   function resetFilters() {
-    setFilters(emptyFilters)
+    updateParams({
+      from: null,
+      to: null,
+      staff: null,
+      action: null,
+      entity: null,
+      q: null,
+      page: null,
+    })
     setSearchInput('')
   }
 
@@ -352,7 +373,7 @@ export function ActionLogPage() {
             <div className="ml-auto flex items-center rounded-md bg-white shadow-xs ring-1 ring-slate-200">
               <button
                 type="button"
-                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
                 disabled={pageIndex === 0}
                 aria-label={t('log.prev')}
                 className="rounded-l-md px-2 py-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-transparent"
@@ -364,7 +385,7 @@ export function ActionLogPage() {
               </span>
               <button
                 type="button"
-                onClick={() => setPageIndex((p) => Math.min(lastPage, p + 1))}
+                onClick={() => setPageIndex(Math.min(lastPage, pageIndex + 1))}
                 disabled={pageIndex >= lastPage}
                 aria-label={t('log.next')}
                 className="rounded-r-md px-2 py-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:hover:bg-transparent"

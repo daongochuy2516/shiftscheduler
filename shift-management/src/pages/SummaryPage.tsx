@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import {
   addDays,
   addMonths,
@@ -26,6 +25,7 @@ import {
 import { useI18n } from '../i18n/I18nContext'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { Checkbox } from '../components/Checkbox'
+import { useUrlParams } from '../lib/urlParams'
 import { SummaryGrid } from '../components/SummaryGrid'
 import { buildSummary } from '../lib/summary'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
@@ -70,11 +70,14 @@ function rangeOf(days: Date[]): { from: string; to: string } {
  * đó (xem `lib/summary.ts`). Nhân viên không có ca bị ẩn theo mặc định.
  */
 export function SummaryPage() {
-  const [params, setParams] = useSearchParams()
+  const [params, updateParams] = useUrlParams()
   const { profiles, rosterProfiles, loading, error } = useSchedule()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
-  const [includeEmptyStaff, setIncludeEmptyStaff] = useState(false)
+  // Trên URL như ngày và chế độ xem, để link gửi đi giữ đúng bộ lọc.
+  const includeEmptyStaff = params.get('all') === '1'
+  const setIncludeEmptyStaff = (on: boolean) =>
+    updateParams({ all: on ? '1' : null })
 
   // Mốc "đã qua giờ kết thúc" phải tự nhích theo thời gian, nếu không ca vừa
   // xong chỉ hiện ra sau khi người dùng F5. Một phút một lần là đủ mịn.
@@ -100,10 +103,10 @@ export function SummaryPage() {
 
   /** Giữ ngày + chế độ xem trong URL để gửi link được, như trang Lịch. */
   function navigate(next: Date, nextView: ViewMode = view) {
-    const query: Record<string, string> = {}
-    if (toDateKey(next) !== toDateKey(new Date())) query.date = toDateKey(next)
-    if (nextView !== 'week') query.view = nextView
-    setParams(query, { replace: true })
+    updateParams({
+      date: toDateKey(next) !== toDateKey(new Date()) ? toDateKey(next) : null,
+      view: nextView !== 'week' ? nextView : null,
+    })
   }
 
   const days = useMemo(() => daysFor(view, date), [view, date])
