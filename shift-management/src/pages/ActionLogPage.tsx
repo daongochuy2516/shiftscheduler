@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import {
   ChevronDown,
@@ -20,9 +20,11 @@ import { Select } from '../components/Select'
 import { DateInput } from '../components/DateInput'
 import { StaffMultiSelect } from '../components/StaffMultiSelect'
 import { effectiveAction, isCheckInAction } from '../lib/actionLog'
-import { dateParam, useUrlParams, type UrlValue } from '../lib/urlParams'
+import { dateParam, useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
 
 const PAGE_SIZE = 50
+/** Đổi chữ tìm thì về trang 1. */
+const PAGE_RESET = ['page']
 
 /**
  * Liệt kê cứng thay vì suy ra từ dữ liệu: bộ lọc phải ổn định, không phụ thuộc
@@ -92,18 +94,10 @@ export function ActionLogPage() {
   const pageIndex = Math.max(0, Number(params.get('page') ?? 1) - 1 || 0)
   const setPageIndex = (index: number) =>
     updateParams({ page: index > 0 ? String(index + 1) : null })
-  const [searchInput, setSearchInput] = useState(() => params.get('q') ?? '')
+  // Gõ tới đâu gọi API tới đó thì quá tốn: hook chờ ngừng gõ rồi mới ghi `q`
+  // lên URL (và về trang 1).
+  const [searchInput, setSearchInput] = useUrlText('q', PAGE_RESET)
   const [filtersOpen, setFiltersOpen] = useState(false)
-
-  // Gõ tới đâu gọi API tới đó thì quá tốn; chờ người dùng ngừng gõ rồi mới
-  // ghi lên URL (và về trang 1).
-  const urlSearch = filters.search ?? ''
-  useEffect(() => {
-    const next = searchInput.trim()
-    if (next === urlSearch) return
-    const id = setTimeout(() => updateParams({ q: next || null, page: null }), 300)
-    return () => clearTimeout(id)
-  }, [searchInput, urlSearch, updateParams])
 
   // Điểm danh / Gỡ điểm danh không có trong dữ liệu (đều là "Đổi trạng
   // thái"): hỏi máy chủ hành động gốc, rồi lọc chiều ngay trong trang tải về.

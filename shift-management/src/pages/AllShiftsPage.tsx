@@ -6,7 +6,7 @@ import { ShiftList } from '../components/ShiftList'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { ShiftSearchBar } from '../components/ShiftSearchBar'
 import type { ShiftFilters } from '../lib/shiftFilters'
-import { dateParam, useUrlParams, type UrlValue } from '../lib/urlParams'
+import { dateParam, useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
 import { planMonthChunks } from '../lib/shiftChunks'
 import { scrollRoot } from '../lib/scrollRoot'
 import { fromDateKey, toDateKey } from '../lib/time'
@@ -55,8 +55,7 @@ export function AllShiftsPage() {
   const { user } = useAuth()
   const { t } = useI18n()
   const [params, updateParams] = useUrlParams()
-  const query = params.get('q') ?? ''
-  const setQuery = (q: string) => updateParams({ q: q || null })
+  const [query, setQuery] = useUrlText('q')
   const tabParam = params.get('tab')
   const window: Window =
     tabParam === 'past' || tabParam === 'all' ? tabParam : 'upcoming'
@@ -98,6 +97,7 @@ export function AllShiftsPage() {
   }
   /** Xoá hết trong thanh tìm kiếm: chữ và bộ lọc. Tab giữ nguyên. */
   function clearSearch() {
+    setQuery('')
     updateParams({ q: null, from: null, to: null, staff: null, order: null })
   }
 
