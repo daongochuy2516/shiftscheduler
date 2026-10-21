@@ -95,7 +95,7 @@ export function HeaderMenu({
           signOut.reset()
         }}
         aria-label={t('menu.label')}
-        title={t('menu.label')}
+        data-tooltip={t('menu.label')}
         data-tour="menu"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -132,7 +132,7 @@ export function HeaderMenu({
               tour="menu-theme"
               label={t('theme.label')}
               sub={t(theme.label)}
-              title={t('menu.themeNext', { theme: t(nextTheme.label) })}
+              tooltip={t('menu.themeNext', { theme: t(nextTheme.label) })}
               onClick={() => setPref(nextTheme.id)}
             />
             <Tile
@@ -141,7 +141,7 @@ export function HeaderMenu({
               tour="menu-language"
               label={t('nav.language')}
               sub={t('menu.langName')}
-              title={t('menu.langNext')}
+              tooltip={t('menu.langNext')}
               onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
             />
             <Tile
@@ -215,7 +215,7 @@ function Tile({
   label,
   sub,
   badge,
-  title,
+  tooltip,
   disabled,
   alert = false,
   tour,
@@ -227,7 +227,8 @@ function Tile({
   label: string
   sub?: string
   badge?: string | null
-  title?: string
+  /** Tooltip tự vẽ khi rê chuột (`data-tooltip`, xem Tooltip.tsx). */
+  tooltip?: string
   disabled?: boolean
   /** Đang chờ bấm lần hai để xác nhận: đổi sang nền đỏ cho khó bỏ qua. */
   alert?: boolean
@@ -240,7 +241,7 @@ function Tile({
       type="button"
       role="menuitem"
       data-tour={tour}
-      title={title}
+      data-tooltip={tooltip}
       disabled={disabled}
       onClick={onClick}
       className={`flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition disabled:opacity-50 ${

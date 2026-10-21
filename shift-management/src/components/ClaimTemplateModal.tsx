@@ -350,7 +350,7 @@ export function ClaimTemplateModal({
                   type="button"
                   onClick={() => toggle(day)}
                   disabled={isClaimed}
-                  title={
+                  data-tooltip={
                     isClaimed
                       ? t('claim.alreadyClaimed')
                       : !repeats

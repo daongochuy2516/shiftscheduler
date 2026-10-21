@@ -498,7 +498,7 @@ function Probe({ probe }: { probe: ProbeResult | undefined }) {
       {probe.ok ? (
         <span className="tabular-nums">{probe.ms} ms</span>
       ) : (
-        <span className="text-rose-700" title={probe.error ?? undefined}>
+        <span className="text-rose-700" data-tooltip={probe.error ?? undefined}>
           {probe.error}
         </span>
       )}
@@ -538,7 +538,7 @@ function SummaryRows({
         ) : summary ? (
           <Indicator tone={summaryTone(summary)}>{summary.description}</Indicator>
         ) : (
-          <span className="text-rose-700" title={error ?? undefined}>
+          <span className="text-rose-700" data-tooltip={error ?? undefined}>
             {t('status.provider.unreachable', { host })}
           </span>
         )}

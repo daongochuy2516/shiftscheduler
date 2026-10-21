@@ -96,7 +96,7 @@ export function MonthGrid({
               <button
                 type="button"
                 onClick={() => onSelectDay(day)}
-                title={t('timeline.openDay')}
+                data-tooltip={t('timeline.openDay')}
                 className={`mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold transition ${
                   isToday
                     ? 'bg-indigo-600 text-white'
@@ -122,7 +122,7 @@ export function MonthGrid({
                       key={shift.id}
                       type="button"
                       onClick={() => onSelectShift(shift)}
-                      title={`${shift.title} · ${normalizeTime(shift.start_time)}–${normalizeTime(
+                      data-tooltip={`${shift.title} · ${normalizeTime(shift.start_time)}–${normalizeTime(
                         shift.end_time,
                       )}`}
                       className={`block w-full rounded border px-1.5 py-0.5 text-left transition focus:ring-2 focus:ring-indigo-500 focus:outline-none ${color.block} ${

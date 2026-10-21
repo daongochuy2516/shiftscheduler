@@ -126,7 +126,7 @@ export function WeekGrid({
                   key={day.toISOString()}
                   type="button"
                   onClick={() => onSelectDay(day)}
-                  title={t('timeline.openDay')}
+                  data-tooltip={t('timeline.openDay')}
                   className={`border-r border-slate-200 px-2 py-2 text-left transition last:border-r-0 hover:bg-slate-100 ${
                     isToday ? 'bg-indigo-50' : ''
                   }`}
@@ -224,7 +224,7 @@ export function WeekGrid({
                               onClick={() =>
                                 onSelectAssignment(cell.shift, cell.assignmentId)
                               }
-                              title={`${cell.shift.title} · ${formatRange(cell.start, cell.end)}`}
+                              data-tooltip={`${cell.shift.title} · ${formatRange(cell.start, cell.end)}`}
                               className={`block w-full rounded border px-1.5 py-1 text-left transition focus:ring-2 focus:ring-indigo-500 focus:outline-none ${color.block} ${
                                 cell.pending ? 'border-dashed' : ''
                               }`}

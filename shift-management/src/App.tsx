@@ -13,6 +13,7 @@ import { ActionLogPage } from './pages/ActionLogPage'
 import { StatusPage } from './pages/StatusPage'
 import { AccountsPage } from './pages/AccountsPage'
 import { HelpPage } from './pages/HelpPage'
+import { TooltipLayer } from './components/Tooltip'
 
 export default function App() {
   return (
@@ -40,6 +41,8 @@ export default function App() {
             </Routes>
           </BrowserRouter>
         </AuthProvider>
+        {/* Tooltip tự vẽ cho mọi phần tử có `data-tooltip`, kể cả trang đăng nhập. */}
+        <TooltipLayer />
       </I18nProvider>
     </ThemeProvider>
   )

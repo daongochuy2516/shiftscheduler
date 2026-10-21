@@ -217,7 +217,7 @@ function StaffRow({
           >
             {dense ? (
               <span
-                title={entries
+                data-tooltip={entries
                   .map((e) => `${e.title} · ${formatRange(e.start, e.end)}`)
                   .join('\n')}
                 className={`text-xs font-medium tabular-nums ${
@@ -235,7 +235,7 @@ function StaffRow({
                 return (
                   <div
                     key={entry.assignmentId}
-                    title={`${entry.title} · ${formatRange(entry.start, entry.end)}`}
+                    data-tooltip={`${entry.title} · ${formatRange(entry.start, entry.end)}`}
                     className={`rounded border px-1.5 py-1 ${color.block}`}
                   >
                     <span className="block truncate text-[11px] font-semibold">
