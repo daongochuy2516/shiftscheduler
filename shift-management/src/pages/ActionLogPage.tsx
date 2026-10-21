@@ -433,7 +433,7 @@ function LogRow({ row }: { row: ActionLog }) {
           <time
             dateTime={row.created_at}
             className="shrink-0 text-xs text-slate-500 tabular-nums sm:w-36"
-            title={format(at, 'PPPPp', { locale: dateLocale })}
+            data-tooltip={format(at, 'PPPPp', { locale: dateLocale })}
           >
             {format(at, 'dd/MM/yyyy HH:mm:ss')}
           </time>

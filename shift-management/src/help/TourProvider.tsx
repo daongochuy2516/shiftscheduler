@@ -299,7 +299,7 @@ function TourStepView({
             type="button"
             onClick={onClose}
             aria-label={t('tour.skip')}
-            title={t('tour.skip')}
+            data-tooltip={t('tour.skip')}
             className="-m-1.5 ml-auto flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-4 w-4" />

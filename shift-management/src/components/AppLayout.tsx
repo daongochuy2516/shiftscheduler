@@ -266,7 +266,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => setCenterOpen(true)}
               aria-label={t('notif.title')}
-              title={t('notif.title')}
+              data-tooltip={t('notif.title')}
               // Từ 640px chuông nằm trong nút lưới (HeaderMenu).
               data-tour="bell-mobile"
               className="relative flex h-11 w-11 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:hidden"

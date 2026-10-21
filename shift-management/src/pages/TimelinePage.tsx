@@ -245,7 +245,7 @@ export function TimelinePage() {
             type="button"
             onClick={() => step(-1)}
             aria-label={prevLabel}
-            title={prevLabel}
+            data-tooltip={prevLabel}
             className="flex min-h-10 items-center rounded-l-md px-3 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 sm:min-h-0 sm:px-2 sm:py-1.5"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -261,7 +261,7 @@ export function TimelinePage() {
             type="button"
             onClick={() => step(1)}
             aria-label={nextLabel}
-            title={nextLabel}
+            data-tooltip={nextLabel}
             className="flex min-h-10 items-center rounded-r-md px-3 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 sm:min-h-0 sm:px-2 sm:py-1.5"
           >
             <ChevronRight className="h-4 w-4" />

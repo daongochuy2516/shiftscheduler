@@ -252,7 +252,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                           )}
                           <p
                             className="mt-1 flex items-center gap-1.5 text-xs text-slate-400"
-                            title={format(
+                            data-tooltip={format(
                               new Date(item.createdAt),
                               'HH:mm:ss d/M/yyyy',
                             )}
@@ -274,7 +274,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                             aria-label={t(
                               item.read ? 'notif.markUnread' : 'notif.markRead',
                             )}
-                            title={t(
+                            data-tooltip={t(
                               item.read ? 'notif.markUnread' : 'notif.markRead',
                             )}
                             className="flex h-11 w-11 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 sm:h-8 sm:w-8"
@@ -290,7 +290,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                             type="button"
                             onClick={() => remove(item.id)}
                             aria-label={t('common.delete')}
-                            title={t('common.delete')}
+                            data-tooltip={t('common.delete')}
                             className="flex h-11 w-11 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 sm:h-8 sm:w-8"
                           >
                             <X className="h-4 w-4" />

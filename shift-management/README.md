@@ -707,6 +707,16 @@ Với người sửa mã: chế độ tối làm bằng cách **định nghĩa l
 
 Cho ra cảm giác app chứ không phải trang web, **mặc định không bôi đen được chữ** (nút, nhãn, tiêu đề). Ô nhập liệu thì luôn gõ và bôi được. Những thông tin đáng chép vẫn chọn được: ghi chú, email, câu báo lỗi của máy chủ, JSON trong Nhật ký, nội dung trang Hướng dẫn, các dòng trên trang Trạng thái. Chữ nằm **trong một nút** thì trình duyệt không cho bôi đen dù có bật.
 
+### Tooltip tự vẽ
+
+Mọi chữ hiện ra khi rê chuột (tên nút chỉ có icon, giờ đầy đủ của một dòng nhật ký, chi tiết một ca trên lịch…) là tooltip **tự vẽ**, không phải tooltip của trình duyệt: cùng kiểu ở mọi máy, theo chế độ tối, không bao giờ tràn ra ngoài màn hình (sát đáy thì hiện lên trên).
+
+- Hiện sau khi dừng chuột khoảng nửa giây; lướt từ nút này sang nút bên cạnh thì hiện ngay, không phải chờ lại.
+- Bấm vào là tắt, và không hiện lại cho tới khi chuột rời phần tử đó. Cuộn trang, đổi cỡ cửa sổ hay **Esc** cũng tắt.
+- Tab tới bằng bàn phím thì hiện ngay. Trên điện thoại (chạm) không có tooltip.
+
+Với người sửa mã: gắn `data-tooltip="…"` lên phần tử, **không dùng `title`** (sẽ ra tooltip của trình duyệt). `TooltipLayer` (`src/components/Tooltip.tsx`, gắn một lần trong `App.tsx`) nghe sự kiện ở cấp trang nên phần tử thêm sau cũng tự có tooltip. Chữ có `\n` thì xuống dòng.
+
 ### Ô chọn tự vẽ
 
 Ô chọn một giá trị, ô tích, ô chọn ngày và chọn nhiều nhân viên đều là thành phần tự vẽ chứ không phải ô gốc của trình duyệt, nên giống nhau ở mọi máy và theo được chế độ tối. Ô ngày gõ được bằng phím (xem [mục 6](#phần-thông-tin-ca)).

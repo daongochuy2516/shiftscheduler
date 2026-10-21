@@ -177,7 +177,7 @@ export function DateInput({
               onChange('')
             }}
             aria-label={t('date.clear')}
-            title={t('date.clear')}
+            data-tooltip={t('date.clear')}
             tabIndex={-1}
             className="-my-1 flex h-8 w-8 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 sm:h-6 sm:w-6"
           >

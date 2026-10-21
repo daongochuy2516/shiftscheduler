@@ -281,7 +281,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
                     onClick={() => setDraft({ ...draft, color: key })}
                     aria-label={key}
                     aria-pressed={selected}
-                    title={key}
+                    data-tooltip={key}
                     className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
                       colorByKey(key).dot
                     } ${

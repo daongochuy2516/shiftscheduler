@@ -243,7 +243,7 @@ export function ShiftSearchBar({
               inputRef.current?.focus()
             }}
             aria-label={t('allShifts.filter.clear')}
-            title={t('allShifts.filter.clear')}
+            data-tooltip={t('allShifts.filter.clear')}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 sm:h-7 sm:w-7"
           >
             <X className="h-4 w-4" />

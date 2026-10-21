@@ -278,10 +278,10 @@ export function Timeline({
                           type="button"
                           data-tour="timeline-block"
                           onClick={() => onSelectAssignment(shift, assignment.id)}
-                          title={`${shift.title} · ${row.profile.display_name} · ${formatRange(
+                          data-tooltip={`${shift.title} · ${row.profile.display_name} · ${formatRange(
                             assignment.start_time,
                             assignment.end_time,
-                          )}${pending ? ' · pending' : ''}`}
+                          )}${pending ? ` · ${t('status.pending')}` : ''}`}
                           className={`absolute z-10 flex flex-col justify-center overflow-hidden rounded-md border px-2 text-left transition focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:outline-none ${
                             color.block
                           } ${pending ? 'border-dashed' : ''}`}
