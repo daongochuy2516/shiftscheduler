@@ -1,8 +1,8 @@
 # Thinkmay Team Board
 
-Ứng dụng xếp ca nội bộ cho nhân viên. React + Vite + TypeScript + Tailwind, backend là Supabase (Postgres + Auth + Realtime).
+Ứng dụng xếp ca nội bộ cho nhân viên. React + Vite + TypeScript + Tailwind, backend là Supabase (Postgres + Auth + Realtime). Không có server riêng: trình duyệt nói chuyện thẳng với Supabase, các luật quan trọng nằm ở database.
 
-Mô hình dữ liệu cốt lõi: **một ca chứa nhiều lượt phân công**, mỗi nhân viên trong ca có khung giờ riêng.
+Mô hình dữ liệu cốt lõi: **một ca chứa nhiều lượt phân công**, mỗi nhân viên trong ca có khung giờ và trạng thái (*chờ xác nhận* / *đã xác nhận*) riêng.
 
 ```
 Ca: Trực trang, 08:00–18:00
@@ -10,6 +10,10 @@ Ca: Trực trang, 08:00–18:00
 ├── Thiên  10:00–16:00   đã xác nhận
 └── An     15:00–18:00   chờ xác nhận
 ```
+
+Các trang: **Lịch**, **Tất cả ca**, **Tổng kết**, **Ca của tôi**, **Chờ xác nhận**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, và **Tài khoản** (chỉ admin).
+
+Tài liệu liên quan: [roadmap.md](roadmap.md) (thiết kế phân quyền, luật điểm danh và phần còn chưa làm); trang **Hướng dẫn** trong ứng dụng là bản viết cho nhân viên, nội dung ở `src/help/content.ts`.
 
 ---
 
@@ -23,11 +27,14 @@ Ca: Trực trang, 08:00–18:00
 - [6. Tạo, sửa và xoá ca](#6-tạo-sửa-và-xoá-ca)
 - [7. Ca mẫu và nhận ca nhanh](#7-ca-mẫu-và-nhận-ca-nhanh)
 - [8. Ba trang lọc](#8-ba-trang-lọc)
-- [8b. Chấm công và tính công](#8b-chấm-công-và-tính-công)
+- [8b. Chấm công và luật điểm danh](#8b-chấm-công-và-luật-điểm-danh)
+- [8c. Trang Tổng kết](#8c-trang-tổng-kết)
 - [9. Đa ngôn ngữ và cập nhật thời gian thực](#9-đa-ngôn-ngữ-và-cập-nhật-thời-gian-thực)
 - [9b. Nhật ký thao tác](#9b-nhật-ký-thao-tác)
 - [9c. Thông báo](#9c-thông-báo)
 - [9d. Hướng dẫn và bài từng bước](#9d-hướng-dẫn-và-bài-từng-bước)
+- [9e. Trang Trạng thái](#9e-trang-trạng-thái)
+- [9f. Giao diện sáng / tối và chữ bôi đen](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)
 - [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
 - [11. Dành cho quản trị viên](#11-dành-cho-quản-trị-viên)
 - [12. Cấu trúc mã nguồn](#12-cấu-trúc-mã-nguồn)
@@ -36,12 +43,18 @@ Ca: Trực trang, 08:00–18:00
 
 ## 1. Chạy dự án
 
+Mọi lệnh chạy trong thư mục `shift-management/` (file `package.json` ở gốc repo không phải ứng dụng). Cần Node 22 (`.nvmrc`).
+
 ```bash
-npm install
+npm ci           # cài đúng phiên bản trong package-lock.json
 npm run dev      # http://localhost:5173
-npm run build    # kiểm tra kiểu + build production
-npm run lint
+npm run build    # tsc -b && vite build: kiểm tra kiểu + build production
+npm run lint     # oxlint
 ```
+
+Không có test tự động: `build` và `lint` là toàn bộ phần máy kiểm tra, còn lại phải mở ứng dụng lên thử. `lint` hiện có sẵn 2 cảnh báo `set-state-in-effect` (`useActionLogs.ts`, `ScheduleContext.tsx`) — đã biết, không phải lỗi mới.
+
+**Triển khai.** Ứng dụng là SPA tĩnh, đang deploy trên Netlify (`npm run build` ra thư mục `dist/`). `public/_redirects` đưa mọi đường dẫn về `index.html` để mở thẳng `/pending` hay `/shifts?...` không bị 404. Đổi tên miền thì cập nhật **Site URL** và **Redirect URLs** của Supabase ([mục 11](#thiết-lập-auth-cần-thiết)).
 
 ### Biến môi trường
 
@@ -67,13 +80,23 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/002_shift_templates.sql` | Bảng `shift_templates` + cột `shifts.template_id` cho tính năng ca mẫu |
 | `supabase/003_action_logs.sql` | Bảng `action_logs` + trigger ghi nhật ký, quyền chỉ-đọc |
 | `supabase/004_template_colors.sql` | Cột `shift_templates.color` — màu cho ca mẫu |
-| `supabase/005_attendance.sql` | Chấm công: cột `profiles.role`, `shift_assignments.confirmed_at` và các trigger luật điểm danh ([mục 8b](#8b-chấm-công-và-tính-công)) |
-| `supabase/006_shift_rules.sql` | Nhân viên chỉ thao tác phần của mình: rời ca trong 30 phút, không thêm / sửa / gỡ người khác, không sửa / xoá ca có người khác ([mục 8b](#8b-chấm-công-và-tính-công)). Cần 005 trước; thay luật "ca tạo quá 30 phút không xoá được" của 005 |
+| `supabase/005_attendance.sql` | Chấm công: cột `profiles.role`, `shift_assignments.confirmed_at` và các trigger luật điểm danh ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)) |
+| `supabase/006_shift_rules.sql` | Nhân viên chỉ thao tác phần của mình: rời ca trong 30 phút, không thêm / sửa / gỡ người khác, không sửa / xoá ca có người khác ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)). Cần 005 trước; thay luật "ca tạo quá 30 phút không xoá được" của 005 |
 | `supabase/007_accounts.sql` | Trang Tài khoản: cột `profiles.displayed` (hiện / ẩn trên bảng), admin sửa được mọi tài khoản, người khác không sửa được ([mục 11](#trang-tài-khoản)). Cần 005 trước |
 | `supabase/008_template_admin.sql` | Chỉ admin tạo / sửa / bật-tắt / xoá ca mẫu; nhân viên vẫn nhận ca mẫu bình thường ([mục 7](#quản-lý-ca-mẫu)). Cần 002 và 005 trước |
 | `supabase/009_server_time.sql` | Hàm `server_now()` cho đồng hồ trên thanh trên chạy theo giờ máy chủ. Chưa chạy thì đồng hồ dùng giờ máy, có chấm vàng cạnh giờ. Không cần file nào trước |
 
-Chưa chạy 002 hay 003 thì ứng dụng **vẫn chạy bình thường** — chỉ hiện thông báo vàng ở khu vực ca mẫu / trang Nhật ký. Chưa chạy 005 thì không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước.
+Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng dụng **vẫn chạy bình thường**, chỉ thiếu tính năng tương ứng:
+
+| Chưa chạy | Hệ quả |
+| --- | --- |
+| 002 | Thông báo vàng ở khu vực ca mẫu; lựa chọn *Nhận ca mẫu* mờ đi |
+| 003 | Trang Nhật ký hiện thông báo vàng, không có dòng nào |
+| 004 | Ca mẫu không có màu riêng (cột `color` đọc về là `null`) |
+| 005 | Không có luật chấm công nào: ai cũng xác nhận được mọi ca như trước, vai trò không tồn tại |
+| 007 | Trang Tài khoản hiện thông báo vàng và không sửa được gì; cột `displayed` chưa có nên không ai bị ẩn |
+| 008 | Nhân viên vẫn tạo / sửa được ca mẫu như trước |
+| 009 | Đồng hồ trên thanh trên dùng giờ máy, có chấm vàng cạnh giờ |
 
 > Chạy 005 xong **mọi người đều là nhân viên thường**. Phong admin ngay sau đó (mục 7 trong file, hoặc [mục 11](#11-dành-cho-quản-trị-viên)), nếu không sẽ không còn ai sửa được lượt đã điểm danh.
 
@@ -96,7 +119,7 @@ Vài điểm cần biết:
 
 - Nút **Tiếng Việt / English** nằm ngay trên form, đổi được trước cả khi đăng nhập.
 - Sai email hoặc mật khẩu sẽ hiện *"Email hoặc mật khẩu không đúng."* Các lỗi khác (bị khoá, giới hạn số lần thử) hiện nguyên văn để dễ báo cho quản trị viên.
-- Nếu bạn dán một đường dẫn sâu (ví dụ `/pending`) khi chưa đăng nhập, hệ thống ghi nhớ và **đưa bạn về đúng trang đó** sau khi đăng nhập xong.
+- Nếu bạn dán một đường dẫn sâu (ví dụ `/pending`) khi chưa đăng nhập, hệ thống ghi nhớ và **đưa bạn về đúng trang đó** sau khi đăng nhập xong. Chỉ nhớ tên trang: các bộ lọc nằm sau dấu `?` trên link (ngày, chế độ xem…) **không** được giữ lại, sau khi đăng nhập bạn mở lại link đó một lần nữa.
 - Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
 
 **Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Phải **bấm hai lần**: lần đầu ô chuyển đỏ, hiện *Bấm lần nữa để đăng xuất*; bấm tiếp trong 4 giây mới đăng xuất, để quá thì trở lại như cũ. Bạn sẽ được đưa về trang đăng nhập ngay.
@@ -141,17 +164,33 @@ Thanh trên cùng có mặt ở mọi trang:
 | --- | --- |
 | **Lịch** | Trang chính: timeline ngày/tuần/tháng |
 | **Tất cả ca** | Danh sách mọi ca, có tìm kiếm |
+| **Tổng kết** | Bảng công: ai đã trực xong những ca nào, tổng bao nhiêu giờ ([mục 8c](#8c-trang-tổng-kết)) |
 | **Ca của tôi** | Chỉ những ca bạn được phân công |
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
-| Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. Rê chuột (hoặc Tab tới) để xem bảng nhỏ có giờ to, ngày đầy đủ kèm thứ. Đưa chuột từ đồng hồ xuống bảng thì bảng không tắt. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
+| Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. **Bấm** vào đồng hồ (rê chuột không bật gì) để mở bảng giống đồng hồ taskbar của Windows: giờ to, ngày đầy đủ kèm thứ, và **lịch tháng** — `‹ ›` đổi tháng, bấm tên tháng để chọn nhanh tháng rồi năm, bấm một ngày là mở trang Lịch của ngày đó. Ô **tô tím đặc** là ngày đang xem (ngày trên đường dẫn của trang Lịch / Tổng kết — mở lại bảng sau khi bấm là thấy ngay ngày vừa chọn, lịch mở đúng tháng đó); trang không có ngày thì tô hôm nay. Hôm nay, nếu khác ngày đang xem, có viền tím. Bấm đồng hồ lần nữa, bấm ra ngoài hoặc **Esc** để đóng. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
 | **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định **hôm nay**) |
-| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** (kết nối tới máy chủ và phiên đăng nhập), **Đổi mật khẩu**, **Đăng xuất** |
-| Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) |
+| Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) và email. Tên lấy từ danh sách nhân viên nên admin vừa đổi tên bạn ở trang Tài khoản thì thanh trên đổi theo ngay. Dưới 768px chỉ còn avatar |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô, theo thứ tự: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối, [mục 9f](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** ([mục 9e](#9e-trang-trạng-thái)), **Hướng dẫn** ([mục 9d](#9d-hướng-dẫn-và-bài-từng-bước)), **Đổi mật khẩu**, **Đăng xuất**. Cuối bảng có dòng nhắc *Ctrl + K — Quick Search*. Bấm ô Giao diện hay Ngôn ngữ thì bảng giữ nguyên để bấm tiếp; các ô còn lại đóng bảng |
 
-Trên điện thoại không có nút lưới: chuông 🔔 nằm riêng; bấm avatar mở bảng có tên, nhãn vai trò **Admin** / **Staff** và email ở đầu, rồi tới các mục cùng màu với ô trên PC: Tổng kết, Nhật ký, Trạng thái, Hướng dẫn, Quick Search, đổi mật khẩu, **Ngôn ngữ** và **Giao diện** (bấm để đổi, giống ô trên PC — giá trị đang dùng ghi bên phải), đăng xuất.
+Cuối trang (chỉ PC) có một dòng chào theo buổi — sáng / trưa / chiều / tối — kèm tên bạn.
 
-Màn hình chưa đủ rộng để xếp cả hàng (dưới 1320px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn.
+### Trên điện thoại (dưới 640px)
+
+Thanh trên chỉ còn logo, nút chuông 🔔 và avatar; phần điều hướng chuyển xuống dưới:
+
+| Thành phần | Công dụng |
+| --- | --- |
+| **Thanh dưới** | Bốn trang dùng nhiều nhất: **Lịch**, **Tất cả ca**, **Ca của tôi**, **Chờ xác nhận**. Trang đang mở có gạch trên màu indigo; số lượt chờ của bạn hiện trên icon (từ 10 trở lên ghi `9+`) |
+| **Nút tròn** góc dưới phải | Mở bảng **Tạo ca**: *Nhận ca mẫu*, *Tạo ca thủ công* (ngày = ngày đang xem), và *Quản lý ca mẫu* với admin |
+| **Chuông 🔔** | Mở ngăn thông báo |
+| **Avatar** | Mở bảng tài khoản: tên, nhãn vai trò, email và lời chào ở đầu, rồi các mục có cùng màu với ô trên PC — **Tổng kết**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, **Tài khoản** (admin), **Quick Search**, **Đổi mật khẩu**, **Ngôn ngữ** và **Giao diện** (bấm để đổi, giá trị đang dùng ghi bên phải), **Đăng xuất** (bấm hai lần) |
+
+Nút bấm trên điện thoại cao tối thiểu 44px; hộp thoại mở dạng bảng trượt từ đáy lên (*bottom sheet*). Từ 640px trở lên giao diện PC không đổi.
+
+### Khi cửa sổ hẹp
+
+Màn hình chưa đủ rộng để xếp cả hàng (dưới 1320px) thì thanh chia hai dòng: logo và các nút ở trên, các mục điều hướng xếp thành dải bên dưới. Không mục nào bị ẩn. Từ 640px nội dung trang cuộn trong khung riêng dưới thanh trên (thanh trên luôn đứng yên).
 
 > Con số màu vàng cạnh chữ "Chờ xác nhận" chỉ đếm **các lượt phân công của riêng bạn** đang chờ xác nhận. Ca của người khác không tính vào đây — mở trang *Chờ xác nhận* rồi bỏ tích *Chỉ ca của tôi* để xem của cả nhóm.
 
@@ -196,7 +235,9 @@ Lịch tháng dạng lưới, tuần bắt đầu từ Thứ Hai, có hiển th�
 - Bấm **số ngày** hoặc **"+N nữa"** để mở chế độ Ngày.
 - Bấm một chip ca để sửa ca đó.
 
-> Chế độ Tuần và Ngày có ô tích **"Chỉ nhân viên có ca"** để ẩn những người không được phân công, giúp lưới gọn lại khi công ty đông người.
+> Chế độ Tuần và Ngày có ô tích **"Chỉ nhân viên có ca"** để ẩn những người không được phân công, giúp lưới gọn lại khi công ty đông người. Trên điện thoại ô này và bộ chọn khung giờ gom vào nút **Bộ lọc** (icon thanh trượt, cạnh nút Ngày | Tuần | Tháng); chế độ Tháng không có bộ lọc nào.
+
+Ngày đang xem, chế độ xem, khung giờ và ô tích đều nằm trên đường dẫn ([mục 10](#10-tra-cứu-nhanh)): gửi link là người nhận mở ra đúng màn hình bạn đang xem, F5 cũng không mất.
 
 ---
 
@@ -255,7 +296,7 @@ Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâ
 | Có trong ca, chờ xác nhận | Giờ và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca** | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
 | Đã điểm danh | Giờ bị khoá kèm 🔒, chỉ còn sửa ghi chú | — |
 
-- Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-tính-công): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — bạn không có quyền điểm danh trễ*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
+- Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — bạn không có quyền điểm danh trễ*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
 - Vừa đổi giờ mà chưa lưu thì không điểm danh được: lưu giờ mới trước.
 - **Rời ca** hỏi lại một lần trước khi gỡ bạn khỏi ca. Nhân viên chỉ tự rời được trong **30 phút đầu** sau khi nhận ca — nút ghi rõ hạn (*Rời ca · tới 16:34*); quá hạn thì nút được thay bằng câu *Đã nhận ca quá 30 phút — bạn không còn quyền rời ca*.
 
@@ -273,7 +314,7 @@ Khung giờ ở đây là khung giờ *tổng* của ca. Từng nhân viên vẫ
 
 Mỗi dòng gồm: **chọn người** · **Từ** · **Đến** · **Trạng thái** · nút xoá · ô ghi chú riêng cho người đó.
 
-- **Thêm nhân viên**: thêm một dòng mới, mặc định lấy khung giờ của ca và trạng thái *Chờ xác nhận*. Với nhân viên thường, nút này là **Thêm tôi vào ca** — chỉ admin thêm được người khác ([mục 8b](#8b-chấm-công-và-tính-công)).
+- **Thêm nhân viên**: thêm một dòng mới, mặc định lấy khung giờ của ca và trạng thái *Chờ xác nhận*. Với nhân viên thường, nút này là **Thêm tôi vào ca** — chỉ admin thêm được người khác ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)).
 - Người đã có trong ca sẽ bị **làm mờ** trong danh sách chọn, tránh trùng.
 - Nút thùng rác **gỡ người đó khỏi ca**. Thay đổi chỉ có hiệu lực sau khi bấm **Lưu thay đổi**.
 - Dưới mỗi dòng hiện **thời lượng** đã tính sẵn (ví dụ `4h 30m`).
@@ -292,7 +333,7 @@ Cảnh báo vàng cố ý không chặn, vì có những ca thực tế cần ng
 
 Bấm **Xoá** (góc trái dưới), form chuyển sang bước xác nhận, bấm **Xoá ca** lần nữa. Thao tác này xoá luôn toàn bộ phân công thuộc ca đó.
 
-Nhân viên chỉ xoá được ca **đang trống**, hoặc ca **chỉ có chính mình** khi bạn **còn rời được** (chưa điểm danh, chưa quá 30 phút kể từ lúc nhận). Không xoá được thì nút **Xoá** được thay bằng câu giải thích, chỉ admin xoá được ([mục 8b](#8b-chấm-công-và-tính-công)).
+Nhân viên chỉ xoá được ca **đang trống**, hoặc ca **chỉ có chính mình** khi bạn **còn rời được** (chưa điểm danh, chưa quá 30 phút kể từ lúc nhận). Không xoá được thì nút **Xoá** được thay bằng câu giải thích, chỉ admin xoá được ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)).
 
 ### Đóng form
 
@@ -409,9 +450,9 @@ Chỉ hiện các lượt phân công đang chờ.
 
 ---
 
-## 8b. Chấm công và tính công
+## 8b. Chấm công và luật điểm danh
 
-**Chấm công = xác nhận.** Bấm **✓ Xác nhận** trên lượt phân công của mình là điểm danh cho lượt đó. **Tính công** là trang **Tổng kết**: nó chỉ cộng những lượt đã xác nhận *và* đã qua giờ kết thúc của riêng người đó, theo ngày / tuần / tháng, ra số lượt và tổng giờ của từng người.
+**Chấm công = xác nhận.** Bấm **✓ Xác nhận** trên lượt phân công của mình là điểm danh cho lượt đó (trạng thái đổi từ *Chờ xác nhận* sang *Đã xác nhận*; trong form sửa ca ở chế độ Đơn giản thì nút này tên **Điểm danh**). Số công được tính ở trang [Tổng kết](#8c-trang-tổng-kết).
 
 Sau khi chạy `supabase/005_attendance.sql`, nhân viên thường phải theo các luật sau. Admin được miễn toàn bộ.
 
@@ -449,6 +490,49 @@ Trong form sửa ca, ô bị khoá chuyển xám. Khoá **theo luật** thì kè
 Giờ tính theo **đồng hồ máy chủ, múi giờ Việt Nam** — chỉnh đồng hồ máy mình không có tác dụng. Mọi luật nằm trong trigger của database nên gọi thẳng Supabase API cũng không lách được; giao diện chỉ ẩn sẵn những gì database sẽ từ chối. Mọi can thiệp của admin đều vào [Nhật ký](#9b-nhật-ký-thao-tác).
 
 Ca mẫu chỉ admin quản lý (sau khi chạy `008_template_admin.sql`, xem [mục 7](#quản-lý-ca-mẫu)). Phần còn chưa chặn: xem [roadmap.md](roadmap.md).
+
+---
+
+## 8c. Trang Tổng kết
+
+Trang **Tổng kết** (`/summary`; điện thoại: avatar → **Tổng kết**) là bảng công: ai đã trực xong những ca nào, tổng bao nhiêu giờ. Không cần migration riêng — số liệu được suy ra từ chính `shifts` và `shift_assignments`, nên luôn khớp dữ liệu hiện tại.
+
+### Một lượt phân công vào bảng khi nào
+
+Đúng hai điều kiện, thiếu một là chưa tính:
+
+1. Nhân viên **đã xác nhận** (điểm danh) lượt đó.
+2. **Đã qua giờ kết thúc của riêng người đó** — làm 08:00–12:00 trong ca 08:00–18:00 thì 12:00 là tính được, không phải đợi 18:00.
+
+Lượt chưa xác nhận thì **không bao giờ** vào bảng, dù ca đã qua từ lâu. Bảng tự cập nhật mỗi phút nên ca vừa kết thúc tự hiện ra, không cần F5.
+
+### Cách xem
+
+Giống trang Lịch: nút `‹ Hôm nay / Tuần này / Tháng này ›` và bộ chuyển **Ngày | Tuần | Tháng**. Khác Lịch ở hai điểm: mở ra mặc định là **Tuần**, và chế độ Tháng lấy đúng các ngày của tháng đó (không đệm thêm ngày tháng liền kề cho tròn tuần — bảng tháng 9 không cộng ngày 31/8).
+
+Bốn ô số ở đầu trang:
+
+| Ô | Ý nghĩa |
+| --- | --- |
+| **Nhân viên được tính** | Số người có ít nhất một lượt đã ghi nhận trong khoảng đang xem |
+| **Lượt đã trực** | Số lượt đã ghi nhận |
+| **Tổng giờ** | Tổng giờ của các lượt đó |
+| **Chưa ghi nhận** | Số lượt nằm trong khoảng nhưng chưa vào bảng (chưa xác nhận, hoặc đã xác nhận mà chưa tới giờ kết thúc). Ô này có để con số không trông như dữ liệu bị mất |
+
+Dưới các ô là một dòng nhắc luật ghi nhận ở trên.
+
+### Đọc bảng
+
+- **Hàng** là nhân viên — bạn luôn ở hàng đầu (nền indigo nhạt, nhãn *Bạn*), còn lại xếp theo tên. **Cột** là ngày, cuối cùng là cột **Tổng** của từng người; hàng cuối **Theo ngày** là tổng giờ từng ngày.
+- Chế độ Ngày và Tuần: mỗi ô là các khối ca của người đó trong ngày, cùng màu với trên Lịch, ghi tên ca và khung giờ **riêng của người đó**.
+- Chế độ Tháng có tới 31 cột nên mỗi ô chỉ ghi **số giờ** (`·` nếu không có); rê chuột vào để xem tên ca và giờ.
+- Ô tích **Hiện cả nhân viên không có ca** (điện thoại: *Hiện tất cả*) hiện thêm những người không có lượt nào trong khoảng; mặc định ẩn để bảng không đầy dòng rỗng. Người đang bị **ẩn** (tài khoản quản lý, xem [Trang Tài khoản](#trang-tài-khoản)) chỉ hiện khi họ có công thật.
+- Bảng **chỉ để xem**: bấm vào một ca không mở form sửa. Muốn sửa thì đi qua trang Lịch.
+- Chưa có tài khoản nhân viên nào thì bảng báo *Chưa có tài khoản nhân viên*; có tài khoản mà khoảng này chưa ghi nhận được ca nào thì báo *Chưa ghi nhận được ca nào trong khoảng này.*
+
+> Tổng kết **không phải ảnh chụp bất biến**: nó tính lại từ dữ liệu hiện có mỗi lần mở. Nếu một ca đã qua bị sửa (admin sửa giờ, gỡ người…) thì con số cũ đổi theo. Chứng cứ bất biến về việc ai đã làm gì nằm ở [Nhật ký](#9b-nhật-ký-thao-tác).
+
+Đường dẫn: `/summary`, tham số `date`, `view` (`day` / `month`; tuần là mặc định nên không ghi), `all=1` — xem [mục 10](#10-tra-cứu-nhanh).
 
 ---
 
@@ -580,6 +664,53 @@ Phím: **→** hoặc **Enter** tiếp, **←** lùi, **Esc** dừng. Trong lúc
 
 Lần đăng nhập đầu tiên, góc dưới trái hiện lời mời **Mới dùng Thinkmay Team Board?** — bấm **Bắt đầu** để xem bài Làm quen giao diện, hoặc **Để sau**. Mỗi tài khoản chỉ được hỏi một lần (nhớ trên trình duyệt đó).
 
+Các bài cũng gọi được từ **Quick Search** (Ctrl + K): gõ *hướng dẫn* hoặc tên bài, mục nằm trong nhóm **Hướng dẫn** ở cuối danh sách — gõ *điểm danh* là ra chỗ điểm danh trước, bài hướng dẫn về nó đứng sau. Chữ gõ vào ô tìm của trang Hướng dẫn nằm trên đường dẫn (`/help?q=…`) như bộ lọc các trang khác: F5 hay gửi link vẫn ra đúng các mục đang lọc.
+
+Với người sửa mã: mỗi bước của bài trỏ vào phần tử có thuộc tính `data-tour="…"`. Đổi tên, xoá hay chuyển chỗ một phần tử như vậy thì sửa kịch bản `src/help/tours.ts` cùng lúc rồi chạy lại bài đó; đổi hành vi mà hướng dẫn mô tả thì sửa cả `src/help/content.ts` và README này.
+
+---
+
+## 9e. Trang Trạng thái
+
+Trang **Trạng thái** (`/status`) cho biết ứng dụng có đang nói chuyện được với máy chủ không và phiên đăng nhập của bạn còn sống bao lâu — nơi đầu tiên cần mở khi *"ứng dụng chậm"* hay *"bấm mà không lưu được"*. Mở từ nút lưới → **Trạng thái** (điện thoại: avatar → **Trạng thái**), hoặc gõ *trạng thái* trong Ctrl + K.
+
+Trang tự kiểm tra lại **mỗi 30 giây** (chạy ngầm), hoặc bấm **Kiểm tra lại** để kiểm tra ngay (nút quay trong lúc chờ). Có bốn thẻ, mỗi thẻ một nhãn màu ở góc: xanh (tốt), vàng (chậm / không ổn định), đỏ (lỗi), xám (đang kiểm tra / không áp dụng).
+
+| Thẻ | Có gì |
+| --- | --- |
+| **Database** | Tên máy chủ Supabase; **Xác thực** (hỏi thẳng máy chủ Auth, xác thực luôn token hiện tại) và **Cơ sở dữ liệu** (một truy vấn nhỏ nhất qua REST + RLS), mỗi dòng ghi thời gian khứ hồi bằng ms; **Realtime** (đã kết nối hay mất kết nối, kèm số kênh đã vào `n/m`); thời điểm kiểm tra lần cuối |
+| **Phiên đăng nhập** | Tài khoản (tên, email); **Token hết hạn** lúc nào và còn bao lâu (token tự làm mới trước khi hết hạn); lần đăng nhập cuối; User ID — các dòng này chọn và chép được để gửi cho admin |
+| **Cloudflare** | Chỉ có số liệu khi trang **thực sự đi qua Cloudflare**: trung tâm dữ liệu phục vụ bạn (ví dụ `HKG · VN`), thời gian phản hồi edge, giao thức HTTP / TLS. Kèm tình trạng mạng chung và số sự cố đang mở lấy từ cloudflarestatus.com |
+| **Netlify** | Tương tự, cho Netlify: trung tâm dữ liệu edge, thời gian phản hồi, trạng thái cache; tình trạng chung từ netlifystatus.com |
+
+**Màu của từng dòng.** Thời gian phản hồi dưới **500 ms** là xanh, tới **1500 ms** là vàng, hơn nữa hoặc gặp lỗi là đỏ. Realtime mất kết nối thì thẻ Database vàng. Phiên còn dưới **5 phút** thì vàng (*Sắp hết hạn*), hết hạn là đỏ (*Đã hết hạn*), không có phiên là đỏ (*Không có phiên*).
+
+**Cloudflare / Netlify khi chạy local.** Mở app ở `localhost` thì trang không đi qua nhà cung cấp nào, các dòng hiện *Không đi qua Cloudflare / Netlify* và nhãn thẻ theo tình trạng chung của họ. Khi app đang được chính nhà cung cấp đó phục vụ thì nhãn theo **thời gian phản hồi thật** của app — tình trạng chung của họ gần như lúc nào cũng có sự cố nhỏ ở đâu đó trên thế giới nên để nó quyết định thì thẻ luôn vàng. Sự cố đang mở hiện tối đa 3 dòng (bấm để mở trang sự cố), còn lại gộp thành *+N nữa*.
+
+Những kiểm tra này chạy **từ trình duyệt của bạn**: tình trạng chung lấy bằng cách gọi trang Statuspage công khai của nhà cung cấp, không gửi dữ liệu ca hay tài khoản đi đâu. Không lấy được thì dòng đó báo *Không lấy được từ …*, các thẻ khác vẫn chạy.
+
+**Chế độ dữ liệu mẫu.** Không có Supabase để kiểm tra: thẻ Database ghi *Dữ liệu mẫu* và thẻ Phiên là *Phiên mẫu, lưu trong trình duyệt này*; hai thẻ Cloudflare / Netlify vẫn chạy.
+
+---
+
+## 9f. Giao diện sáng / tối và chữ bôi đen
+
+### Sáng / Tối / Theo hệ thống
+
+Ba lựa chọn: **Hệ thống** (theo cài đặt của thiết bị, đổi theo ngay khi thiết bị đổi), **Sáng**, **Tối**. Đổi bằng ô **Giao diện** trong nút lưới — mỗi lần bấm chuyển một bước **Hệ thống → Sáng → Tối** — hoặc trong avatar trên điện thoại, hoặc gõ *giao diện tối* / *sáng* / *hệ thống* trong Ctrl + K.
+
+Lựa chọn nhớ trên trình duyệt đó (khoá `scheduler.theme`; chọn **Hệ thống** thì không lưu gì, để thiết bị quyết định). Một đoạn script nhỏ trong `index.html` áp giao diện trước khi trang vẽ nên mở ứng dụng ở chế độ tối không bị nháy trắng.
+
+Với người sửa mã: chế độ tối làm bằng cách **định nghĩa lại biến màu Tailwind** dưới `[data-theme='dark']` trong `src/index.css`, không rải `dark:` trong từng component — viết class sáng như bình thường là đủ. Dùng họ màu mới ngoài những họ đã có bản tối (slate, indigo, rose, amber, emerald, sky, violet, teal, orange, lime, fuchsia, cyan) thì phải thêm khối biến tương ứng.
+
+### Chữ không bôi đen được
+
+Cho ra cảm giác app chứ không phải trang web, **mặc định không bôi đen được chữ** (nút, nhãn, tiêu đề). Ô nhập liệu thì luôn gõ và bôi được. Những thông tin đáng chép vẫn chọn được: ghi chú, email, câu báo lỗi của máy chủ, JSON trong Nhật ký, nội dung trang Hướng dẫn, các dòng trên trang Trạng thái. Chữ nằm **trong một nút** thì trình duyệt không cho bôi đen dù có bật.
+
+### Ô chọn tự vẽ
+
+Ô chọn một giá trị, ô tích, ô chọn ngày và chọn nhiều nhân viên đều là thành phần tự vẽ chứ không phải ô gốc của trình duyệt, nên giống nhau ở mọi máy và theo được chế độ tối. Ô ngày gõ được bằng phím (xem [mục 6](#phần-thông-tin-ca)).
+
 ---
 
 ## 10. Tra cứu nhanh
@@ -593,9 +724,12 @@ Lần đăng nhập đầu tiên, góc dưới trái hiện lời mời **Mới 
 | `/?view=month&date=2026-09-08` | Lịch tháng 9/2026 |
 | `/?date=2026-09-08` | Timeline ngày 08/09/2026 |
 | `/shifts` | Tất cả ca |
+| `/summary` | Tổng kết, chế độ Tuần, tuần này |
+| `/summary?view=month&date=2026-09-08` | Tổng kết tháng 9/2026 |
 | `/my-shifts` | Ca của tôi |
 | `/pending` | Chờ xác nhận |
 | `/logs` | Nhật ký thao tác |
+| `/status` | Trạng thái hệ thống |
 | `/help` | Hướng dẫn và các bài từng bước |
 | `/accounts` | Tài khoản (chỉ admin; người khác bị đưa về `/`) |
 | `/login` | Đăng nhập |
@@ -604,14 +738,15 @@ Ngày, chế độ xem **và mọi bộ lọc** nằm trong URL nên **gửi lin
 
 | Trang | Tham số |
 | --- | --- |
-| Lịch | `date`, `view` (`week` / `month`), `scale` (thang giờ: `work` / `business` / `full`), `working=1` (Chỉ nhân viên có ca) |
-| Tổng kết | `date`, `view` (`day` / `month`), `all=1` (hiện cả người không có ca) |
+| Lịch | `date`, `view` (`week` / `month`; Ngày là mặc định), `scale` (thang giờ: `work` / `business` / `full`), `working=1` (Chỉ nhân viên có ca) |
+| Tổng kết | `date`, `view` (`day` / `month`; Tuần là mặc định), `all=1` (hiện cả người không có ca) |
 | Tất cả ca | `q` (chữ tìm), `tab` (`past` / `all`), `from`, `to`, `staff` (lặp lại được), `order=desc` |
 | Chờ xác nhận | `all=1` (bỏ tích Chỉ ca của tôi) |
 | Nhật ký | `from`, `to`, `staff` (lặp lại được), `action`, `entity`, `q`, `page` |
 | Hướng dẫn | `q` (chữ tìm) |
+| Trạng thái, Tài khoản | Không có tham số |
 
-Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫn gọn như cũ. Ví dụ `/shifts?tab=past&staff=<id>&order=desc` mở Tất cả ca, tab Đã qua, chỉ ca có người đó, mới nhất lên đầu.
+Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫn gọn như cũ. Ô tìm kiếm (`q` ở Tất cả ca, Nhật ký, Hướng dẫn) lọc ngay theo từng phím nhưng chỉ ghi lên URL khi đã ngừng gõ khoảng 0,3 giây — để bộ gõ tiếng Việt như EVKey / Unikey không bị lộn chữ. Ví dụ `/shifts?tab=past&staff=<id>&order=desc` mở Tất cả ca, tab Đã qua, chỉ ca có người đó, mới nhất lên đầu.
 
 ### Quy ước hiển thị
 
@@ -629,7 +764,7 @@ Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫ
 
 | Thao tác | Kết quả |
 | --- | --- |
-| `Esc` | Đóng form đang mở |
+| `Esc` | Đóng form, ngăn thông báo, Quick Search hay bài hướng dẫn đang mở |
 | Bấm nền tối ngoài form | Đóng form |
 | Bấm khối / chip ca | Mở form sửa ca đó |
 | Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |
@@ -642,9 +777,10 @@ Bấm **Ctrl + K** ở bất cứ trang nào (trên điện thoại: bấm avata
 
 | Gõ | Được |
 | --- | --- |
-| Tên trang: *lịch tuần*, *tổng kết*, *nhật ký*… | Đi tới trang đó (Lịch ngày / tuần / tháng, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản với admin) |
-| *tạo ca*, *thông báo*, *giao diện tối*, *en* / *vi* (đặt ngôn ngữ), *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó rồi đóng bảng. Đăng xuất phải Enter hai lần |
-| Tên một người: *mai* | **Ca của Mai Le** — mở Tất cả ca, lọc sẵn theo người đó |
+| Tên trang: *lịch tuần*, *tổng kết*, *nhật ký*… | Đi tới trang đó (Lịch ngày / tuần / tháng, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Hướng dẫn, Tài khoản với admin) |
+| *tạo ca*, *nhận ca mẫu*, *thông báo*, *giao diện tối*, *en* / *vi* (đặt ngôn ngữ), *đổi mật khẩu*, *đăng xuất* | Chạy thao tác đó rồi đóng bảng. Đăng xuất phải Enter hai lần |
+| *hướng dẫn*, hay tên một bài (*điểm danh*, *nhận ca mẫu*…) | Mở trang Hướng dẫn, hoặc chạy thẳng bài từng bước đó. Nhóm này luôn nằm cuối danh sách |
+| Tên một người: *mai* | **Ca của Mai Le** — mở Tất cả ca, lọc sẵn theo người đó. Chỉ gợi ý khi đã gõ, tối đa 6 người |
 | Phép tính: `12*3+4`, `(1+2)^3` | Kết quả — Enter để chép |
 | Giờ ± thời lượng: `08:00 + 4h30m`, `22:00 + 3h` | `12:30`, `01:00 (+1 ngày)` |
 | Giờ − giờ: `17:30 - 08:15` | `9h 15m` (kèm số phút). Giờ sau nhỏ hơn thì hiểu là qua đêm |
@@ -723,7 +859,19 @@ Database chặn thật: chỉ admin sửa được tên hiển thị và hiện 
 
 ### Phân quyền
 
-**Anon không có quyền gì.** Mọi nhân viên đã đăng nhập đều xem được tất cả ca và tạo/sửa được ca, kể cả ca của người khác — đây là chủ ý cho công cụ nội bộ. Ngoại lệ là các luật chấm công ở [mục 8b](#8b-chấm-công-và-tính-công) (sau khi chạy migration 005): những việc đó chỉ admin làm được.
+**Anon không có quyền gì.** Mọi nhân viên đã đăng nhập đều **xem** được tất cả ca, thông tin nhân viên, Tổng kết và Nhật ký. Luật nào cần chặn thật thì đặt ở database (RLS, trigger, `check`, `now()` của máy chủ); giao diện chỉ phản ánh lại những gì database sẽ từ chối.
+
+| Việc | Ai làm được | Cần chạy |
+| --- | --- | --- |
+| Tạo ca, nhận ca (thêm **chính mình** vào ca), nhận ca mẫu | Mọi nhân viên | `schema.sql`, 002 |
+| Điểm danh, sửa giờ / ghi chú phần của mình, rời ca, xoá ca trống / ca chỉ có mình | Nhân viên, **trong các giới hạn** ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh) | 005, 006 |
+| Thêm / sửa / gỡ lượt của **người khác**, bỏ điểm danh, điểm danh hộ, sửa tên – ngày – giờ của ca có người khác, xoá ca có người khác | Chỉ **admin** | 005, 006 |
+| Tạo / sửa / bật-tắt / xoá ca mẫu | Chỉ **admin** (nhân viên chỉ nhận) | 008 |
+| Đổi tên hiển thị, hiện / ẩn người trên bảng | Chỉ **admin**, của bất kỳ ai | 007 |
+| Phong admin | Chỉ làm tay trong SQL Editor ([mục 11](#phong-admin)) | 005 |
+| Sửa / xoá / tạo dòng Nhật ký | **Không ai** qua ứng dụng ([mục 9b](#9b-nhật-ký-thao-tác)) | 003 |
+
+Chưa chạy 005 thì cột `profiles.role` chưa có và **không áp luật nào**: mọi người sửa được mọi ca như bản đầu tiên. Danh sách còn chưa chặn: xem [roadmap.md](roadmap.md).
 
 ---
 
@@ -732,20 +880,38 @@ Database chặn thật: chỉ admin sửa được tên hiển thị và hiện 
 ```
 src/
 ├── auth/           # Xác thực: interface + bản mock + bản Supabase
-├── data/           # Truy cập dữ liệu: interface + bản mock + bản Supabase
-├── components/     # Timeline, WeekGrid, MonthGrid, các modal, layout
-├── pages/          # Login, Lịch, Tất cả ca, Ca của tôi, Chờ xác nhận
+├── data/           # Truy cập dữ liệu: interface, hai backend, bộ đệm ca (shiftStore), ScheduleContext (hook đọc / ghi)
+├── components/     # Timeline, WeekGrid, MonthGrid, SummaryGrid, form ca, Modal, Select, Checkbox, DateInput, header, menu…
+├── pages/          # Login, Lịch, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản, Hướng dẫn
+├── help/           # Nội dung trang Hướng dẫn (content.ts), kịch bản wizard (tours.ts), TourProvider
+├── notifications/  # Thông báo: popup + ngăn thông báo, lưu ở localStorage
+├── theme/          # Sáng / Tối / Hệ thống
 ├── i18n/           # Từ điển vi/en và provider
-├── lib/            # Tiện ích thời gian, màu sắc, Supabase client
+├── lib/            # Hàm thuần: thời gian, màu, tổng kết, luật điểm danh phía client, lọc, URL, các probe của trang Trạng thái…
 └── types.ts        # Kiểu dữ liệu, khớp 1:1 với cột trong Supabase
+supabase/           # schema.sql rồi 002…009, chạy tay theo thứ tự trong SQL Editor
 ```
+
+Thứ tự bọc của ứng dụng: `ThemeProvider → I18nProvider → AuthProvider → BrowserRouter`; các trang cần đăng nhập nằm trong `ProtectedRoute`, bên trong là `NotificationProvider → ScheduleProvider → ShiftEditorProvider → TourProvider → AppLayout`.
 
 Hai file quyết định backend nào đang chạy:
 
 - `src/data/index.ts` — chọn `supabaseBackend` hoặc `mockBackend`
 - `src/auth/index.ts` — chọn `supabaseAuth` hoặc `mockAuth`
 
-Cả hai tự động dựa vào việc `.env` có được cấu hình hay không. Giao diện không import trực tiếp bất kỳ backend nào, nên đổi backend không phải sửa component.
+Cả hai tự động dựa vào việc `.env` có được cấu hình hay không. Giao diện không import trực tiếp bất kỳ backend nào (đọc qua hook, ghi qua `useSchedule()` — các hàm ghi tự làm tươi màn hình sau khi lưu), nên đổi backend không phải sửa component. Thêm gì vào `SchedulerBackend` hay `AuthBackend` thì viết ở **cả hai** bản, và bản mock phải hành xử giống bản thật, kể cả nhật ký.
+
+### Luật chấm công nằm ở ba nơi
+
+Luật điểm danh ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)) tồn tại ở **ba chỗ phải giữ khớp nhau**: trigger trong SQL (`005_attendance.sql`, bản mới nhất của hai hàm trigger ở `006_shift_rules.sql` — sửa luật thì viết migration mới ghi đè hàm, không sửa file đã chạy), `src/lib/attendance.ts` (bản sao phía client để khoá nút và giải thích vì sao), và `mockBackend.ts` (để chế độ dữ liệu mẫu cư xử giống). Ca mẫu chỉ admin: trigger trong `008_template_admin.sql` và `canManageTemplates` phía client.
+
+### Thêm ngôn ngữ, chuỗi, màu
+
+- Mọi chuỗi người dùng thấy đi qua `t()` — trừ tên sản phẩm (`src/lib/brand.ts`) và nội dung trang Hướng dẫn (`src/help/`, viết thẳng dạng `Record<Lang, …>`). Thêm khoá vào bản `en` trước (nguồn của kiểu `TranslationKey`) rồi `vi`; thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`; chèn giá trị: `{{name}}`.
+- Class Tailwind phải viết nguyên chuỗi, không ghép từ mảnh lúc chạy (`bg-${x}-50` sẽ không được sinh) — xem `PALETTE` trong `src/lib/colors.ts`.
+- Bộ lọc của trang nằm trên URL qua `useUrlParams()` (`src/lib/urlParams.ts`); thêm tham số mới thì thêm vào bảng ở [mục 10](#đường-dẫn).
+- Giờ là chuỗi `HH:mm`, ngày là chuỗi `yyyy-MM-dd` theo **giờ máy** — dùng `toDateKey` / `fromDateKey` trong `src/lib/time.ts`, không dùng `toISOString()` (lệch ngày vì UTC). Giờ Postgres trả về (`HH:mm:ss`) qua `normalizeTime`.
+- Quy ước chi tiết cho người (và công cụ) sửa mã nằm ở [CLAUDE.md](../CLAUDE.md) ở gốc repo.
 
 ### Tải ca theo lát cắt
 
@@ -765,5 +931,7 @@ Bộ đệm nằm ở `src/data/shiftStore.ts`: lát cắt đang xem được l�
 
 - Khi đã cuộn sâu nhiều tháng ở trang Tất cả ca, mỗi thay đổi qua Realtime làm tươi lại **từng tháng đang hiển thị** (mỗi tháng một truy vấn nhỏ có index). Đổi tab hoặc bộ lọc thì quay về một tháng.
 - **Ca của tôi** tải toàn bộ lịch sử của *một* người (cần cho ô tổng số lượt). Nhẹ hơn nhiều so với cả nhóm, nhưng vẫn tăng dần theo thời gian.
-- Bundle khoảng 590 KB (chủ yếu là `supabase-js`), chưa tách code.
+- Bundle khoảng 840 KB (gzip khoảng 233 KB), chưa tách code; `build` có cảnh báo chunk lớn hơn 500 KB.
 - Ca qua nửa đêm (22:00 → 02:00) chưa được hỗ trợ: ràng buộc `end_time > start_time` yêu cầu ca nằm gọn trong một ngày.
+- Tổng kết tính lại từ dữ liệu hiện có mỗi lần mở, không phải ảnh chụp bất biến ([mục 8c](#8c-trang-tổng-kết)).
+- Ca đã qua mà trống, hoặc chỉ có mình chưa điểm danh: nhân viên vẫn sửa được giờ / tên. Xem phần "Chưa làm" trong [roadmap.md](roadmap.md).
