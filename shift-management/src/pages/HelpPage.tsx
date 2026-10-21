@@ -12,7 +12,6 @@ import { useI18n } from '../i18n/I18nContext'
 import { HELP, type HelpBlock, type HelpSection } from '../help/content'
 import { TOURS, TOUR_ORDER, stepsFor, type TourId } from '../help/tours'
 import { useTour } from '../help/TourProvider'
-import { useUrlParams } from '../lib/urlParams'
 
 /** Bỏ dấu, chữ thường — để tìm không dấu vẫn ra. */
 function fold(s: string): string {
@@ -77,11 +76,9 @@ export function HelpPage() {
   const { t, lang } = useI18n()
   const { user } = useAuth()
   const { start } = useTour()
-  // Chữ tìm nằm trên URL (`?q=`) như bộ lọc các trang khác: F5 hay gửi link
-  // vẫn ra đúng các mục đang lọc.
-  const [params, updateParams] = useUrlParams()
-  const query = params.get('q') ?? ''
-  const setQuery = (q: string) => updateParams({ q: q || null })
+  // Cố ý không lên URL như bộ lọc các trang khác: tìm trong trang Hướng dẫn
+  // là tra nhanh tại chỗ, không phải thứ để gửi link cho nhau.
+  const [query, setQuery] = useState('')
 
   const visible = useMemo(
     () =>
