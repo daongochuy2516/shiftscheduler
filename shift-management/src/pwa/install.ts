@@ -20,8 +20,6 @@ interface BeforeInstallPromptEvent extends Event {
 export interface InstallState {
   /** Đang chạy như app đã cài (cửa sổ riêng, không thanh địa chỉ) — kể cả khi F11. */
   standalone: boolean
-  /** Đang toàn màn hình (F11), trong cửa sổ app hay tab trình duyệt. */
-  fullscreen: boolean
   /** Trình duyệt cho mở hộp cài ngay. */
   canPrompt: boolean
   /**
@@ -75,7 +73,6 @@ function compute(): InstallState {
   const standalone = detectStandalone()
   return {
     standalone,
-    fullscreen: detectFullscreen(),
     canPrompt: !standalone && deferred !== null,
     promptSupported: 'onbeforeinstallprompt' in window,
     manualIos: !standalone && detectIos(),
@@ -86,7 +83,6 @@ function refresh() {
   const next = compute()
   if (
     next.standalone === state.standalone &&
-    next.fullscreen === state.fullscreen &&
     next.canPrompt === state.canPrompt &&
     next.manualIos === state.manualIos
   ) {

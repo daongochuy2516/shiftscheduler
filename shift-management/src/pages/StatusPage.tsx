@@ -113,31 +113,18 @@ function summaryTone(summary: StatuspageSummary): Tone {
  * Ô tổng của thẻ Cloudflare/Netlify. Khi app đang được nhà cung cấp đó phục
  * vụ, ô theo chính phản hồi của app: trạng thái chung của họ gần như lúc nào
  * cũng có sự cố nhỏ ở đâu đó trên thế giới, để nó quyết định thì ô luôn vàng.
- * Không đi qua họ (localhost) thì mới lấy trạng thái chung.
+ * Không đi qua họ (localhost, hay host của nhà cung cấp kia) thì ô xám
+ * "Inactive", bất kể trạng thái chung: nhà cung cấp không dính tới bản đang
+ * mở, sự cố của họ không ảnh hưởng gì. Trạng thái chung vẫn hiện ở dòng dưới.
  */
 function providerBadge(
   loaded: boolean,
   servedMs: number | null,
-  summary: StatuspageSummary | null,
 ): { tone: Tone; label: TranslationKey } {
   if (!loaded) return { tone: 'idle', label: 'status.checking' }
-  if (servedMs !== null) {
-    const tone = msTone(servedMs)
-    return { tone, label: OVERALL_LABEL[tone] }
-  }
-  if (!summary) return { tone: 'idle', label: 'status.unknown' }
-  const tone = summaryTone(summary)
-  return {
-    tone,
-    label:
-      tone === 'ok'
-        ? 'status.ok'
-        : tone === 'error'
-          ? 'status.provider.major'
-          : summary.indicator === 'maintenance'
-            ? 'status.provider.maintenance'
-            : 'status.provider.minor',
-  }
+  if (servedMs === null) return { tone: 'idle', label: 'status.provider.inactive' }
+  const tone = msTone(servedMs)
+  return { tone, label: OVERALL_LABEL[tone] }
 }
 
 export function StatusPage() {
@@ -152,13 +139,19 @@ export function StatusPage() {
   const [now, setNow] = useState(() => Date.now())
   const lastProbeRef = useRef(0)
 
-  const probe = useCallback(async () => {
+  /**
+   * `providers`: hỏi cả Cloudflare / Netlify. Chỉ lúc mở trang và khi bấm
+   * Kiểm tra lại — lượt tự kiểm tra chỉ làm mới Supabase: trạng thái chung của
+   * nhà cung cấp hiếm khi đổi trong vài chục giây, hỏi liên tục chỉ thêm dịp
+   * gặp lỗi mạng vặt.
+   */
+  const probe = useCallback(async (providers: boolean) => {
     lastProbeRef.current = Date.now()
     try {
       await Promise.all([
         IS_MOCK_BACKEND ? null : probeSupabase().then(setStatus),
-        probeCloudflare().then(setCf),
-        probeNetlify().then(setNf),
+        providers ? probeCloudflare().then(setCf) : null,
+        providers ? probeNetlify().then(setNf) : null,
       ])
     } finally {
       setChecking(false)
@@ -167,15 +160,15 @@ export function StatusPage() {
 
   // Các lần tự kiểm tra định kỳ chạy ngầm; chỉ bấm tay mới hiện vòng quay.
   // Tab đang ẩn thì không hỏi: không ai xem, và lượt chạy ngay lúc máy vừa
-  // thức dậy (mạng chưa kịp nối lại) chỉ ra "unreachable" giả. Quay lại tab mà
-  // đã quá một nhịp thì kiểm tra luôn.
+  // thức dậy (mạng chưa kịp nối lại) chỉ ra lỗi giả. Quay lại tab mà đã quá
+  // một nhịp thì kiểm tra luôn.
   useEffect(() => {
-    void probe()
+    void probe(true)
     const id = setInterval(() => {
-      if (!document.hidden) void probe()
+      if (!document.hidden) void probe(false)
     }, RECHECK_MS)
     const onVisible = () => {
-      if (!document.hidden && Date.now() - lastProbeRef.current >= RECHECK_MS) void probe()
+      if (!document.hidden && Date.now() - lastProbeRef.current >= RECHECK_MS) void probe(false)
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
@@ -186,7 +179,7 @@ export function StatusPage() {
 
   function recheck() {
     setChecking(true)
-    void probe()
+    void probe(true)
   }
 
   // Đồng hồ cho "x giây trước" và đếm ngược hạn token.
@@ -276,8 +269,8 @@ function StatusCards({
             ? 'status.sessionExpiring'
             : 'status.sessionValid'
 
-  const cfBadge = providerBadge(cf !== null, cf?.edge?.ms ?? null, cf?.global ?? null)
-  const nfBadge = providerBadge(nf !== null, nf?.origin?.ms ?? null, nf?.global ?? null)
+  const cfBadge = providerBadge(cf !== null, cf?.edge?.ms ?? null)
+  const nfBadge = providerBadge(nf !== null, nf?.origin?.ms ?? null)
 
   return (
     <div lang="en" className="grid gap-4 lg:grid-cols-2">
@@ -321,7 +314,7 @@ function StatusCards({
                 <Pending />
               )}
             </Row>
-            <Row label={t('status.lastChecked')} hint={t('status.autoRecheck')}>
+            <Row label={t('status.lastChecked')}>
               {status ? ago(status.checkedAt) : <Pending />}
             </Row>
           </dl>
@@ -655,15 +648,7 @@ function AppCard() {
     >
       <dl className="divide-y divide-slate-100">
         <Row nowrap label={t('status.app.mode')}>
-          {t(
-            install.fullscreen
-              ? install.standalone
-                ? 'status.app.fullscreenApp'
-                : 'status.app.fullscreenBrowser'
-              : install.standalone
-                ? 'status.app.standalone'
-                : 'status.app.browser',
-          )}
+          {install.standalone ? t('status.app.standalone') : t('status.app.browser')}
         </Row>
         {sw.supported && (
           <>
@@ -841,7 +826,8 @@ function OfflineCard({ now, ago }: { now: number; ago: (at: number) => string })
   const connDetail =
     online && conn
       ? [
-          conn.type,
+          // Không hiện `effectiveType` ("4g"): đó là ước lượng của trình duyệt
+          // theo tốc độ, gần như mạng nào cũng ra 4g nên không nói lên gì.
           conn.rtt !== null ? `${conn.rtt} ms` : null,
           conn.downlink !== null
             ? `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(conn.downlink)} Mbps`

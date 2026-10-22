@@ -10,10 +10,10 @@ const TIMEOUT_MS = 10_000
 /** Hỏng thì chờ ngần này rồi thử lại một lần trong cùng lượt. */
 const RETRY_DELAY_MS = 1_500
 /**
- * Lượt tự kiểm tra (30 giây) mà hỏng, trong khi lượt ngay trước còn lấy được,
- * thì vẫn hiện kết quả trước — mạng chập chờn một nhịp (Wi-Fi nối lại, máy vừa
- * thức dậy, đổi VPN) không đáng để thẻ nhảy đỏ. Hỏng liền hai lượt, hoặc kết
- * quả trước đã cũ hơn ngần này, mới báo "unreachable".
+ * Một lượt (mở trang / bấm Kiểm tra lại) mà hỏng, trong khi lượt ngay trước
+ * còn lấy được, thì vẫn hiện kết quả trước — mạng chập chờn một nhịp (Wi-Fi
+ * nối lại, máy vừa thức dậy, đổi VPN) không đáng để thẻ nhảy đỏ. Hỏng liền hai
+ * lượt, hoặc kết quả trước đã cũ hơn ngần này, mới báo "unreachable".
  */
 const STALE_MAX_MS = 90_000
 

@@ -50,15 +50,12 @@ export async function precacheInfo(): Promise<PrecacheInfo | null> {
 
 /** Network Information API — chỉ Chrome / Edge / Android có. */
 interface NetworkInformation {
-  effectiveType?: string
   rtt?: number
   downlink?: number
   saveData?: boolean
 }
 
 export interface ConnectionInfo {
-  /** `4g`, `3g`… — ước lượng theo tốc độ đo được, không phải loại sóng thật. */
-  type: string | null
   rtt: number | null
   /** Mbps. */
   downlink: number | null
@@ -70,7 +67,6 @@ export function connectionInfo(): ConnectionInfo | null {
     .connection
   if (!conn) return null
   return {
-    type: conn.effectiveType ?? null,
     rtt: conn.rtt ?? null,
     downlink: conn.downlink ?? null,
     saveData: conn.saveData === true,
