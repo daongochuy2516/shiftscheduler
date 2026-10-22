@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { format, formatDistanceStrict } from 'date-fns'
 import {
   Check,
@@ -150,8 +150,10 @@ export function StatusPage() {
   // Lần đầu kiểm tra ngay khi mở trang nên bắt đầu ở trạng thái "đang kiểm tra".
   const [checking, setChecking] = useState(true)
   const [now, setNow] = useState(() => Date.now())
+  const lastProbeRef = useRef(0)
 
   const probe = useCallback(async () => {
+    lastProbeRef.current = Date.now()
     try {
       await Promise.all([
         IS_MOCK_BACKEND ? null : probeSupabase().then(setStatus),
@@ -164,10 +166,22 @@ export function StatusPage() {
   }, [])
 
   // Các lần tự kiểm tra định kỳ chạy ngầm; chỉ bấm tay mới hiện vòng quay.
+  // Tab đang ẩn thì không hỏi: không ai xem, và lượt chạy ngay lúc máy vừa
+  // thức dậy (mạng chưa kịp nối lại) chỉ ra "unreachable" giả. Quay lại tab mà
+  // đã quá một nhịp thì kiểm tra luôn.
   useEffect(() => {
     void probe()
-    const id = setInterval(() => void probe(), RECHECK_MS)
-    return () => clearInterval(id)
+    const id = setInterval(() => {
+      if (!document.hidden) void probe()
+    }, RECHECK_MS)
+    const onVisible = () => {
+      if (!document.hidden && Date.now() - lastProbeRef.current >= RECHECK_MS) void probe()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [probe])
 
   function recheck() {
@@ -641,7 +655,15 @@ function AppCard() {
     >
       <dl className="divide-y divide-slate-100">
         <Row nowrap label={t('status.app.mode')}>
-          {install.standalone ? t('status.app.standalone') : t('status.app.browser')}
+          {t(
+            install.fullscreen
+              ? install.standalone
+                ? 'status.app.fullscreenApp'
+                : 'status.app.fullscreenBrowser'
+              : install.standalone
+                ? 'status.app.standalone'
+                : 'status.app.browser',
+          )}
         </Row>
         {sw.supported && (
           <>
@@ -682,9 +704,11 @@ function AppCard() {
                 ? t('status.app.installHint')
                 : install.manualIos
                   ? t('status.app.installIosHint')
-                  : import.meta.env.PROD
-                    ? t('status.app.installOtherHint')
-                    : undefined
+                  : !import.meta.env.PROD
+                    ? undefined
+                    : install.promptSupported
+                      ? t('status.app.installNotOfferedHint')
+                      : t('status.app.installOtherHint')
           }
         >
           {install.standalone ? (
@@ -700,7 +724,15 @@ function AppCard() {
             </FooterButton>
           ) : (
             // Dev không có manifest nên trình duyệt không bao giờ mời cài.
-            t(import.meta.env.PROD ? 'status.app.installUnsupported' : 'status.app.devOff')
+            // Chrome / Edge không mời khi app đã cài trên máy (mở bằng tab
+            // thường): đừng báo "không hỗ trợ" trên chính trình duyệt hỗ trợ.
+            t(
+              !import.meta.env.PROD
+                ? 'status.app.devOff'
+                : install.promptSupported
+                  ? 'status.app.installNotOffered'
+                  : 'status.app.installUnsupported',
+            )
           )}
         </Row>
       </dl>

@@ -6,9 +6,14 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <!-- Màu thanh trạng thái / thanh tiêu đề khi cài như app; script dưới và
-       ThemeContext đổi theo giao diện sáng / tối. -->
-  <meta name="theme-color" content="#ffffff" />
+  <!-- Màu thanh trạng thái / thanh tiêu đề khi cài như app, theo giao diện
+       sáng / tối của máy ngay từ HTML tĩnh: Android (app đã cài) không chắc
+       nhận màu do JS đổi sau, còn icon trạng thái thì luôn theo giao diện máy
+       — để thanh trắng mà máy đang tối là mất icon. Chỉ khi người dùng chọn
+       hẳn Sáng / Tối, và đang trên máy tính, thì script dưới và ThemeContext
+       mới ghi đè cả hai (cho thanh tiêu đề cửa sổ trên máy tính khớp header). -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1f1f" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -26,10 +31,18 @@
         (pref !== 'light' &&
           window.matchMedia('(prefers-color-scheme: dark)').matches)
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      // Cùng màu với THEME_COLOR trong ThemeContext.tsx.
-      document
-        .querySelector('meta[name="theme-color"]')
-        .setAttribute('content', dark ? '#1f1f1f' : '#ffffff')
+      // Theo máy, hoặc điện thoại / máy tính bảng (Android, iOS, iPadOS), thì
+      // hai thẻ theme-color ở trên đã đúng, không đụng tới. Cùng màu và cùng
+      // cách nhận máy với ThemeContext.tsx.
+      var ua = navigator.userAgent
+      var mobile =
+        /Android|iPhone|iPad|iPod/.test(ua) ||
+        (ua.indexOf('Macintosh') !== -1 && navigator.maxTouchPoints > 1)
+      if ((pref === 'light' || pref === 'dark') && !mobile) {
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+          m.setAttribute('content', dark ? '#1f1f1f' : '#ffffff')
+        })
+      }
     })()
   </script>
 </head>

@@ -19,6 +19,14 @@ const DARK_QUERY = '(prefers-color-scheme: dark)'
  * nháy trong index.html lặp lại hai màu này.
  */
 const THEME_COLOR = { light: '#ffffff', dark: '#1f1f1f' } as const
+/**
+ * Điện thoại / máy tính bảng: icon thanh trạng thái theo giao diện máy, nên
+ * thanh cũng phải theo máy. iPadOS báo mình là Mac; phân biệt bằng màn cảm ứng
+ * (giống `detectIos` trong pwa/install.ts). Script trong index.html lặp lại.
+ */
+const STATUS_BAR_FOLLOWS_DEVICE =
+  /Android|iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
 
 interface ThemeContextValue {
   pref: ThemePref
@@ -42,9 +50,21 @@ function applyTheme(pref: ThemePref) {
     pref === 'dark' ||
     (pref === 'system' && window.matchMedia(DARK_QUERY).matches)
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-  document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', dark ? THEME_COLOR.dark : THEME_COLOR.light)
+  // index.html có hai thẻ theme-color theo `media` sáng / tối của máy. Theo
+  // máy: trả mỗi thẻ về màu của nó, trình duyệt tự chọn — không đổi màu bằng
+  // JS, vì app đã cài trên Android có thể bỏ qua màu đổi sau khi tải trang
+  // mà icon thanh trạng thái vẫn theo giao diện máy (thanh trắng, icon trắng).
+  // Vì icon theo máy nên trên Android / iOS thanh luôn theo máy, kể cả khi
+  // chọn hẳn Sáng / Tối. Máy tính: chọn hẳn thì cả hai thẻ một màu cho thanh
+  // tiêu đề cửa sổ khớp header (chữ trên đó trình duyệt tự chọn cho tương phản).
+  const followDevice = pref === 'system' || STATUS_BAR_FOLLOWS_DEVICE
+  document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+    const forDark = followDevice
+      ? (meta.getAttribute('media')?.includes('dark') ?? dark)
+      : dark
+    const color = forDark ? THEME_COLOR.dark : THEME_COLOR.light
+    if (meta.getAttribute('content') !== color) meta.setAttribute('content', color)
+  })
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

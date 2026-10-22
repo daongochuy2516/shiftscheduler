@@ -4,6 +4,19 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { APP_NAME } from './src/lib/brand.ts'
 
+/**
+ * Bản tối cho màn chờ và thanh trạng thái khi máy đang ở giao diện tối
+ * (Chrome Android đọc khối này; trình duyệt khác bỏ qua). Không có thì máy
+ * tối vẫn ra thanh trắng với icon trắng. Khớp nền trang tối
+ * (`[data-theme='dark'] body`) và header tối (`--color-white`). Kiểu
+ * ManifestOptions của vite-plugin-pwa chưa có trường này nên để riêng rồi trải vào.
+ */
+const DARK_MANIFEST = {
+  user_preferences: {
+    color_scheme_dark: { background_color: '#181818', theme_color: '#1f1f1f' },
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -31,6 +44,7 @@ export default defineConfig({
         // Khớp nền trang (slate-100) và header (trắng) ở giao diện sáng.
         background_color: '#f1f5f9',
         theme_color: '#ffffff',
+        ...DARK_MANIFEST,
         icons: [
           { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
