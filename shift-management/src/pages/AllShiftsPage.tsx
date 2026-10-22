@@ -14,6 +14,7 @@ import type { ShiftDateBounds, ShiftQuery } from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
+import { LoadError } from '../components/LoadError'
 
 type Window = 'upcoming' | 'past' | 'all'
 
@@ -280,9 +281,7 @@ export function AllShiftsPage() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
-          {error}
-        </p>
+        <LoadError message={error} />
       )}
 
       {/* ---- kết quả ---- */}

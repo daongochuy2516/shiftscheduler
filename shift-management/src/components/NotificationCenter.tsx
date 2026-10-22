@@ -239,7 +239,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                           >
                             {t(item.title, item.params)}
                           </p>
-                          {item.body && (
+                          {(item.body || item.bodyKey) && (
                             <p
                               className={`mt-0.5 text-sm break-words whitespace-pre-line ${
                                 item.kind === 'error'
@@ -247,7 +247,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                                   : 'text-slate-600'
                               }`}
                             >
-                              {item.body}
+                              {item.bodyKey ? t(item.bodyKey) : item.body}
                             </p>
                           )}
                           <p

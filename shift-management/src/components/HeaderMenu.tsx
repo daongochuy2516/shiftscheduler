@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   Bell,
+  Download,
   Grip,
   KeyRound,
   Languages,
@@ -36,11 +37,14 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
  */
 export function HeaderMenu({
   isAdmin,
+  onInstall,
   onChangePassword,
   onSignOut,
   signingOut,
 }: {
   isAdmin: boolean
+  /** Có khi trình duyệt cài được app (pwa/install.ts); không thì ẩn ô. */
+  onInstall?: () => void
   onChangePassword: () => void
   onSignOut: () => void
   signingOut: boolean
@@ -108,7 +112,8 @@ export function HeaderMenu({
 
       {open && (
         <MenuPanel label={t('menu.label')}>
-          {/* Nhân viên 7 ô, admin thêm ô Tài khoản; lưới 3 cột. */}
+          {/* Nhân viên 7 ô, admin thêm ô Tài khoản, trình duyệt cài được app
+              thì thêm ô Cài ứng dụng; lưới 3 cột. */}
           <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-2">
             {isAdmin && (
               <Tile
@@ -158,6 +163,14 @@ export function HeaderMenu({
               label={t('nav.help')}
               onClick={() => run(() => navigate('/help'))}
             />
+            {onInstall && (
+              <Tile
+                icon={Download}
+                tone="bg-lime-50 text-lime-700"
+                label={t('pwa.install')}
+                onClick={() => run(onInstall)}
+              />
+            )}
             <Tile
               icon={KeyRound}
               tone="bg-amber-50 text-amber-600"

@@ -1,4 +1,8 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/vanillajs" />
+
+/** Mốc build (ISO), do `define` trong vite.config.ts điền. */
+declare const __APP_BUILD__: string
 
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string

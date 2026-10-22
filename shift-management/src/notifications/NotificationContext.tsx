@@ -10,6 +10,11 @@ import {
 import type { TranslateParams } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import type { UUID } from '../types'
+import {
+  OFFLINE_ERROR_MESSAGE,
+  isNetworkError,
+  isOfflineError,
+} from '../lib/network'
 import { NotificationCenter } from '../components/NotificationCenter'
 import { Toaster } from '../components/Toaster'
 
@@ -28,6 +33,11 @@ export interface AppNotification {
   title: TranslationKey
   params?: TranslateParams
   body: string | null
+  /**
+   * Thân thông báo dạng khoá, dịch lúc hiển thị — cho câu do chính app viết
+   * (ví dụ "đang offline"), khác với `body` là chữ thô của máy chủ.
+   */
+  bodyKey?: TranslationKey
   /** ISO timestamp */
   createdAt: string
   read: boolean
@@ -38,6 +48,7 @@ export interface NotifyInput {
   title: TranslationKey
   params?: TranslateParams
   body?: string | null
+  bodyKey?: TranslationKey
 }
 
 interface NotificationContextValue {
@@ -127,6 +138,7 @@ export function NotificationProvider({
       title: input.title,
       params: input.params,
       body: input.body ?? null,
+      bodyKey: input.bodyKey,
       createdAt: new Date().toISOString(),
       read: false,
     }
@@ -210,6 +222,21 @@ export function useNotifications(): NotificationContextValue {
 }
 
 /**
+ * Thân của thông báo lỗi. Lỗi mạng là câu của app (đã dịch): chưa gửi đi vì
+ * offline, hay mất mạng giữa chừng (có thể đã lưu, có thể chưa). Còn lại là
+ * câu nguyên văn của máy chủ.
+ */
+function errorBody(err: unknown): Pick<NotifyInput, 'body' | 'bodyKey'> {
+  if (isOfflineError(err) || err === OFFLINE_ERROR_MESSAGE) {
+    return { body: null, bodyKey: 'offline.notSent' }
+  }
+  if (err && isNetworkError(err)) {
+    return { body: null, bodyKey: 'offline.lostConnection' }
+  }
+  return { body: err instanceof Error ? err.message : err ? String(err) : null }
+}
+
+/**
  * Báo kết quả một thao tác. Lỗi thì `body` là câu nguyên văn của máy chủ —
  * database là nơi quyết định, người dùng cần thấy đúng lý do nó từ chối.
  */
@@ -226,7 +253,7 @@ export function useNotify() {
           kind: 'error',
           title,
           params,
-          body: err instanceof Error ? err.message : err ? String(err) : null,
+          ...errorBody(err),
         }),
     }),
     [notify],

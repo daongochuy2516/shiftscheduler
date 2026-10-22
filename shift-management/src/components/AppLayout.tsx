@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   Clock3,
+  Download,
   KeyRound,
   Languages,
   LayoutList,
@@ -45,6 +46,9 @@ import type { ShiftTemplate } from '../types'
 import { useTwoStep } from './useTwoStep'
 import { RoleBadge } from './RoleBadge'
 import { APP_NAME } from '../lib/brand'
+import { promptInstall, useInstallState } from '../pwa/install'
+import { OfflineBanner } from './OfflineBanner'
+import { InstallHelpModal } from './InstallHelpModal'
 
 const NAV: {
   to: string
@@ -129,6 +133,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [newShift, setNewShift] = useState<'menu' | 'templates' | null>(null)
   const [claimTarget, setClaimTarget] = useState<ShiftTemplate | null>(null)
   const [managingTemplates, setManagingTemplates] = useState(false)
+  const [installHelpOpen, setInstallHelpOpen] = useState(false)
+  const install = useInstallState()
+  /**
+   * Mục "Cài ứng dụng": Chrome / Edge / Android mở hộp cài của trình duyệt,
+   * iPhone / iPad thì hiện cách cài tay. Đã cài, hay trình duyệt không cài
+   * được (Firefox máy tính) thì không có mục này.
+   */
+  const onInstall =
+    install.canPrompt || install.manualIos
+      ? () => {
+          if (install.canPrompt) void promptInstall()
+          else setInstallHelpOpen(true)
+        }
+      : undefined
 
   // Ctrl + K (⌘K trên Mac) mở / đóng bảng lệnh nhanh ở bất cứ trang nào —
   // kể cả khi đang gõ trong ô nhập: phím tắt này không gõ ra chữ gì.
@@ -306,6 +324,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <div className="hidden sm:block">
                   <HeaderMenu
                     isAdmin={isAdmin}
+                    onInstall={onInstall}
                     onChangePassword={() => setChangingPassword(true)}
                     onSignOut={handleSignOut}
                     signingOut={signingOut}
@@ -321,6 +340,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {t('auth.mockBanner')}
           </p>
         )}
+        <OfflineBanner />
       </header>
 
       {/* Từ 640px nội dung cuộn trong khung riêng dưới header, để thanh cuộn
@@ -431,6 +451,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
               {t('palette.title')}
             </button>
 
+            {onInstall && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountOpen(false)
+                  onInstall()
+                }}
+                className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+              >
+                <SheetIcon icon={Download} tone="bg-lime-50 text-lime-700" />
+                {t('pwa.install')}
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {
@@ -504,6 +538,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {changingPassword && (
         <ChangePasswordModal onClose={() => setChangingPassword(false)} />
+      )}
+
+      {installHelpOpen && (
+        <InstallHelpModal onClose={() => setInstallHelpOpen(false)} />
       )}
 
       {newShift && (

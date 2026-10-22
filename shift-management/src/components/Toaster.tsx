@@ -74,13 +74,13 @@ function Toast({ item }: { item: AppNotification }) {
         <p className="text-sm font-semibold text-slate-900">
           {t(item.title, item.params)}
         </p>
-        {item.body && (
+        {(item.body || item.bodyKey) && (
           <p
             className={`mt-0.5 line-clamp-3 text-sm break-words ${
               item.kind === 'error' ? 'text-rose-700' : 'text-slate-600'
             }`}
           >
-            {item.body}
+            {item.bodyKey ? t(item.bodyKey) : item.body}
           </p>
         )}
       </button>

@@ -244,6 +244,26 @@ const vi: HelpSection[] = [
     ],
   },
   {
+    id: 'app',
+    title: 'Cài ứng dụng và mất mạng',
+    summary: 'Mở như app, xem lịch khi offline.',
+    blocks: [
+      {
+        type: 'list',
+        items: [
+          '**Cài ứng dụng**: nút lưới (điện thoại: avatar) → Cài ứng dụng. iPhone / iPad: mở bằng Safari → nút **Chia sẻ** → **Thêm vào MH chính**.',
+          '**Mất mạng** vẫn mở được app và xem những ngày / tuần / tháng **đã mở lúc có mạng trong 2 ngày qua**. Băng vàng dưới header cho biết dữ liệu lưu lúc mấy giờ.',
+          'Offline thì **chỉ xem**: tạo, sửa, nhận ca, điểm danh đều phải chờ có mạng. App không gửi bù — có mạng lại thì bấm lại.',
+          'Có **phiên bản mới** thì app hỏi trước khi tải lại, không tự nhảy giữa lúc bạn đang điền form.',
+        ],
+      },
+      {
+        type: 'note',
+        text: 'Đăng xuất là xoá hết dữ liệu đã lưu trên máy — máy dùng chung không giữ lịch của ai.',
+      },
+    ],
+  },
+  {
     id: 'faq',
     title: 'Câu hỏi thường gặp',
     summary: 'Những chỗ hay vướng.',
@@ -484,6 +504,26 @@ const en: HelpSection[] = [
           '**Sign out**: press **twice**.',
           'Forgot your password: ask an admin to reset it.',
         ],
+      },
+    ],
+  },
+  {
+    id: 'app',
+    title: 'Install the app and going offline',
+    summary: 'Open it like an app, read the schedule offline.',
+    blocks: [
+      {
+        type: 'list',
+        items: [
+          '**Install app**: grid button (phone: avatar) → Install app. iPhone / iPad: open in Safari → **Share** → **Add to Home Screen**.',
+          '**Offline**, the app still opens and shows the days / weeks / months **you opened while online in the last 2 days**. The yellow strip under the header says when that data was saved.',
+          'Offline is **read-only**: creating, editing, claiming and checking in all wait for a connection. Nothing is sent later on its own — press again once you’re back online.',
+          'When a **new version** is out, the app asks before reloading instead of jumping while you’re filling in a form.',
+        ],
+      },
+      {
+        type: 'note',
+        text: 'Signing out wipes everything saved on this device — a shared computer keeps nobody’s schedule.',
       },
     ],
   },

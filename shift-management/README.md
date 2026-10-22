@@ -35,6 +35,7 @@ Tài liệu liên quan: [roadmap.md](roadmap.md) (thiết kế phân quyền, lu
 - [9d. Hướng dẫn và bài từng bước](#9d-hướng-dẫn-và-bài-từng-bước)
 - [9e. Trang Trạng thái](#9e-trang-trạng-thái)
 - [9f. Giao diện sáng / tối và chữ bôi đen](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)
+- [9g. Cài ứng dụng và dùng khi mất mạng](#9g-cài-ứng-dụng-và-dùng-khi-mất-mạng)
 - [10. Tra cứu nhanh](#10-tra-cứu-nhanh)
 - [11. Dành cho quản trị viên](#11-dành-cho-quản-trị-viên)
 - [12. Cấu trúc mã nguồn](#12-cấu-trúc-mã-nguồn)
@@ -54,7 +55,7 @@ npm run lint     # oxlint
 
 Không có test tự động: `build` và `lint` là toàn bộ phần máy kiểm tra, còn lại phải mở ứng dụng lên thử. `lint` hiện có sẵn 2 cảnh báo `set-state-in-effect` (`useActionLogs.ts`, `ScheduleContext.tsx`) — đã biết, không phải lỗi mới.
 
-**Triển khai.** Ứng dụng là SPA tĩnh, đang deploy trên Netlify (`npm run build` ra thư mục `dist/`). `public/_redirects` đưa mọi đường dẫn về `index.html` để mở thẳng `/pending` hay `/shifts?...` không bị 404. Đổi tên miền thì cập nhật **Site URL** và **Redirect URLs** của Supabase ([mục 11](#thiết-lập-auth-cần-thiết)).
+**Triển khai.** Ứng dụng là SPA tĩnh, đang deploy trên Netlify (`npm run build` ra thư mục `dist/`). `public/_redirects` đưa mọi đường dẫn về `index.html` để mở thẳng `/pending` hay `/shifts?...` không bị 404. `build` sinh thêm `sw.js` (service worker) và `manifest.webmanifest` cho phần cài ứng dụng / offline ([mục 9g](#9g-cài-ứng-dụng-và-dùng-khi-mất-mạng)). Đổi tên miền thì cập nhật **Site URL** và **Redirect URLs** của Supabase ([mục 11](#thiết-lập-auth-cần-thiết)).
 
 ### Biến môi trường
 
@@ -672,24 +673,30 @@ Với người sửa mã: mỗi bước của bài trỏ vào phần tử có th
 
 ## 9e. Trang Trạng thái
 
-Trang **Trạng thái** (`/status`) cho biết ứng dụng có đang nói chuyện được với máy chủ không và phiên đăng nhập của bạn còn sống bao lâu — nơi đầu tiên cần mở khi *"ứng dụng chậm"* hay *"bấm mà không lưu được"*. Mở từ nút lưới → **Trạng thái** (điện thoại: avatar → **Trạng thái**), hoặc gõ *trạng thái* trong Ctrl + K.
+Trang **Trạng thái** (`/status`) cho biết ứng dụng có đang nói chuyện được với máy chủ không, phiên đăng nhập còn bao lâu, service worker và cache offline đang thế nào — nơi đầu tiên cần mở khi *"ứng dụng chậm"* hay *"bấm mà không lưu được"*. Mở từ nút lưới → **Trạng thái** (điện thoại: avatar → **Trạng thái**), hoặc gõ *trạng thái* trong Ctrl + K.
 
-Trang tự kiểm tra lại **mỗi 30 giây** (chạy ngầm), hoặc bấm **Kiểm tra lại** để kiểm tra ngay (nút quay trong lúc chờ). Có bốn thẻ, mỗi thẻ một nhãn màu ở góc: xanh (tốt), vàng (chậm / không ổn định), đỏ (lỗi), xám (đang kiểm tra / không áp dụng).
+**Ngôn ngữ.** Tiêu đề, dòng mô tả và nút **Kiểm tra lại** theo ngôn ngữ của web; **mọi thứ trong các thẻ luôn tiếng Anh** (nhãn, trạng thái, tooltip, "5 seconds ago", số kiểu `1.6 Mbps`), dù web đang ở tiếng Việt — đây là trang kỹ thuật, thuật ngữ gốc đọc chuẩn nhất. Bảng dưới dùng đúng nhãn hiện trên trang.
+
+Trang tự kiểm tra lại **mỗi 30 giây** (chạy ngầm), hoặc bấm **Kiểm tra lại** để kiểm tra ngay (nút quay trong lúc chờ). Có sáu thẻ, mỗi thẻ một nhãn màu ở góc: xanh (tốt), vàng (chậm / không ổn định), đỏ (lỗi), xám (đang kiểm tra / không áp dụng).
 
 | Thẻ | Có gì |
 | --- | --- |
-| **Database** | Tên máy chủ Supabase; **Xác thực** (hỏi thẳng máy chủ Auth, xác thực luôn token hiện tại) và **Cơ sở dữ liệu** (một truy vấn nhỏ nhất qua REST + RLS), mỗi dòng ghi thời gian khứ hồi bằng ms; **Realtime** (đã kết nối hay mất kết nối, kèm số kênh đã vào `n/m`); thời điểm kiểm tra lần cuối |
-| **Phiên đăng nhập** | Tài khoản (tên, email); **Token hết hạn** lúc nào và còn bao lâu (token tự làm mới trước khi hết hạn); lần đăng nhập cuối; User ID — các dòng này chọn và chép được để gửi cho admin |
-| **Cloudflare** | Chỉ có số liệu khi trang **thực sự đi qua Cloudflare**: trung tâm dữ liệu phục vụ bạn (ví dụ `HKG · VN`), thời gian phản hồi edge, giao thức HTTP / TLS. Kèm tình trạng mạng chung và số sự cố đang mở lấy từ cloudflarestatus.com |
-| **Netlify** | Tương tự, cho Netlify: trung tâm dữ liệu edge, thời gian phản hồi, trạng thái cache; tình trạng chung từ netlifystatus.com |
+| **Supabase** | **Project host**; **Authentication** (hỏi thẳng máy chủ Auth, xác thực luôn token hiện tại) và **Database (REST API)** (một truy vấn nhỏ nhất qua RLS), mỗi dòng ghi thời gian khứ hồi bằng ms; **Realtime** (*Connected · n of m channels joined* / *Disconnected*); **Last checked**. Nhãn thẻ: *Operational*, *Degraded*, *Down* |
+| **Session** | **Account** (tên, email); **Access token expires** — lúc nào và còn bao lâu (tự refresh trước khi hết hạn); **Last signed in**; **User identifier** — các dòng này chọn và chép được để gửi cho admin |
+| **Application** | **Display mode**: *Standalone window (installed)* (mở như app đã cài) hay *Browser tab*; **Service worker**: *Activated and running* / *Waiting, new version ready*; **Precached files**: số tệp và dung lượng app shell được lưu sẵn để mở khi offline; **Installation** — nút **Install app** (Chrome, Edge, Android) hoặc **How to install** (iPhone / iPad), đã cài thì *Installed*. Chân thẻ: **Build time** và nút **Check for updates** (không có bản mới thì báo *Up to date*; có thì thành **Update now**). Nhãn thẻ *Ready for offline use*, *Update available* (vàng); chạy `npm run dev` thì *Disabled in development* và thẻ chỉ ghi cách thử bản build ([mục 9g](#9g-cài-ứng-dụng-và-dùng-khi-mất-mạng)) |
+| **Offline cache** | **Network** online / offline, kèm loại mạng, độ trễ, tốc độ khi trình duyệt cho biết (Chrome, Edge, Android); bốn ô số **Since this tab was opened**: *Reads from server*, *Reads from cache* (bao nhiêu lần do máy chủ chậm quá hạn — *server timeouts*), *Times offline* (tổng bao lâu), *Writes blocked offline*; **IndexedDB cache**: số mục, dung lượng, gồm những gì (shifts, date ranges, action logs, staff profiles, shift templates), *last saved* — chỉ tính mục còn trong hạn 48 giờ. Chân thẻ: **Browser storage** đã dùng / trần, và **Clear cache** (bấm hai lần). Nhãn thẻ: *Online* (xanh), *Serving cached data* (vàng), *Offline* (đỏ) |
+| **Cloudflare** | Chỉ có số liệu khi trang **thực sự đi qua Cloudflare**: **Edge location** (ví dụ `HKG · VN`), **Edge response time**, **Connection protocol** HTTP / TLS. Kèm trạng thái chung (**Cloudflare global status**) và **Open incidents** lấy từ cloudflarestatus.com |
+| **Netlify** | Tương tự, cho Netlify: edge, độ trễ, **Edge cache status**; trạng thái chung từ netlifystatus.com |
 
-**Màu của từng dòng.** Thời gian phản hồi dưới **500 ms** là xanh, tới **1500 ms** là vàng, hơn nữa hoặc gặp lỗi là đỏ. Realtime mất kết nối thì thẻ Database vàng. Phiên còn dưới **5 phút** thì vàng (*Sắp hết hạn*), hết hạn là đỏ (*Đã hết hạn*), không có phiên là đỏ (*Không có phiên*).
+**Màu của từng dòng.** Thời gian phản hồi dưới **500 ms** là xanh, tới **1500 ms** là vàng, hơn nữa hoặc gặp lỗi là đỏ. Realtime mất kết nối thì thẻ Supabase vàng. Phiên còn dưới **5 phút** thì vàng (*Expiring*), hết hạn là đỏ (*Expired*), không có phiên là đỏ (*No session*).
 
-**Cloudflare / Netlify khi chạy local.** Mở app ở `localhost` thì trang không đi qua nhà cung cấp nào, các dòng hiện *Không đi qua Cloudflare / Netlify* và nhãn thẻ theo tình trạng chung của họ. Khi app đang được chính nhà cung cấp đó phục vụ thì nhãn theo **thời gian phản hồi thật** của app — tình trạng chung của họ gần như lúc nào cũng có sự cố nhỏ ở đâu đó trên thế giới nên để nó quyết định thì thẻ luôn vàng. Sự cố đang mở hiện tối đa 3 dòng (bấm để mở trang sự cố), còn lại gộp thành *+N nữa*.
+**Cloudflare / Netlify khi chạy local.** Mở app ở `localhost` thì trang không đi qua nhà cung cấp nào, dòng Edge location ghi *Not served through Cloudflare / Netlify* và nhãn thẻ theo trạng thái chung của họ. Khi app đang được chính nhà cung cấp đó phục vụ thì nhãn theo **thời gian phản hồi thật** của app — trạng thái chung của họ gần như lúc nào cũng có sự cố nhỏ ở đâu đó trên thế giới nên để nó quyết định thì thẻ luôn vàng. Sự cố đang mở hiện tối đa 3 dòng (bấm để mở trang sự cố), còn lại gộp thành *+N more*.
 
-Những kiểm tra này chạy **từ trình duyệt của bạn**: tình trạng chung lấy bằng cách gọi trang Statuspage công khai của nhà cung cấp, không gửi dữ liệu ca hay tài khoản đi đâu. Không lấy được thì dòng đó báo *Không lấy được từ …*, các thẻ khác vẫn chạy.
+Những kiểm tra này chạy **từ trình duyệt của bạn**: trạng thái chung lấy bằng cách gọi trang Statuspage công khai của nhà cung cấp, không gửi dữ liệu ca hay tài khoản đi đâu. Không lấy được thì dòng đó ghi *… unreachable*, các thẻ khác vẫn chạy.
 
-**Chế độ dữ liệu mẫu.** Không có Supabase để kiểm tra: thẻ Database ghi *Dữ liệu mẫu* và thẻ Phiên là *Phiên mẫu, lưu trong trình duyệt này*; hai thẻ Cloudflare / Netlify vẫn chạy.
+**Chế độ dữ liệu mẫu.** Không có Supabase để kiểm tra: thẻ Supabase ghi *Mock data* và thẻ Session ghi *Mock session stored in this browser (localStorage)*; các thẻ còn lại vẫn chạy.
+
+Với người sửa mã: phần thẻ nằm trong `StatusCards`, bọc bởi `FixedLang lang="en"` (`src/i18n/I18nContext.tsx`) — `useI18n()` bên trong trả `t()` tiếng Anh và `dateLocale` enUS. Khoá `status.*` của phần thẻ chỉ có ở từ điển `en` (kiểu `EnglishOnlyKey` trong `translations.ts`; thêm bản `vi` là lỗi biên dịch).
 
 ---
 
@@ -720,6 +727,46 @@ Với người sửa mã: gắn `data-tooltip="…"` lên phần tử, **không 
 ### Ô chọn tự vẽ
 
 Ô chọn một giá trị, ô tích, ô chọn ngày và chọn nhiều nhân viên đều là thành phần tự vẽ chứ không phải ô gốc của trình duyệt, nên giống nhau ở mọi máy và theo được chế độ tối. Ô ngày gõ được bằng phím (xem [mục 6](#phần-thông-tin-ca)).
+
+---
+
+## 9g. Cài ứng dụng và dùng khi mất mạng
+
+Ứng dụng là một **PWA**: cài được ra màn hình chính / menu Start như app thật, mở trong cửa sổ riêng không có thanh địa chỉ, và **mất mạng vẫn mở được để xem** lịch đã xem lần cuối.
+
+### Cài ứng dụng
+
+| Thiết bị | Cách cài |
+| --- | --- |
+| Chrome / Edge trên máy tính, Android | Nút lưới → **Cài ứng dụng** (điện thoại: avatar → **Cài ứng dụng**), hoặc biểu tượng cài trên thanh địa chỉ của trình duyệt |
+| iPhone / iPad | Mục **Cài ứng dụng** mở hướng dẫn: mở trang bằng Safari → nút **Chia sẻ** → **Thêm vào MH chính** → **Thêm** |
+
+Đã cài, hoặc trình duyệt không cài được (Firefox trên máy tính), thì không có mục này. Giữ lâu biểu tượng app (điện thoại) hay chuột phải ở taskbar (Windows) có lối tắt vào **Lịch**, **Ca của tôi**, **Chờ xác nhận**.
+
+### Khi mất mạng
+
+- **Mở được app.** Toàn bộ giao diện được lưu sẵn trên máy sau lần mở đầu tiên. Phiên đăng nhập vẫn giữ, kể cả khi token đã quá một giờ (có mạng lại thì tự làm mới).
+- **Xem được những gì đã xem.** Mỗi lần tải được từ máy chủ — một ngày / tuần / tháng trên Lịch, Ca của tôi, Chờ xác nhận, danh sách nhân viên, ca mẫu, trang Nhật ký đã mở — đều được lưu trên máy. Offline thì app đọc bản lưu đó; phần **chưa mở lúc có mạng trong 2 ngày qua** thì báo *phần này chưa được lưu trên máy*.
+- **Băng vàng dưới header** nói rõ đang xem dữ liệu lưu lúc mấy giờ: *Bạn đang offline — đang xem dữ liệu lưu lúc 12:48*. Có wifi mà không tới được máy chủ (mạng chập chờn) thì sau 5 giây app cũng dùng bản lưu và báo *Không kết nối được máy chủ*.
+- **Chỉ xem, không ghi.** Tạo / sửa / xoá ca, nhận ca, điểm danh, đổi mật khẩu khi offline đều bị chặn ngay, báo *Bạn đang offline nên chưa gửi gì đi* và form giữ nguyên để bấm lại khi có mạng. App cố ý **không xếp hàng gửi sau**: luật điểm danh tính theo giờ máy chủ, một lượt điểm danh gửi bù lúc có mạng sẽ sai giờ hoặc bị từ chối. Mất mạng giữa lúc đang gửi thì báo *Mất kết nối giữa chừng* — có mạng lại hãy kiểm tra xem thay đổi đã vào chưa.
+- **Có mạng lại** thì mọi thứ đang hiện được tải lại ngay (Realtime không báo những gì đổi trong lúc mất mạng), băng vàng tự tắt.
+- **Đăng nhập** cần có mạng. **Đăng xuất** lúc offline vẫn được và xoá sạch bản lưu trên máy.
+
+### Bản lưu trên máy
+
+Nằm trong IndexedDB của trình duyệt (`thinkmay-offline`), riêng từng tài khoản: **đăng xuất là xoá hết**, đăng nhập tài khoản khác thì phần của người trước bị xoá. Mỗi phần chỉ giữ **2 ngày** kể từ lần tải gần nhất — lịch cũ hơn dễ sai so với thực tế, nên offline thà báo chưa có còn hơn hiện lịch đã đổi; quá hạn là bị xoá. Tối đa 400 phần mới nhất. Trình duyệt không cho dùng IndexedDB (một số chế độ ẩn danh) thì app chạy bình thường, chỉ là không xem được khi offline. Hồ sơ của người đang đăng nhập (tên, vai trò) lưu thêm ở `localStorage` (`scheduler.offlineProfile`) để mở app offline — cũng bị xoá khi đăng xuất. Muốn xoá bản lưu mà không đăng xuất: trang Trạng thái → thẻ **Offline cache** → **Clear cache**. Ở đó cũng xem được bản lưu gồm những gì.
+
+### Phiên bản mới
+
+Deploy bản mới thì app đang mở **không tự tải lại** (đang điền dở form là mất). App tự hỏi bản mới mỗi giờ và mỗi lần quay lại tab; có bản mới thì hiện hộp **Đã có phiên bản mới** (điện thoại: phía trên nút nổi; máy tính: góc phải dưới) với **Tải lại** / **Để sau**. Để sau thì lần mở app sau sẽ chạy bản mới, hoặc vào trang Trạng thái → **Cập nhật ngay**.
+
+Với người sửa mã:
+
+- Service worker do `vite-plugin-pwa` sinh lúc `build` (cấu hình `VitePWA` trong `vite.config.ts`), chỉ giữ **vỏ ứng dụng** (JS, CSS, icon, `index.html` cho mọi đường dẫn). `npm run dev` không đăng ký service worker — thử offline thì `npm run build && npm run preview` rồi DevTools → Network → Offline.
+- Dữ liệu offline không đi qua service worker mà ở tầng backend: `src/data/offlineBackend.ts` bọc backend đang chạy (cả bản mock) — đọc qua mạng trước, hỏng mạng thì lấy bản lưu (`offlineCache.ts`), ghi thì chặn khi offline. Thêm phương thức đọc vào `SchedulerBackend` thì quyết định luôn nó có lưu offline không (bộ bọc là object kiểu `SchedulerBackend`, thiếu là lỗi biên dịch).
+- Phần phiên offline nằm trong `src/auth/supabaseAuth.ts` (hồ sơ lưu trên máy, bỏ qua sự kiện `INITIAL_SESSION`, đăng xuất `scope: 'local'` khi offline).
+- Icon app: `public/favicon.svg` (bo góc) và `public/app-icon-maskable.svg` (tràn viền, cho Android / iOS); các PNG `pwa-*.png`, `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png` dựng từ hai file này — đổi logo thì dựng lại cả bộ.
+- Màu thanh tiêu đề khi chạy như app (`<meta name="theme-color">`) đổi theo giao diện sáng / tối: `THEME_COLOR` trong `ThemeContext.tsx` và script chống nháy trong `index.html` phải khớp nhau.
 
 ---
 
@@ -890,11 +937,12 @@ Chưa chạy 005 thì cột `profiles.role` chưa có và **không áp luật n�
 ```
 src/
 ├── auth/           # Xác thực: interface + bản mock + bản Supabase
-├── data/           # Truy cập dữ liệu: interface, hai backend, bộ đệm ca (shiftStore), ScheduleContext (hook đọc / ghi)
+├── data/           # Truy cập dữ liệu: interface, hai backend, bộ bọc offline + bản lưu IndexedDB, bộ đệm ca (shiftStore), ScheduleContext (hook đọc / ghi)
 ├── components/     # Timeline, WeekGrid, MonthGrid, SummaryGrid, form ca, Modal, Select, Checkbox, DateInput, header, menu…
 ├── pages/          # Login, Lịch, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản, Hướng dẫn
 ├── help/           # Nội dung trang Hướng dẫn (content.ts), kịch bản wizard (tours.ts), TourProvider
 ├── notifications/  # Thông báo: popup + ngăn thông báo, lưu ở localStorage
+├── pwa/            # Service worker (đăng ký, bản mới) và cài ứng dụng
 ├── theme/          # Sáng / Tối / Hệ thống
 ├── i18n/           # Từ điển vi/en và provider
 ├── lib/            # Hàm thuần: thời gian, màu, tổng kết, luật điểm danh phía client, lọc, URL, các probe của trang Trạng thái…
@@ -906,7 +954,7 @@ Thứ tự bọc của ứng dụng: `ThemeProvider → I18nProvider → AuthPro
 
 Hai file quyết định backend nào đang chạy:
 
-- `src/data/index.ts` — chọn `supabaseBackend` hoặc `mockBackend`
+- `src/data/index.ts` — chọn `supabaseBackend` hoặc `mockBackend`, rồi bọc trong `withOfflineCache` ([mục 9g](#9g-cài-ứng-dụng-và-dùng-khi-mất-mạng))
 - `src/auth/index.ts` — chọn `supabaseAuth` hoặc `mockAuth`
 
 Cả hai tự động dựa vào việc `.env` có được cấu hình hay không. Giao diện không import trực tiếp bất kỳ backend nào (đọc qua hook, ghi qua `useSchedule()` — các hàm ghi tự làm tươi màn hình sau khi lưu), nên đổi backend không phải sửa component. Thêm gì vào `SchedulerBackend` hay `AuthBackend` thì viết ở **cả hai** bản, và bản mock phải hành xử giống bản thật, kể cả nhật ký.
@@ -941,7 +989,8 @@ Bộ đệm nằm ở `src/data/shiftStore.ts`: lát cắt đang xem được l�
 
 - Khi đã cuộn sâu nhiều tháng ở trang Tất cả ca, mỗi thay đổi qua Realtime làm tươi lại **từng tháng đang hiển thị** (mỗi tháng một truy vấn nhỏ có index). Đổi tab hoặc bộ lọc thì quay về một tháng.
 - **Ca của tôi** tải toàn bộ lịch sử của *một* người (cần cho ô tổng số lượt). Nhẹ hơn nhiều so với cả nhóm, nhưng vẫn tăng dần theo thời gian.
-- Bundle khoảng 840 KB (gzip khoảng 233 KB), chưa tách code; `build` có cảnh báo chunk lớn hơn 500 KB.
+- Bundle khoảng 880 KB (gzip khoảng 245 KB), chưa tách code; `build` có cảnh báo chunk lớn hơn 500 KB. Service worker tải sẵn cả bundle ở lần mở đầu (~970 KB chưa nén).
+- Offline chỉ xem được, không ghi; chỉ xem được những phần đã mở lúc có mạng ([mục 9g](#9g-cài-ứng-dụng-và-dùng-khi-mất-mạng)).
 - Ca qua nửa đêm (22:00 → 02:00) chưa được hỗ trợ: ràng buộc `end_time > start_time` yêu cầu ca nằm gọn trong một ngày.
 - Tổng kết tính lại từ dữ liệu hiện có mỗi lần mở, không phải ảnh chụp bất biến ([mục 8c](#8c-trang-tổng-kết)).
 - Ca đã qua mà trống, hoặc chỉ có mình chưa điểm danh: nhân viên vẫn sửa được giờ / tên. Xem phần "Chưa làm" trong [roadmap.md](roadmap.md).

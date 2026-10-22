@@ -14,6 +14,7 @@ import { StatusPage } from './pages/StatusPage'
 import { AccountsPage } from './pages/AccountsPage'
 import { HelpPage } from './pages/HelpPage'
 import { TooltipLayer } from './components/Tooltip'
+import { UpdatePrompt } from './components/UpdatePrompt'
 
 export default function App() {
   return (
@@ -43,6 +44,8 @@ export default function App() {
         </AuthProvider>
         {/* Tooltip tự vẽ cho mọi phần tử có `data-tooltip`, kể cả trang đăng nhập. */}
         <TooltipLayer />
+        {/* Nhắc tải lại khi service worker đã có bản mới (pwa/serviceWorker.ts). */}
+        <UpdatePrompt />
       </I18nProvider>
     </ThemeProvider>
   )

@@ -1,18 +1,24 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { format, formatDistanceStrict } from 'date-fns'
 import {
+  Check,
   Cloud,
+  CloudOff,
   Database,
+  Download,
   ExternalLink,
   Globe,
+  HardDrive,
   KeyRound,
   RotateCw,
+  Smartphone,
+  Trash2,
   UserRound,
   Network,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { IS_MOCK_BACKEND } from '../data'
-import { useI18n } from '../i18n/I18nContext'
+import { FixedLang, useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { supabaseHost } from '../lib/supabaseClient'
 import {
@@ -24,6 +30,29 @@ import { probeCloudflare, type CloudflareStatus } from '../lib/cloudflareStatus'
 import { probeNetlify, type NetlifyStatus } from '../lib/netlifyStatus'
 import type { StatuspageSummary } from '../lib/statuspage'
 import { Avatar } from '../components/Avatar'
+import {
+  offlineStats,
+  resetOfflineData,
+  type OfflineKind,
+  type OfflineStats,
+} from '../data/offlineCache'
+import { useNetworkStatus, useOfflineMetrics } from '../data/networkStatus'
+import { useNotify } from '../notifications/NotificationContext'
+import { useTwoStep } from '../components/useTwoStep'
+import { promptInstall, useInstallState } from '../pwa/install'
+import { InstallHelpModal } from '../components/InstallHelpModal'
+import {
+  connectionInfo,
+  precacheInfo,
+  storageInfo,
+  type PrecacheInfo,
+  type StorageInfo,
+} from '../pwa/storage'
+import {
+  applyUpdate,
+  checkForUpdate,
+  useServiceWorker,
+} from '../pwa/serviceWorker'
 
 const RECHECK_MS = 30_000
 /** Dưới mức này là tốt; tới SLOW_MS là chậm; trên nữa coi như có vấn đề. */
@@ -112,8 +141,9 @@ function providerBadge(
 }
 
 export function StatusPage() {
-  const { t, dateLocale } = useI18n()
-  const { user } = useAuth()
+  // Tiêu đề, dòng mô tả và nút Kiểm tra lại theo ngôn ngữ của web; mọi thứ
+  // trong các thẻ luôn tiếng Anh (StatusCards, bọc trong FixedLang).
+  const { t } = useI18n()
   const [status, setStatus] = useState<SupabaseStatus | null>(null)
   const [cf, setCf] = useState<CloudflareStatus | null>(null)
   const [nf, setNf] = useState<NetlifyStatus | null>(null)
@@ -151,8 +181,60 @@ export function StatusPage() {
     return () => clearInterval(id)
   }, [])
 
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <Network className="h-5 w-5 shrink-0 text-slate-400" />
+            {t('status.title')}
+          </h1>
+          <p className="text-sm text-slate-500">{t('status.subtitle')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={recheck}
+          disabled={checking}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-60"
+        >
+          <RotateCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
+          {t('status.recheck')}
+        </button>
+      </div>
+
+      <FixedLang lang="en">
+        <StatusCards status={status} cf={cf} nf={nf} now={now} />
+      </FixedLang>
+    </div>
+  )
+}
+
+/**
+ * Sáu thẻ của trang. Luôn tiếng Anh, ở mọi ngôn ngữ của web: tên dịch vụ,
+ * trạng thái và số liệu kỹ thuật đọc chuẩn nhất bằng thuật ngữ gốc. Chuỗi vẫn
+ * qua `t()` (khoá `status.*` chỉ có ở `en`, xem `EnglishOnlyKey`).
+ */
+function StatusCards({
+  status,
+  cf,
+  nf,
+  now,
+}: {
+  status: SupabaseStatus | null
+  cf: CloudflareStatus | null
+  nf: NetlifyStatus | null
+  now: number
+}) {
+  const { t, dateLocale } = useI18n()
+  const { user } = useAuth()
+
+  // `now` chỉ nhích mỗi giây: mốc vừa ghi có thể muộn hơn nó vài trăm ms,
+  // không kẹp lại thì ra "0 giây nữa".
   const ago = (at: number) =>
-    formatDistanceStrict(at, now, { addSuffix: true, locale: dateLocale })
+    formatDistanceStrict(Math.min(at, now), now, {
+      addSuffix: true,
+      locale: dateLocale,
+    })
 
   const session = status?.session ?? null
   const sessionTone: Tone = IS_MOCK_BACKEND
@@ -184,239 +266,679 @@ export function StatusPage() {
   const nfBadge = providerBadge(nf !== null, nf?.origin?.ms ?? null, nf?.global ?? null)
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <Network className="h-5 w-5 shrink-0 text-slate-400" />
-            {t('status.title')}
-          </h1>
-          <p className="text-sm text-slate-500">{t('status.subtitle')}</p>
-        </div>
-        <button
-          type="button"
-          onClick={recheck}
-          disabled={checking}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 disabled:opacity-60"
-        >
-          <RotateCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
-          {t('status.recheck')}
-        </button>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* ---- Database (Supabase) ---- */}
-        <Card
-          icon={Database}
-          title={t('status.supabase')}
-          tone={IS_MOCK_BACKEND || !status ? 'idle' : supabaseTone(status)}
-          label={
-            IS_MOCK_BACKEND
-              ? t('status.mockShort')
-              : t(status ? OVERALL_LABEL[supabaseTone(status)] : 'status.checking')
-          }
-        >
-          {IS_MOCK_BACKEND ? (
-            <Note>{t('status.mock')}</Note>
-          ) : (
-            <dl className="divide-y divide-slate-100">
-              <Row label={t('status.host')}>
-                <span className="font-mono text-xs">{supabaseHost ?? '—'}</span>
-              </Row>
-              <Row label={t('status.auth')}>
-                <Probe probe={status?.auth} />
-              </Row>
-              <Row label={t('status.database')}>
-                <Probe probe={status?.database} />
-              </Row>
-              <Row label={t('status.realtime')}>
-                {status ? (
-                  <Indicator tone={status.realtime.connected ? 'ok' : 'warn'}>
-                    {status.realtime.connected
-                      ? t('status.realtimeConnected', {
-                          joined: status.realtime.channels.filter(
-                            (c) => c.state === 'joined',
-                          ).length,
-                          total: status.realtime.channels.length,
-                        })
-                      : t('status.realtimeDisconnected')}
-                  </Indicator>
-                ) : (
-                  <Pending />
-                )}
-              </Row>
-              <Row label={t('status.lastChecked')} hint={t('status.autoRecheck')}>
-                {status ? ago(status.checkedAt) : <Pending />}
-              </Row>
-            </dl>
-          )}
-        </Card>
-
-        {/* ---- Phiên đăng nhập ---- */}
-        <Card
-          icon={KeyRound}
-          title={t('status.session')}
-          tone={sessionTone}
-          label={t(sessionLabel)}
-        >
+    <div lang="en" className="grid gap-4 lg:grid-cols-2">
+      {/* ---- Database (Supabase) ---- */}
+      <Card
+        icon={Database}
+        title={t('status.supabase')}
+        tone={IS_MOCK_BACKEND || !status ? 'idle' : supabaseTone(status)}
+        label={
+          IS_MOCK_BACKEND
+            ? t('status.mockShort')
+            : t(status ? OVERALL_LABEL[supabaseTone(status)] : 'status.checking')
+        }
+      >
+        {IS_MOCK_BACKEND ? (
+          <Note>{t('status.mock')}</Note>
+        ) : (
           <dl className="divide-y divide-slate-100">
-            <Row label={t('status.account')}>
-              {user ? (
-                <span className="flex min-w-0 items-center gap-2">
-                  <Avatar name={user.display_name} seed={user.id} size="sm" />
-                  <span className="min-w-0 text-right">
-                    <span className="block truncate font-medium text-slate-900">
-                      {user.display_name}
-                    </span>
-                    <span className="block truncate text-xs text-slate-500">
-                      {user.email}
-                    </span>
+            <Row label={t('status.host')}>
+              <span className="font-mono text-xs">{supabaseHost ?? '—'}</span>
+            </Row>
+            <Row label={t('status.auth')}>
+              <Probe probe={status?.auth} />
+            </Row>
+            <Row label={t('status.database')}>
+              <Probe probe={status?.database} />
+            </Row>
+            <Row label={t('status.realtime')}>
+              {status ? (
+                <Indicator tone={status.realtime.connected ? 'ok' : 'warn'}>
+                  {status.realtime.connected
+                    ? t('status.realtimeConnected', {
+                        joined: status.realtime.channels.filter(
+                          (c) => c.state === 'joined',
+                        ).length,
+                        total: status.realtime.channels.length,
+                      })
+                    : t('status.realtimeDisconnected')}
+                </Indicator>
+              ) : (
+                <Pending />
+              )}
+            </Row>
+            <Row label={t('status.lastChecked')} hint={t('status.autoRecheck')}>
+              {status ? ago(status.checkedAt) : <Pending />}
+            </Row>
+          </dl>
+        )}
+      </Card>
+
+      {/* ---- Phiên đăng nhập ---- */}
+      <Card
+        icon={KeyRound}
+        title={t('status.session')}
+        tone={sessionTone}
+        label={t(sessionLabel)}
+      >
+        <dl className="divide-y divide-slate-100">
+          <Row label={t('status.account')}>
+            {user ? (
+              <span className="flex min-w-0 items-center gap-2">
+                <Avatar name={user.display_name} seed={user.id} size="sm" />
+                <span className="min-w-0 text-right">
+                  <span className="block truncate font-medium text-slate-900">
+                    {user.display_name}
+                  </span>
+                  <span className="block truncate text-xs text-slate-500">
+                    {user.email}
                   </span>
                 </span>
-              ) : (
-                <UserRound className="h-4 w-4 text-slate-400" />
-              )}
-            </Row>
-
-            {!IS_MOCK_BACKEND && (
-              <>
-                <Row
-                  label={t('status.expiresAt')}
-                  hint={session?.expiresAt ? t('status.autoRefreshHint') : undefined}
-                >
-                  {!status ? (
-                    <Pending />
-                  ) : session?.expiresAt ? (
-                    <span className="text-right">
-                      <span className="block tabular-nums">
-                        {format(session.expiresAt, 'HH:mm:ss · dd/MM')}
-                      </span>
-                      <span className="block text-xs text-slate-500">
-                        {session.expiresAt > now
-                          ? t('status.expiresIn', {
-                              time: formatDistanceStrict(session.expiresAt, now, {
-                                locale: dateLocale,
-                              }),
-                            })
-                          : ago(session.expiresAt)}
-                      </span>
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </Row>
-                <Row label={t('status.lastSignIn')}>
-                  {!status ? (
-                    <Pending />
-                  ) : session?.lastSignInAt ? (
-                    <span className="tabular-nums">
-                      {format(new Date(session.lastSignInAt), 'HH:mm · dd/MM/yyyy')}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </Row>
-                <Row label={t('status.userId')}>
-                  <span className="truncate font-mono text-xs">
-                    {session?.userId ?? user?.id ?? '—'}
-                  </span>
-                </Row>
-              </>
+              </span>
+            ) : (
+              <UserRound className="h-4 w-4 text-slate-400" />
             )}
-          </dl>
-          {IS_MOCK_BACKEND && (
-            <Note bordered>{t('status.mockSession')}</Note>
+          </Row>
+
+          {!IS_MOCK_BACKEND && (
+            <>
+              <Row
+                label={t('status.expiresAt')}
+                hint={session?.expiresAt ? t('status.autoRefreshHint') : undefined}
+              >
+                {!status ? (
+                  <Pending />
+                ) : session?.expiresAt ? (
+                  <span className="text-right">
+                    <span className="block tabular-nums">
+                      {format(session.expiresAt, 'HH:mm:ss · dd/MM')}
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      {session.expiresAt > now
+                        ? t('status.expiresIn', {
+                            time: formatDistanceStrict(session.expiresAt, now, {
+                              locale: dateLocale,
+                            }),
+                          })
+                        : ago(session.expiresAt)}
+                    </span>
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </Row>
+              <Row label={t('status.lastSignIn')}>
+                {!status ? (
+                  <Pending />
+                ) : session?.lastSignInAt ? (
+                  <span className="tabular-nums">
+                    {format(new Date(session.lastSignInAt), 'HH:mm · dd/MM/yyyy')}
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </Row>
+              <Row label={t('status.userId')}>
+                <span className="truncate font-mono text-xs">
+                  {session?.userId ?? user?.id ?? '—'}
+                </span>
+              </Row>
+            </>
           )}
-        </Card>
+        </dl>
+        {IS_MOCK_BACKEND && (
+          <Note bordered>{t('status.mockSession')}</Note>
+        )}
+      </Card>
 
-        {/* ---- Cloudflare ---- */}
-        <Card
-          icon={Cloud}
-          title="Cloudflare"
-          tone={cfBadge.tone}
-          label={t(cfBadge.label)}
-        >
-          <dl className="divide-y divide-slate-100">
-            <Row label={t('status.provider.edge')}>
-              {!cf ? (
-                <Pending />
-              ) : cf.edge ? (
-                <Indicator tone={msTone(cf.edge.ms)}>
-                  <span className="font-mono text-xs">{cf.edge.colo}</span>
-                  {cf.edge.loc && (
-                    <span className="text-slate-500"> · {cf.edge.loc}</span>
-                  )}
-                </Indicator>
-              ) : (
-                <NotServed name="Cloudflare" />
-              )}
-            </Row>
-            {cf?.edge && (
-              <>
-                <Row label={t('status.provider.latency')}>
-                  <span className="tabular-nums">{cf.edge.ms} ms</span>
-                </Row>
-                <Row label={t('status.cf.protocol')}>
-                  <span className="font-mono text-xs">
-                    {[cf.edge.http, cf.edge.tls].filter(Boolean).join(' · ') || '—'}
-                  </span>
-                </Row>
-              </>
-            )}
-            <SummaryRows
-              name="Cloudflare"
-              host="cloudflarestatus.com"
-              loaded={cf !== null}
-              summary={cf?.global ?? null}
-              error={cf?.globalError ?? null}
-            />
-          </dl>
-          <IncidentList summary={cf?.global ?? null} />
-        </Card>
+      {/* ---- Ứng dụng (PWA, offline) ---- */}
+      <AppCard />
+      <OfflineCard now={now} ago={ago} />
 
-        {/* ---- Netlify ---- */}
-        <Card
-          icon={Globe}
-          title="Netlify"
-          tone={nfBadge.tone}
-          label={t(nfBadge.label)}
-        >
-          <dl className="divide-y divide-slate-100">
-            <Row label={t('status.provider.edge')}>
-              {!nf ? (
-                <Pending />
-              ) : nf.origin ? (
-                <Indicator tone={msTone(nf.origin.ms)}>
-                  <span className="font-mono text-xs">
-                    {nf.origin.dc ?? 'Netlify'}
-                  </span>
-                </Indicator>
-              ) : (
-                <NotServed name="Netlify" />
-              )}
-            </Row>
-            {nf?.origin && (
-              <>
-                <Row label={t('status.provider.latency')}>
-                  <span className="tabular-nums">{nf.origin.ms} ms</span>
-                </Row>
-                <Row label={t('status.nf.cache')}>
-                  <span className="font-mono text-xs">{nf.origin.cache ?? '—'}</span>
-                </Row>
-              </>
+      {/* ---- Cloudflare ---- */}
+      <Card
+        icon={Cloud}
+        title="Cloudflare"
+        tone={cfBadge.tone}
+        label={t(cfBadge.label)}
+      >
+        <dl className="divide-y divide-slate-100">
+          <Row label={t('status.provider.edge')}>
+            {!cf ? (
+              <Pending />
+            ) : cf.edge ? (
+              <Indicator tone={msTone(cf.edge.ms)}>
+                <span className="font-mono text-xs">{cf.edge.colo}</span>
+                {cf.edge.loc && (
+                  <span className="text-slate-500"> · {cf.edge.loc}</span>
+                )}
+              </Indicator>
+            ) : (
+              <NotServed name="Cloudflare" />
             )}
-            <SummaryRows
-              name="Netlify"
-              host="netlifystatus.com"
-              loaded={nf !== null}
-              summary={nf?.global ?? null}
-              error={nf?.globalError ?? null}
-            />
-          </dl>
-          <IncidentList summary={nf?.global ?? null} />
-        </Card>
-      </div>
+          </Row>
+          {cf?.edge && (
+            <>
+              <Row label={t('status.provider.latency')}>
+                <span className="tabular-nums">{cf.edge.ms} ms</span>
+              </Row>
+              <Row label={t('status.cf.protocol')}>
+                <span className="font-mono text-xs">
+                  {[cf.edge.http, cf.edge.tls].filter(Boolean).join(' · ') || '—'}
+                </span>
+              </Row>
+            </>
+          )}
+          <SummaryRows
+            name="Cloudflare"
+            host="cloudflarestatus.com"
+            loaded={cf !== null}
+            summary={cf?.global ?? null}
+            error={cf?.globalError ?? null}
+          />
+        </dl>
+        <IncidentList summary={cf?.global ?? null} />
+      </Card>
+
+      {/* ---- Netlify ---- */}
+      <Card
+        icon={Globe}
+        title="Netlify"
+        tone={nfBadge.tone}
+        label={t(nfBadge.label)}
+      >
+        <dl className="divide-y divide-slate-100">
+          <Row label={t('status.provider.edge')}>
+            {!nf ? (
+              <Pending />
+            ) : nf.origin ? (
+              <Indicator tone={msTone(nf.origin.ms)}>
+                <span className="font-mono text-xs">
+                  {nf.origin.dc ?? 'Netlify'}
+                </span>
+              </Indicator>
+            ) : (
+              <NotServed name="Netlify" />
+            )}
+          </Row>
+          {nf?.origin && (
+            <>
+              <Row label={t('status.provider.latency')}>
+                <span className="tabular-nums">{nf.origin.ms} ms</span>
+              </Row>
+              <Row label={t('status.nf.cache')}>
+                <span className="font-mono text-xs">{nf.origin.cache ?? '—'}</span>
+              </Row>
+            </>
+          )}
+          <SummaryRows
+            name="Netlify"
+            host="netlifystatus.com"
+            loaded={nf !== null}
+            summary={nf?.global ?? null}
+            error={nf?.globalError ?? null}
+          />
+        </dl>
+        <IncidentList summary={nf?.global ?? null} />
+      </Card>
     </div>
+  )
+}
+
+/** Byte → "953 KB", "1,2 MB" theo ngôn ngữ đang dùng. */
+function formatBytes(n: number, locale: string): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let value = n
+  let i = 0
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024
+    i++
+  }
+  const digits = i > 0 && value < 10 ? 1 : 0
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(value)} ${units[i]}`
+}
+
+/** Nút nhỏ ở chân thẻ. `danger`: màu đỏ, `armed`: đang chờ bấm lần hai. */
+function FooterButton({
+  icon: Icon,
+  onClick,
+  disabled,
+  tone = 'default',
+  spinning = false,
+  children,
+}: {
+  icon: typeof Network
+  onClick: () => void
+  disabled?: boolean
+  tone?: 'default' | 'primary' | 'ghost' | 'danger' | 'armed'
+  spinning?: boolean
+  children: ReactNode
+}) {
+  const toneClass = {
+    default: 'border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50',
+    primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    ghost: 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+    danger: 'text-rose-600 hover:bg-rose-50',
+    armed: 'bg-rose-600 text-white',
+  }[tone]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium whitespace-nowrap transition disabled:opacity-60 ${toneClass}`}
+    >
+      <Icon className={`h-4 w-4 ${spinning ? 'animate-spin' : ''}`} />
+      {children}
+    </button>
+  )
+}
+
+/**
+ * Cài như app và service worker: vỏ ứng dụng đã lưu sẵn để mở khi offline,
+ * phiên bản đang chạy, bản mới.
+ */
+function AppCard() {
+  const { t, lang } = useI18n()
+  const sw = useServiceWorker()
+  const install = useInstallState()
+  const { online } = useNetworkStatus()
+  const notify = useNotify()
+  // undefined: đang đọc; null: chưa có vỏ ứng dụng nào được lưu.
+  const [shell, setShell] = useState<PrecacheInfo | null | undefined>(undefined)
+  const [installing, setInstalling] = useState(false)
+  const [installHelpOpen, setInstallHelpOpen] = useState(false)
+  // Vừa kiểm tra xong mà không có bản mới: nút nói vậy một lúc rồi trở lại.
+  const [upToDate, setUpToDate] = useState(false)
+
+  useEffect(() => {
+    if (!upToDate) return
+    const id = setTimeout(() => setUpToDate(false), 3000)
+    return () => clearTimeout(id)
+  }, [upToDate])
+
+  async function handleCheck() {
+    setUpToDate((await checkForUpdate()) === false)
+  }
+
+  /** Cùng hành vi với mục "Cài ứng dụng" trong nút lưới (AppLayout). */
+  async function handleInstall() {
+    if (install.manualIos) {
+      setInstallHelpOpen(true)
+      return
+    }
+    setInstalling(true)
+    const accepted = await promptInstall()
+    setInstalling(false)
+    if (accepted) notify.success('notif.pwa.installed')
+  }
+
+  // Đọc lại khi worker vừa cài xong hay vừa có bản mới.
+  useEffect(() => {
+    if (!sw.supported) return
+    let alive = true
+    const load = () =>
+      void precacheInfo().then((next) => {
+        if (alive) setShell(next)
+      })
+    load()
+    const id = setInterval(load, RECHECK_MS)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [sw.supported, sw.ready, sw.needRefresh])
+
+  const tone: Tone = sw.needRefresh ? 'warn' : sw.ready ? 'ok' : 'idle'
+  const label: TranslationKey = sw.needRefresh
+    ? 'status.app.updateAvailable'
+    : sw.ready
+      ? 'status.app.ready'
+      : !sw.supported
+        ? import.meta.env.PROD
+          ? 'status.app.unsupported'
+          : 'status.app.devOff'
+        : 'status.app.settingUp'
+  const build = format(new Date(__APP_BUILD__), 'HH:mm · dd/MM/yyyy')
+
+  return (
+    <Card
+      icon={Smartphone}
+      title={t('status.app')}
+      tone={tone}
+      label={t(label)}
+      footer={
+        <>
+          <span className="text-xs text-slate-500">
+            {t('status.app.versionHint')}{' '}
+            <span className="text-slate-700 tabular-nums select-text">{build}</span>
+          </span>
+          {sw.supported && (
+            <span className="ml-auto">
+              {sw.needRefresh ? (
+                <FooterButton icon={RotateCw} tone="primary" onClick={applyUpdate}>
+                  {t('status.app.update')}
+                </FooterButton>
+              ) : (
+                <FooterButton
+                  icon={upToDate ? Check : RotateCw}
+                  tone="ghost"
+                  spinning={sw.checking}
+                  onClick={() => void handleCheck()}
+                  disabled={sw.checking || !online}
+                >
+                  {sw.checking
+                    ? t('status.app.checking')
+                    : upToDate
+                      ? t('status.app.upToDate')
+                      : t('status.app.check')}
+                </FooterButton>
+              )}
+            </span>
+          )}
+        </>
+      }
+    >
+      <dl className="divide-y divide-slate-100">
+        <Row nowrap label={t('status.app.mode')}>
+          {install.standalone ? t('status.app.standalone') : t('status.app.browser')}
+        </Row>
+        {sw.supported && (
+          <>
+            <Row label={t('status.app.sw')}>
+              <Indicator tone={tone}>
+                {t(
+                  sw.needRefresh
+                    ? 'status.app.sw.waiting'
+                    : sw.ready
+                      ? 'status.app.sw.active'
+                      : 'status.app.settingUp',
+                )}
+              </Indicator>
+            </Row>
+            <Row nowrap label={t('status.app.shell')} hint={t('status.app.shellHint')}>
+              {shell === undefined ? (
+                <Pending />
+              ) : shell === null ? (
+                t('status.app.settingUp')
+              ) : (
+                <span className="tabular-nums">
+                  {t('status.app.shellValue', {
+                    count: shell.files,
+                    size: formatBytes(shell.bytes, lang),
+                  })}
+                </span>
+              )}
+            </Row>
+          </>
+        )}
+        <Row
+          nowrap
+          label={t('status.app.install')}
+          hint={
+            install.standalone
+              ? undefined
+              : install.canPrompt
+                ? t('status.app.installHint')
+                : install.manualIos
+                  ? t('status.app.installIosHint')
+                  : import.meta.env.PROD
+                    ? t('status.app.installOtherHint')
+                    : undefined
+          }
+        >
+          {install.standalone ? (
+            <Indicator tone="ok">{t('status.app.installed')}</Indicator>
+          ) : install.canPrompt || install.manualIos ? (
+            <FooterButton
+              icon={Download}
+              tone="primary"
+              onClick={() => void handleInstall()}
+              disabled={installing}
+            >
+              {install.canPrompt ? t('status.app.installNow') : t('status.app.installHow')}
+            </FooterButton>
+          ) : (
+            // Dev không có manifest nên trình duyệt không bao giờ mời cài.
+            t(import.meta.env.PROD ? 'status.app.installUnsupported' : 'status.app.devOff')
+          )}
+        </Row>
+      </dl>
+      {installHelpOpen && <InstallHelpModal onClose={() => setInstallHelpOpen(false)} />}
+      {/* Không có service worker thì các dòng về nó chỉ toàn "—": nói lý do
+          một lần, căn giữa phần còn lại của thẻ (thẻ bên cạnh cao hơn). */}
+      {!sw.supported && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 border-t border-slate-100 px-6 py-6 text-center">
+          <CloudOff className="h-6 w-6 text-slate-300" />
+          <p className="max-w-sm text-sm text-slate-500 select-text">
+            {t(import.meta.env.PROD ? 'status.app.unsupportedNote' : 'status.app.devNote')}
+          </p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
+const OFFLINE_KINDS: readonly OfflineKind[] = ['shifts', 'bounds', 'logs', 'profiles', 'templates']
+const KIND_LABEL: Record<OfflineKind, TranslationKey> = {
+  shifts: 'status.offline.kind.shifts',
+  bounds: 'status.offline.kind.bounds',
+  logs: 'status.offline.kind.logs',
+  profiles: 'status.offline.kind.profiles',
+  templates: 'status.offline.kind.templates',
+}
+
+/** Một ô số trong dải số đếm của phiên. */
+function Stat({
+  label,
+  value,
+  sub,
+  warn = false,
+}: {
+  label: string
+  value: number
+  sub?: string
+  warn?: boolean
+}) {
+  return (
+    <div className="min-w-0 px-4 py-2.5">
+      <p className={`text-lg leading-6 font-semibold tabular-nums ${warn ? 'text-amber-600' : 'text-slate-900'}`}>
+        {value}
+      </p>
+      <p className="truncate text-xs text-slate-500">{label}</p>
+      {sub && <p className="truncate text-[11px] text-slate-400">{sub}</p>}
+    </div>
+  )
+}
+
+/**
+ * Mạng và bản lưu để xem offline: phiên này đọc từ máy chủ hay từ bản lưu
+ * bao nhiêu lần, mất mạng mấy lần, bản lưu gồm những gì, trình duyệt có giữ
+ * nó lâu dài không. Số đếm của phiên nằm trong bộ nhớ (networkStatus.ts),
+ * tải lại trang là về 0.
+ */
+function OfflineCard({ now, ago }: { now: number; ago: (at: number) => string }) {
+  const { t, lang, dateLocale } = useI18n()
+  const notify = useNotify()
+  const { online, staleSince } = useNetworkStatus()
+  const m = useOfflineMetrics()
+  const conn = connectionInfo()
+  // undefined: đang đọc; null: trình duyệt không có API tương ứng.
+  const [stats, setStats] = useState<OfflineStats | null | undefined>(undefined)
+  const [storage, setStorage] = useState<StorageInfo | null | undefined>(undefined)
+  const [busy, setBusy] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
+
+  // Đọc lại định kỳ, và mỗi khi phiên vừa đọc thêm (bản lưu vừa đổi).
+  useEffect(() => {
+    let alive = true
+    const run = () =>
+      void Promise.all([offlineStats(), storageInfo()]).then(([nextStats, nextStorage]) => {
+        if (!alive) return
+        setStats(nextStats)
+        setStorage(nextStorage)
+      })
+    run()
+    const id = setInterval(run, RECHECK_MS)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [m.networkReads, m.cacheReads, reloadToken])
+
+  const clearStep = useTwoStep(() => {
+    setBusy(true)
+    void resetOfflineData()
+      .then(() => notify.success('notif.offline.cleared'))
+      .finally(() => {
+        setBusy(false)
+        setReloadToken((n) => n + 1)
+      })
+  })
+
+  const tone: Tone = !online ? 'error' : staleSince !== null ? 'warn' : 'ok'
+  const label: TranslationKey = !online
+    ? 'status.app.offline'
+    : staleSince !== null
+      ? 'status.offline.stale'
+      : 'status.app.online'
+
+  const offlineTotal =
+    m.offlineMs + (m.offlineSince !== null ? Math.max(0, now - m.offlineSince) : 0)
+  const kinds = stats ? OFFLINE_KINDS.filter((k) => stats.byKind[k] > 0) : []
+  const connDetail =
+    online && conn
+      ? [
+          conn.type,
+          conn.rtt !== null ? `${conn.rtt} ms` : null,
+          conn.downlink !== null
+            ? `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(conn.downlink)} Mbps`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : ''
+  const hasSaved = Boolean(stats && stats.count > 0)
+
+  return (
+    <Card
+      icon={HardDrive}
+      title={t('status.offline')}
+      tone={tone}
+      label={t(label)}
+      footer={
+        // Đối xứng với thẻ Ứng dụng: con số bên trái (thay cho một dòng), nút bên phải.
+        <>
+          {storage && (
+            <span
+              className="text-xs text-slate-500"
+              data-tooltip={t('status.offline.storageHint')}
+            >
+              {t('status.offline.storage')}{' '}
+              <span className="text-slate-700 tabular-nums select-text">
+                {t('status.offline.storageValue', {
+                  used: formatBytes(storage.usage, lang),
+                  quota: formatBytes(storage.quota, lang),
+                })}
+              </span>
+            </span>
+          )}
+          {/* Bấm hai lần: xoá rồi thì offline không xem lại được cho tới khi
+              mở lại lúc có mạng. */}
+          {hasSaved && (
+            <span className="ml-auto">
+              <FooterButton
+                icon={Trash2}
+                tone={clearStep.armed ? 'armed' : 'danger'}
+                onClick={clearStep.press}
+                disabled={busy}
+              >
+                {clearStep.armed ? t('status.offline.clearAgain') : t('status.offline.clear')}
+              </FooterButton>
+            </span>
+          )}
+        </>
+      }
+    >
+      <dl className="divide-y divide-slate-100">
+        <Row
+          label={t('status.app.network')}
+          hint={conn?.saveData ? t('status.offline.saveData') : undefined}
+        >
+          <Indicator tone={online ? 'ok' : 'error'}>
+            {online ? t('status.app.online') : t('status.app.offline')}
+            {connDetail && (
+              <span className="text-slate-500 tabular-nums"> · {connDetail}</span>
+            )}
+          </Indicator>
+        </Row>
+      </dl>
+
+      {/* Số đếm của phiên: một dải ô số thay cho bốn dòng. */}
+      <div className="border-t border-slate-100">
+        <p className="px-4 pt-2.5 text-xs text-slate-400">{t('status.offline.session')}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4">
+          <Stat label={t('status.offline.stat.server')} value={m.networkReads} />
+          <Stat
+            label={t('status.offline.stat.cache')}
+            value={m.cacheReads}
+            sub={
+              m.slowFallbacks > 0
+                ? t('status.offline.stat.slow', { count: m.slowFallbacks })
+                : undefined
+            }
+          />
+          <Stat
+            label={t('status.offline.stat.offline')}
+            value={m.offlineCount}
+            sub={
+              m.offlineCount > 0
+                ? t('status.offline.stat.offlineTotal', {
+                    time: formatDistanceStrict(0, offlineTotal, { locale: dateLocale }),
+                  })
+                : undefined
+            }
+          />
+          <Stat
+            label={t('status.offline.stat.blocked')}
+            value={m.blockedWrites}
+            warn={m.blockedWrites > 0}
+          />
+        </div>
+      </div>
+
+      <dl className="divide-y divide-slate-100 border-t border-slate-100">
+        <Row
+          nowrap
+          label={t('status.app.saved')}
+          hint={
+            stats && kinds.length > 0
+              ? kinds.map((k) => `${t(KIND_LABEL[k])} ${stats.byKind[k]}`).join(' · ')
+              : t('status.app.savedHint')
+          }
+        >
+          {stats === undefined ? (
+            <Pending />
+          ) : stats === null ? (
+            t('status.app.noStorage')
+          ) : stats.count === 0 || stats.lastSavedAt === null ? (
+            t('status.app.savedNone')
+          ) : (
+            <span className="text-right tabular-nums">
+              <span className="block">
+                {t('status.offline.savedValue', {
+                  count: stats.count,
+                  size: formatBytes(stats.bytes, lang),
+                })}
+              </span>
+              <span className="block text-xs text-slate-500">
+                {t('status.offline.savedLast', { time: ago(stats.lastSavedAt) })}
+              </span>
+            </span>
+          )}
+        </Row>
+      </dl>
+    </Card>
   )
 }
 
@@ -425,16 +947,23 @@ function Card({
   title,
   tone,
   label,
+  footer,
   children,
 }: {
   icon: typeof Network
   title: string
   tone: Tone
   label: string
+  /**
+   * Chân thẻ (nút, mốc build). Luôn dính đáy: lưới kéo hai thẻ cạnh nhau
+   * cao bằng nhau, phần dư nằm trên chân thẻ thay vì thành khoảng trống
+   * cuối thẻ.
+   */
+  footer?: ReactNode
   children: ReactNode
 }) {
   return (
-    <section className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
+    <section className="flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
       <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
         <Icon className="h-4 w-4 text-slate-400" />
         <h2 className="font-semibold text-slate-900">{title}</h2>
@@ -446,6 +975,11 @@ function Card({
         </span>
       </header>
       {children}
+      {footer && (
+        <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
+          {footer}
+        </div>
+      )}
     </section>
   )
 }
@@ -453,19 +987,31 @@ function Card({
 function Row({
   label,
   hint,
+  nowrap = false,
   children,
 }: {
   label: string
   hint?: string
+  /**
+   * Giá trị ngắn ("749 KB", "3 phút trước") giữ trên một dòng; chỗ hẹp thì
+   * chú thích bên trái xuống dòng thay vì bẻ đôi giá trị.
+   */
+  nowrap?: boolean
   children: ReactNode
 }) {
   return (
     <div className="flex items-center gap-4 px-4 py-2.5 text-sm">
-      <dt className="shrink-0">
+      <dt className={nowrap ? 'min-w-0' : 'shrink-0'}>
         <span className="block text-slate-600">{label}</span>
         {hint && <span className="block text-xs text-slate-400">{hint}</span>}
       </dt>
-      <dd className="ml-auto flex min-w-0 justify-end text-slate-800 select-text">{children}</dd>
+      <dd
+        className={`ml-auto flex justify-end text-slate-800 select-text ${
+          nowrap ? 'shrink-0 whitespace-nowrap' : 'min-w-0'
+        }`}
+      >
+        {children}
+      </dd>
     </div>
   )
 }

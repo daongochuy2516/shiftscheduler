@@ -13,6 +13,12 @@ export type ThemePref = 'system' | 'light' | 'dark'
 // Trùng với script chống nháy trong index.html — đổi một chỗ phải đổi cả hai.
 const STORAGE_KEY = 'scheduler.theme'
 const DARK_QUERY = '(prefers-color-scheme: dark)'
+/**
+ * Màu thanh tiêu đề / thanh trạng thái khi cài như app: trùng nền header
+ * (`bg-white`, bản tối là `--color-white` trong index.css). Script chống
+ * nháy trong index.html lặp lại hai màu này.
+ */
+const THEME_COLOR = { light: '#ffffff', dark: '#1f1f1f' } as const
 
 interface ThemeContextValue {
   pref: ThemePref
@@ -36,6 +42,9 @@ function applyTheme(pref: ThemePref) {
     pref === 'dark' ||
     (pref === 'system' && window.matchMedia(DARK_QUERY).matches)
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', dark ? THEME_COLOR.dark : THEME_COLOR.light)
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

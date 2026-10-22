@@ -1,5 +1,6 @@
 import type { Profile } from '../types'
 import { MOCK_PROFILES } from '../data/mockData'
+import { OFFLINE_ERROR_MESSAGE, isOnline } from '../lib/network'
 import { CURRENT_PASSWORD_WRONG, type AuthBackend } from './backend'
 
 const SESSION_KEY = 'scheduler.mock.session'
@@ -51,6 +52,8 @@ export const mockAuth: AuthBackend = {
 
   async signIn(email: string, password: string) {
     await new Promise((r) => setTimeout(r, 300))
+    // Giống bản Supabase: đăng nhập cần máy chủ.
+    if (!isOnline()) return OFFLINE_ERROR_MESSAGE
     const profile = MOCK_PROFILES.find(
       (p) => p.email.toLowerCase() === email.trim().toLowerCase(),
     )
@@ -69,6 +72,7 @@ export const mockAuth: AuthBackend = {
 
   async changePassword(currentPassword: string, newPassword: string) {
     await new Promise((r) => setTimeout(r, 300))
+    if (!isOnline()) return OFFLINE_ERROR_MESSAGE
     const profile = readSession()
     if (!profile) return 'Not signed in.'
     if (currentPassword !== passwordFor(profile.id)) {

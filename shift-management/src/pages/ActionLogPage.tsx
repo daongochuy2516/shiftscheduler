@@ -21,6 +21,7 @@ import { DateInput } from '../components/DateInput'
 import { StaffMultiSelect } from '../components/StaffMultiSelect'
 import { effectiveAction, isCheckInAction } from '../lib/actionLog'
 import { dateParam, useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
+import { LoadError } from '../components/LoadError'
 
 const PAGE_SIZE = 50
 /** Đổi chữ tìm thì về trang 1. */
@@ -188,9 +189,7 @@ export function ActionLogPage() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
-          {error}
-        </p>
+        <LoadError message={error} />
       )}
 
       {/* ---- bộ lọc ---- */}

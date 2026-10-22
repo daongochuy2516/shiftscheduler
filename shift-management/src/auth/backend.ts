@@ -14,7 +14,10 @@ export interface AuthBackend {
    */
   getSession(): Promise<Profile | null>
 
-  /** Returns an error message on failure, or null on success. */
+  /**
+   * Returns an error message on failure, or null on success. Offline it
+   * returns `OFFLINE_ERROR_MESSAGE` (lib/network.ts) for the UI to translate.
+   */
   signIn(email: string, password: string): Promise<string | null>
 
   signOut(): Promise<void>

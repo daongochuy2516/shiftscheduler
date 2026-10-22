@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Profile } from '../types'
+import { clearOfflineData, setOfflineOwner } from '../data/offlineCache'
 import { auth } from './index'
 
 interface AuthContextValue {
@@ -31,14 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true
 
+    // Chủ bản lưu offline phải có trước khi màn hình đầu tiên đọc dữ liệu,
+    // nên đặt ngay ở đây chứ không trong effect của component con.
     auth.getSession().then((session) => {
       if (!active) return
+      setOfflineOwner(session?.id ?? null)
       setUser(session)
       setLoading(false)
     })
 
     const unsubscribe = auth.onAuthChange((next) => {
       if (!active) return
+      // Bị đăng xuất (tab khác, phiên bị thu hồi): không để lịch của người
+      // đó nằm lại trên máy.
+      if (next) setOfflineOwner(next.id)
+      else void clearOfflineData()
       setUser(next)
       setLoading(false)
     })
@@ -56,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await auth.signOut()
+    await clearOfflineData()
     setUser(null)
   }, [])
 

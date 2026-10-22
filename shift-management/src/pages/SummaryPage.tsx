@@ -30,6 +30,7 @@ import { SummaryGrid } from '../components/SummaryGrid'
 import { buildSummary } from '../lib/summary'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
+import { LoadError } from '../components/LoadError'
 
 type ViewMode = 'day' | 'week' | 'month'
 
@@ -175,9 +176,7 @@ export function SummaryPage() {
   return (
     <div className="space-y-4">
       {(error ?? shiftsState.error) && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
-          {error ?? shiftsState.error}
-        </p>
+        <LoadError message={error ?? shiftsState.error ?? ''} />
       )}
 
       {/* ---- điều hướng thời gian + chế độ xem ---- */}

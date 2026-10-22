@@ -4,7 +4,15 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- Màu thanh trạng thái / thanh tiêu đề khi cài như app; script dưới và
+       ThemeContext đổi theo giao diện sáng / tối. -->
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Team Board" />
   <title>Thinkmay Team Board</title>
   <!-- dark theme flash fix src/theme/ThemeContext.tsx. -->
   <script>
@@ -18,6 +26,10 @@
         (pref !== 'light' &&
           window.matchMedia('(prefers-color-scheme: dark)').matches)
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      // Cùng màu với THEME_COLOR trong ThemeContext.tsx.
+      document
+        .querySelector('meta[name="theme-color"]')
+        .setAttribute('content', dark ? '#1f1f1f' : '#ffffff')
     })()
   </script>
 </head>

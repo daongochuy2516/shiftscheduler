@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { ShiftList } from '../components/ShiftList'
 import { Checkbox } from '../components/Checkbox'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { LoadError } from '../components/LoadError'
 import { useUrlParams } from '../lib/urlParams'
 
 export function PendingPage() {
@@ -37,6 +38,11 @@ export function PendingPage() {
     0,
   )
 
+  // Chưa từng tải được (offline mà chưa có bản lưu, hay máy chủ báo lỗi):
+  // hiện lý do thay vì khung xương mãi.
+  if (!loading && !pending.loaded && pending.error) {
+    return <LoadError message={pending.error} />
+  }
   if (loading || !pending.loaded) return <PageSkeleton />
 
   return (

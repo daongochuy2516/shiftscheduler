@@ -35,6 +35,7 @@ import type { TranslationKey } from '../i18n/translations'
 import { Select } from '../components/Select'
 import { useUrlParams } from '../lib/urlParams'
 import { Checkbox } from '../components/Checkbox'
+import { LoadError } from '../components/LoadError'
 
 type ViewMode = 'day' | 'week' | 'month'
 type ScaleId = 'fit' | 'work' | 'business' | 'full'
@@ -230,9 +231,7 @@ export function TimelinePage() {
   return (
     <div className="space-y-4">
       {(error ?? shiftsState.error) && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
-          {error ?? shiftsState.error}
-        </p>
+        <LoadError message={error ?? shiftsState.error ?? ''} />
       )}
 
       {/* ---- navigation + view switcher ---- */}

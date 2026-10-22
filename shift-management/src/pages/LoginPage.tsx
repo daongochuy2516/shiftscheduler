@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Modal } from '../components/Modal'
 import { IS_MOCK_BACKEND } from '../data'
 import { MOCK_PASSWORD } from '../auth/mockAuth'
+import { OFFLINE_ERROR_MESSAGE } from '../lib/network'
 import { MOCK_PROFILES } from '../data/mockData'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang } from '../i18n/translations'
@@ -57,7 +58,7 @@ export function LoginPage() {
     setError(null)
     const message = await signIn(email, password)
     if (message) {
-      setError(message)
+      setError(message === OFFLINE_ERROR_MESSAGE ? t('offline.signIn') : message)
       setSubmitting(false)
       return
     }

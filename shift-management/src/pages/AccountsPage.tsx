@@ -11,6 +11,7 @@ import { isListed } from '../lib/profiles'
 import { Avatar } from '../components/Avatar'
 import { PageSkeleton } from '../components/PageSkeleton'
 import { RoleBadge } from '../components/RoleBadge'
+import { LoadError } from '../components/LoadError'
 
 const inputClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500'
@@ -43,9 +44,7 @@ export function AccountsPage() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200 select-text">
-          {error}
-        </p>
+        <LoadError message={error} />
       )}
 
       {!accountsAvailable && (

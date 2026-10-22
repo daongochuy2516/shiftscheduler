@@ -4,6 +4,7 @@ import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { ShiftList } from '../components/ShiftList'
 import { PageSkeleton } from '../components/PageSkeleton'
+import { LoadError } from '../components/LoadError'
 import { formatMinutesDuration, toDateKey, toMinutes } from '../lib/time'
 
 export function MyShiftsPage() {
@@ -38,6 +39,11 @@ export function MyShiftsPage() {
     }
   }, [mine, user?.id, today])
 
+  // Chưa từng tải được (offline mà chưa có bản lưu, hay máy chủ báo lỗi):
+  // hiện lý do thay vì khung xương mãi.
+  if (!loading && !mineState.loaded && mineState.error) {
+    return <LoadError message={mineState.error} />
+  }
   if (loading || !mineState.loaded) return <PageSkeleton />
 
   return (

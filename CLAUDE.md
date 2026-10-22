@@ -20,6 +20,7 @@ npm run lint     # oxlint
 - Không có test tự động. `build` + `lint` là toàn bộ kiểm tra bằng máy; phần còn lại phải chạy app (skill `verify`).
 - `lint` hiện có sẵn 2 cảnh báo `set-state-in-effect` (`useActionLogs.ts`, `ScheduleContext.tsx`). Không thêm cảnh báo mới.
 - Node 22 (`.nvmrc`). Deploy tĩnh trên Netlify; `public/_redirects` lo phần SPA.
+- PWA (`vite-plugin-pwa`, cấu hình trong `vite.config.ts`): service worker chỉ có ở bản build, `dev` không đăng ký. Thử offline / bản mới thì `npm run build && npm run preview` rồi DevTools → Network → Offline.
 - Stack: React 19, Vite 8, TypeScript 6 (`erasableSyntaxOnly`, `verbatimModuleSyntax` → dùng `import type`, không `enum`), Tailwind 4 (cấu hình trong `src/index.css`, không có `tailwind.config`), react-router 7, date-fns 4, lucide-react.
 
 ## Kiến trúc
@@ -43,9 +44,12 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 | `src/auth/` | Cùng kiểu: interface + bản Supabase + bản mock |
 | `src/lib/` | Hàm thuần: `time.ts`, `colors.ts`, `summary.ts`, `shiftChunks.ts`, các probe của trang Trạng thái |
 | `src/i18n/` | Từ điển `en` / `vi` và `t()` |
+| `src/pwa/` | Đăng ký service worker + hộp nhắc bản mới (`serviceWorker.ts`), cài ứng dụng (`install.ts`, import sớm ở `main.tsx`) |
 | `supabase/` | `schema.sql` rồi `002`…`009`, chạy tay theo thứ tự trong SQL Editor |
 
 **Hai backend.** Có `VITE_SUPABASE_URL` + key trong `shift-management/.env` thì dùng Supabase, không thì dùng mock lưu `localStorage` (băng vàng "Đang chạy dữ liệu mẫu"). Chọn ở `src/data/index.ts` và `src/auth/index.ts`.
+
+**Offline.** Backend nào cũng được bọc bởi `withOfflineCache` (`data/offlineBackend.ts`): đọc qua mạng trước, lỗi mạng / quá 5 giây thì lấy bản lưu IndexedDB (`offlineCache.ts`, khoá theo người đăng nhập, giữ tối đa 2 ngày — `MAX_AGE_MS`, xoá khi đăng xuất), ghi thì ném `OfflineError` khi offline — cố ý không xếp hàng gửi sau. `networkStatus.ts` báo cho băng offline. Service worker chỉ giữ vỏ app, không đụng request Supabase.
 
 **Tải ca theo lát cắt.** Không có "tải tất cả ca". Mỗi màn hình xin đúng phần nó hiện qua `useShifts(query)` với `ShiftQuery` là `range` / `user` / `pending`; `useShiftChunks` ghép nhiều tháng cho cuộn vô hạn; `usePrefetchShifts` tải trước khoảng kề bên. Bộ đệm khoá theo chuỗi (`shiftQueryKey`), lát đang xem được làm tươi khi dữ liệu đổi, lát không ai xem bị bỏ.
 
@@ -58,6 +62,9 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Thêm một `kind` cho `ShiftQuery` thì sửa cả `shiftQueryKey`, `parseShiftQueryKey` và `listShifts` ở hai backend.
 - Snapshot trả cho `useSyncExternalStore` phải giữ nguyên tham chiếu khi dữ liệu không đổi — trả object mới mỗi lần gọi là render vô hạn.
 - Lọc ca theo người là **AND** và không được cắt danh sách người trong ca: bản Supabase nhúng `shift_assignments!inner` thêm lần nữa dưới tên `match_N` để lọc, còn `assignments` vẫn trả đủ.
+- Thêm phương thức đọc vào `SchedulerBackend` thì thêm vào `withOfflineCache` bằng `cachedRead` (khoá phải gồm mọi tham số); phương thức ghi thì bọc `online()`.
+- Offline mà chưa có bản lưu thì phép đọc ném lỗi có message `OFFLINE_ERROR_MESSAGE` (`lib/network.ts`): hiện lỗi tải trang bằng `components/LoadError.tsx`, đừng in thẳng `error`. `useNotify().error` tự đổi lỗi offline / lỗi mạng thành câu đã dịch (`bodyKey`).
+- Phiên offline (`auth/supabaseAuth.ts`): hồ sơ lưu ở `scheduler.offlineProfile`, bỏ qua sự kiện `INITIAL_SESSION` (offline với token hết hạn nó đến với session null). Sửa luồng đăng nhập thì giữ hai điều này.
 - Migration 002–009 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`), hàm chưa có thì `serverTime` trả `null` (`isMissingFunction`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`, `displayed`) đọc về là `null`.
 - `profiles` gồm cả người đang ẩn (`displayed = false`, ví dụ tài khoản quản lý). Danh sách để **chọn / lọc** nhân viên dùng `rosterProfiles`; bảng xếp ca lọc hàng bằng `showRow` trong `lib/profiles.ts` (người ẩn vẫn hiện nếu có ca). Tra tên theo id thì dùng `profilesById` như cũ.
 
@@ -78,6 +85,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 **Giao diện**
 
 - Mọi chuỗi người dùng thấy đều qua `t()` — trừ tên sản phẩm `APP_NAME` (`lib/brand.ts`, giống nhau mọi ngôn ngữ; `<title>` trong `index.html` lặp lại nó), và nội dung trang Hướng dẫn: `src/help/content.ts` + kịch bản wizard `src/help/tours.ts` là văn bản dài nên viết thẳng dạng `Record<Lang, …>` (thiếu một ngôn ngữ vẫn là lỗi biên dịch). Thêm khoá vào `en` trước (nguồn của `TranslationKey`), rồi `vi` — thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`. Chèn giá trị: `{{name}}`.
+- Phần thẻ của trang Trạng thái luôn tiếng Anh ở mọi ngôn ngữ (trừ tiêu đề, dòng mô tả, nút Kiểm tra lại): `StatusCards` bọc trong `FixedLang lang="en"`. Khoá `status.*` của phần đó chỉ viết ở `en` — kiểu `EnglishOnlyKey` khiến thêm bản `vi` là lỗi biên dịch.
 - Chế độ tối làm bằng cách định nghĩa lại biến màu Tailwind dưới `[data-theme='dark']` trong `index.css`, **không** rải `dark:` trong component. Viết class sáng như bình thường. Họ màu đã có bản tối: slate, indigo, rose, amber, emerald, sky, violet, teal, orange, lime, fuchsia, cyan — dùng họ khác thì thêm khối biến tương ứng.
 - Class Tailwind phải viết nguyên chuỗi, không ghép từ mảnh lúc chạy (`bg-${x}-50` sẽ không được sinh). Xem `PALETTE` trong `lib/colors.ts`.
 - Mặc định cả app không bôi đen được chữ (`user-select: none` trên `body`, `index.css`), ô nhập liệu thì luôn được. Thông tin đáng copy — ghi chú, email, lỗi, JSON nhật ký, nội dung Hướng dẫn — gắn `select-text` ở component. Chữ nằm trong `<button>` thì trình duyệt không cho bôi đen dù có gắn.
@@ -89,7 +97,8 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Hiệu ứng mở / đóng của `Modal` và ngăn thông báo nằm trong `index.css` (`modal-backdrop`, `modal-panel`, `drawer-panel`, `.is-leaving`). Đóng không cần chờ ở chỗ gọi: `useExitAnimation` để lại một bản sao tĩnh chạy hiệu ứng rồi xoá. Lớp phủ tự làm thì dùng lại hook này thay vì tự giữ state "đang đóng".
 - Kết quả của thao tác ghi (thành công, hay lỗi máy chủ trả về) báo qua `useNotify()` — `success(key, params, body)` / `error(key, err, params)` — không thêm dòng xanh/đỏ trong form. Lỗi giữ form mở, thành công thì đóng. Tiêu đề lưu dạng khoá `t()` (`notif.*`), `body` là chuỗi thô nên đừng đưa chữ phụ thuộc ngôn ngữ vào đó. Lỗi nhập liệu từng ô vẫn hiện tại chỗ.
 - Wizard hướng dẫn chỉ vào phần tử qua thuộc tính `data-tour="…"` (danh sách trong `help/tours.ts`). Đổi tên, xoá, hay chuyển chỗ một phần tử có `data-tour` thì sửa kịch bản cùng lúc và chạy lại bài đó; đổi hành vi mà hướng dẫn mô tả thì sửa `help/content.ts` cùng README.
-- Khoá `localStorage` của theme (`scheduler.theme`) lặp lại trong script chống nháy ở `index.html` — đổi một chỗ phải đổi cả hai.
+- Khoá `localStorage` của theme (`scheduler.theme`) và màu `theme-color` (`THEME_COLOR` trong `ThemeContext.tsx`) lặp lại trong script chống nháy ở `index.html` — đổi một chỗ phải đổi cả hai.
+- Manifest PWA trong `vite.config.ts` là file tĩnh: `name` lấy `APP_NAME`, tên lối tắt (`shortcuts`) viết thẳng tiếng Việt — ngoại lệ của luật `t()`. Đổi logo thì dựng lại bộ icon trong `public/` (xem README mục 9g).
 
 ## Quy ước
 

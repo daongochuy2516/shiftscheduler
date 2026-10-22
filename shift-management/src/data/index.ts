@@ -1,15 +1,18 @@
 import { hasSupabaseConfig } from '../lib/supabaseClient'
 import type { SchedulerBackend } from './backend'
 import { mockBackend } from './mockBackend'
+import { withOfflineCache } from './offlineBackend'
 import { supabaseBackend } from './supabaseBackend'
 
 /**
  * The active data backend: Supabase when `.env` is configured, otherwise the
  * in-memory mock so the app still runs for anyone without credentials.
+ * Either way it is wrapped so reads fall back to the on-device copy when the
+ * network is gone (offlineBackend.ts).
  */
-export const backend: SchedulerBackend = hasSupabaseConfig
-  ? supabaseBackend
-  : mockBackend
+export const backend: SchedulerBackend = withOfflineCache(
+  hasSupabaseConfig ? supabaseBackend : mockBackend,
+)
 
 /** Drives the "running on mock data" banner and the login-page hints. */
 export const IS_MOCK_BACKEND: boolean = !hasSupabaseConfig
