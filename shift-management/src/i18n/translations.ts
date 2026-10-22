@@ -1209,7 +1209,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'notif.offline.cleared': 'Đã xoá bản lưu trên máy',
   // ---- trang Trạng thái (phần thẻ chỉ có tiếng Anh, xem EnglishOnlyKey) ----
   'status.title': 'Trạng thái hệ thống',
-  'status.subtitle': 'Supabase, phiên, service worker, cache offline và CDN. Tự kiểm tra mỗi 30 giây.',
+  'status.subtitle': 'Supabase, session, service worker, cache offline và CDN. Tự kiểm tra mỗi 30 giây.',
   'status.recheck': 'Kiểm tra lại',
 }
 
