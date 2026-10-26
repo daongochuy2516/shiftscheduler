@@ -33,6 +33,7 @@ import { useNotifications } from '../notifications/NotificationContext'
 import { useTheme, type ThemePref } from '../theme/ThemeContext'
 import { quickCalc, type CalcResult } from '../lib/quickCalc'
 import { scrollRoot } from '../lib/scrollRoot'
+import { uiIsAdmin } from '../lib/uiBypass'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
 import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
@@ -169,7 +170,7 @@ export function CommandPalette({
     return () => window.clearTimeout(id)
   }, [copiedId])
 
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = uiIsAdmin(user)
 
   // ---- danh sách lệnh cố định ---------------------------------------------
   const fixed = useMemo<Command[]>(() => {
@@ -316,8 +317,8 @@ export function CommandPalette({
           group: 'staff' as const,
           icon: Users,
           label: t('palette.staffShifts', { name: p.display_name }),
-          hint: p.email,
-          keywords: `${p.email} ca shifts`,
+          // Danh bạ không có email (011), nên chỉ tìm được theo tên.
+          keywords: 'ca shifts',
           run: () => (navigate(`/shifts?staff=${p.id}`), 'close' as const),
         }))
       : []

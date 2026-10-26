@@ -1,6 +1,7 @@
 import { isAuthRetryableFetchError, type User } from '@supabase/supabase-js'
-import type { Profile } from '../types'
+import type { Account } from '../types'
 import { getSupabase } from '../lib/supabaseClient'
+import { isMissingFunction } from '../data/supabaseBackend'
 import { OFFLINE_ERROR_MESSAGE, delay, isOnline } from '../lib/network'
 import { CURRENT_PASSWORD_WRONG, type AuthBackend } from './backend'
 
@@ -18,16 +19,16 @@ const PROFILE_KEY = 'scheduler.offlineProfile'
 /** Chờ máy chủ xác nhận phiên tới ngần này rồi dùng bản sao. */
 const SESSION_WAIT_MS = 4000
 
-function readCachedProfile(): Profile | null {
+function readCachedProfile(): Account | null {
   try {
     const raw = localStorage.getItem(PROFILE_KEY)
-    return raw ? (JSON.parse(raw) as Profile) : null
+    return raw ? (JSON.parse(raw) as Account) : null
   } catch {
     return null
   }
 }
 
-function writeCachedProfile(profile: Profile) {
+function writeCachedProfile(profile: Account) {
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
   } catch {
@@ -48,18 +49,20 @@ function clearCachedProfile() {
  * creates it, but if that ever hasn't run we still return a usable profile
  * derived from the auth user rather than bouncing them back to login.
  */
-async function loadProfile(user: User): Promise<Profile> {
+async function loadProfile(user: User): Promise<Account> {
   const supabase = getSupabase()
-  const { data, error } = await supabase
-    .from('profiles')
-    // `*`: cột `role` chỉ có sau migration 005.
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle()
+  // Từ 011 email / vai trò không đọc thẳng trong bảng được nữa: hồ sơ của
+  // mình đi qua my_profile(). Chưa chạy 011 thì đọc bảng như cũ (`*`: cột
+  // `role` chỉ có sau migration 005).
+  const viaRpc = await supabase.rpc('my_profile').maybeSingle()
+  const { data, error } =
+    viaRpc.error && isMissingFunction(viaRpc.error)
+      ? await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+      : viaRpc
 
   if (data) {
-    const profile: Profile = {
-      ...(data as Profile),
+    const profile: Account = {
+      ...(data as Account),
       role: data.role ?? null,
       displayed: data.displayed ?? null,
     }

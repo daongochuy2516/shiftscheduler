@@ -1,4 +1,4 @@
-import type { Profile } from '../types'
+import type { Account } from '../types'
 
 /**
  * Sentinel returned by `changePassword` when the current password is wrong.
@@ -12,7 +12,7 @@ export interface AuthBackend {
    * Resolves the currently signed-in user, or null. Called once on app load
    * to decide between the app and the login page.
    */
-  getSession(): Promise<Profile | null>
+  getSession(): Promise<Account | null>
 
   /**
    * Returns an error message on failure, or null on success. Offline it
@@ -35,5 +35,5 @@ export interface AuthBackend {
    * Fires whenever the session changes (sign in, sign out, token refresh,
    * or a sign-out in another tab). Returns an unsubscribe function.
    */
-  onAuthChange(callback: (user: Profile | null) => void): () => void
+  onAuthChange(callback: (user: Account | null) => void): () => void
 }

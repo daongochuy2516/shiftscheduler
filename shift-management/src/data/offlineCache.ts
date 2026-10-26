@@ -197,9 +197,9 @@ export function resetOfflineData(): Promise<void> {
 }
 
 /** Loại phép đọc, theo phần đầu của tên trong khoá (xem offlineBackend.ts). */
-export type OfflineKind = 'shifts' | 'bounds' | 'logs' | 'profiles' | 'templates'
+export type OfflineKind = 'shifts' | 'bounds' | 'logs' | 'profiles' | 'templates' | 'accounts'
 
-const KINDS: readonly OfflineKind[] = ['shifts', 'bounds', 'logs', 'profiles', 'templates']
+const KINDS: readonly OfflineKind[] = ['shifts', 'bounds', 'logs', 'profiles', 'templates', 'accounts']
 
 export interface OfflineStats {
   /** Số phép đọc đang có bản lưu. */
@@ -221,7 +221,7 @@ export async function offlineStats(): Promise<OfflineStats | null> {
     lastSavedAt: null,
     firstSavedAt: null,
     bytes: 0,
-    byKind: { shifts: 0, bounds: 0, logs: 0, profiles: 0, templates: 0 },
+    byKind: { shifts: 0, bounds: 0, logs: 0, profiles: 0, templates: 0, accounts: 0 },
   })
   const encoder = new TextEncoder()
   return withStore<OfflineStats>(

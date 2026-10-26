@@ -1,5 +1,6 @@
 import type { PostgrestError } from '@supabase/supabase-js'
 import type {
+  Account,
   ActionLog,
   ActionLogPage,
   ActionLogQuery,
@@ -18,7 +19,7 @@ import type {
 } from '../types'
 import { getSupabase } from '../lib/supabaseClient'
 import { normalizeTime } from '../lib/time'
-import type { SchedulerBackend } from './backend'
+import { ForbiddenError, type SchedulerBackend } from './backend'
 
 /** Postgres `time` comes back as "HH:mm:ss"; the UI works in "HH:mm". */
 function normalizeAssignment(row: ShiftAssignment): ShiftAssignment {
@@ -95,7 +96,7 @@ function isMissingTable(error: PostgrestError): boolean {
 }
 
 /** Hàm SQL chưa có (migration chưa chạy) — PostgREST báo PGRST202. */
-function isMissingFunction(error: PostgrestError): boolean {
+export function isMissingFunction(error: PostgrestError): boolean {
   return (
     error.code === 'PGRST202' ||
     error.code === '42883' ||
@@ -180,17 +181,37 @@ async function fetchShift(id: UUID): Promise<ShiftWithAssignments> {
 export const supabaseBackend: SchedulerBackend = {
   async listProfiles(): Promise<Profile[]> {
     const supabase = getSupabase()
-    const { data, error } = await supabase
-      .from('profiles')
-      // `*` chứ không liệt kê cột: `role` chỉ có sau migration 005, gọi đích
-      // danh một cột chưa tồn tại sẽ làm hỏng cả truy vấn.
-      .select('*')
-      .order('display_name')
+    // Liệt kê đúng các cột danh bạ: từ 011 chỉ chúng đọc được, `*` hay
+    // `email` là bị từ chối cả truy vấn.
+    const directory = (columns: string) =>
+      supabase.from('profiles').select(columns).order('display_name')
+    let { data, error } = await directory('id, display_name, displayed, created_at')
+    // Chưa chạy 007 thì chưa có cột `displayed`.
+    if (error?.code === '42703') {
+      ;({ data, error } = await directory('id, display_name, created_at'))
+    }
     if (error) fail('Could not load staff', error)
-    return ((data ?? []) as Profile[]).map((row) => ({
+    return ((data ?? []) as unknown as Profile[]).map((row) => ({
+      id: row.id,
+      display_name: row.display_name,
+      // Chưa chạy 007 thì cột chưa có: null, coi như hiện.
+      displayed: row.displayed ?? null,
+      created_at: row.created_at,
+    }))
+  },
+
+  async listAccounts(): Promise<Account[] | null> {
+    const { data, error } = await getSupabase().rpc('list_accounts')
+    if (error) {
+      if (isMissingFunction(error)) return null
+      // list_accounts() tự kiểm tra admin và từ chối bằng 42501; anon thì
+      // bị từ chối ngay ở quyền gọi hàm, cũng 42501.
+      if (error.code === '42501') throw new ForbiddenError(error.message)
+      fail('Không tải được danh sách tài khoản', error)
+    }
+    return ((data ?? []) as Account[]).map((row) => ({
       ...row,
       role: row.role ?? null,
-      // Chưa chạy 007 thì cột chưa có: null, coi như hiện.
       displayed: row.displayed ?? null,
     }))
   },
@@ -451,9 +472,13 @@ export const supabaseBackend: SchedulerBackend = {
     const supabase = getSupabase()
 
     // `count: 'exact'` để biết tổng số dòng khớp bộ lọc mà không phải tải hết.
+    // Liệt kê cột thay vì `*`: từ 011 `actor_email` không đọc được.
     let q = supabase
       .from('action_logs')
-      .select('*', { count: 'exact' })
+      .select(
+        'id, created_at, actor_id, actor_name, action, entity_type, entity_id, summary, old_data, new_data, metadata',
+        { count: 'exact' },
+      )
       .order('created_at', { ascending: false })
 
     // Ngày người dùng nhập là giờ máy họ; đổi sang mốc tuyệt đối để so sánh

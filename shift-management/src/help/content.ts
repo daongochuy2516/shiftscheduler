@@ -51,7 +51,7 @@ const vi: HelpSection[] = [
         rows: [
           ['14:00 hôm nay', 'Nhận ca. Sửa được giờ của mình, **rời ca** được'],
           ['14:30 hôm nay', 'Hết 30 phút: không rời ca được nữa'],
-          ['07:30 ngày mai', '**Mở điểm danh** — 30 phút trước giờ vào của riêng bạn'],
+          ['07:30 ngày mai', '**Mở điểm danh** — 30 phút trước giờ vào của riêng bạn. Từ đây giờ của bạn bị **khoá**'],
           ['12:00 ngày mai', '**Đóng điểm danh** — không thể tự điểm danh (nếu bạn có làm việc vào ca này nhưng quên điểm danh thì nhắn admin xem xét điểm danh bù)'],
           ['Đã điểm danh', 'Lượt bị **khoá**: không bỏ điểm danh, không sửa giờ, không rời ca'],
         ],
@@ -62,10 +62,10 @@ const vi: HelpSection[] = [
         rows: [
           ['Điểm danh', 'Lượt của mình, từ 30 phút trước giờ vào tới giờ kết thúc'],
           ['Bỏ điểm danh', 'Không được'],
-          ['Sửa giờ của mình', 'Chưa điểm danh'],
+          ['Sửa giờ của mình', 'Trước giờ mở điểm danh'],
           ['Rời ca', 'Trong 30 phút sau khi nhận, và chưa điểm danh'],
           ['Thêm / sửa / gỡ người khác', 'Không được — bạn chỉ thêm được chính mình'],
-          ['Sửa tên / ngày / giờ ca', 'Ca không có người khác. Đổi ngày thì còn cần chưa ai điểm danh'],
+          ['Sửa tên / ngày / giờ ca', 'Ca không có người khác. Đổi ngày thì còn cần chưa tới giờ mở điểm danh. Ca từ ca mẫu: không sửa giờ'],
           ['Xoá ca', 'Ca trống: luôn được. Chỉ có mình: khi còn rời được. Có người khác: không'],
           ['Ca mẫu', 'Chỉ nhận, không tạo / sửa / xoá'],
         ],
@@ -315,7 +315,7 @@ const en: HelpSection[] = [
         rows: [
           ['14:00 today', 'Join. You can change your own hours and **leave**'],
           ['14:30 today', '30 minutes are up: you can no longer leave'],
-          ['07:30 tomorrow', '**Check-in opens** — 30 minutes before your own start'],
+          ['07:30 tomorrow', '**Check-in opens** — 30 minutes before your own start. Your hours are **locked** from here'],
           ['12:00 tomorrow', '**Check-in closes** — no checking in afterwards'],
           ['Checked in', 'Your assignment is **locked**: no un-checking, no hour changes, no leaving'],
         ],
@@ -326,10 +326,10 @@ const en: HelpSection[] = [
         rows: [
           ['Check in', 'Your own assignment, from 30 minutes before your start until your end'],
           ['Un-check', 'Never'],
-          ['Change your hours', 'Not checked in yet'],
+          ['Change your hours', 'Before check-in opens'],
           ['Leave', 'Within 30 minutes of joining, and not checked in'],
           ['Add / edit / remove others', 'Never — you can only add yourself'],
-          ['Change shift title / date / hours', 'Nobody else is on the shift. Moving the date also needs nobody checked in'],
+          ['Change shift title / date / hours', 'Nobody else is on the shift. Moving the date also needs check-in not to have opened yet. Template shifts: hours can’t change'],
           ['Delete a shift', 'Empty: always. Only you: while you can still leave. Others on it: no'],
           ['Templates', 'Claim only — no creating, editing or deleting'],
         ],

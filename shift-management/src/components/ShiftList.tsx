@@ -22,8 +22,8 @@ import { useShiftColor } from '../data/useShiftColor'
 import {
   checkInOpensAt,
   checkInWindow,
-  isRestricted,
 } from '../lib/attendance'
+import { uiRestricted } from '../lib/uiBypass'
 import {
   formatDuration,
   formatRange,
@@ -80,7 +80,7 @@ export function ShiftList({
   )
   const notify = useNotify()
   /** Nhân viên thường: chỉ điểm danh lượt của mình, và chỉ trong giờ. */
-  const restricted = isRestricted(user)
+  const restricted = uiRestricted(user)
 
   // Nút điểm danh phải tự hiện ra khi tới giờ, không bắt người đang chờ F5.
   const [now, setNow] = useState(() => new Date())

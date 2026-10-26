@@ -45,7 +45,7 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 | `src/lib/` | Hàm thuần: `time.ts`, `colors.ts`, `summary.ts`, `shiftChunks.ts`, các probe của trang Trạng thái |
 | `src/i18n/` | Từ điển `en` / `vi` và `t()` |
 | `src/pwa/` | Đăng ký service worker + hộp nhắc bản mới (`serviceWorker.ts`), cài ứng dụng (`install.ts`, import sớm ở `main.tsx`) |
-| `supabase/` | `schema.sql` rồi `002`…`009`, chạy tay theo thứ tự trong SQL Editor |
+| `supabase/` | `schema.sql` rồi `002`…`011`, chạy tay theo thứ tự trong SQL Editor |
 
 **Hai backend.** Có `VITE_SUPABASE_URL` + key trong `shift-management/.env` thì dùng Supabase, không thì dùng mock lưu `localStorage` (băng vàng "Đang chạy dữ liệu mẫu"). Chọn ở `src/data/index.ts` và `src/auth/index.ts`.
 
@@ -65,8 +65,9 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 - Thêm phương thức đọc vào `SchedulerBackend` thì thêm vào `withOfflineCache` bằng `cachedRead` (khoá phải gồm mọi tham số); phương thức ghi thì bọc `online()`.
 - Offline mà chưa có bản lưu thì phép đọc ném lỗi có message `OFFLINE_ERROR_MESSAGE` (`lib/network.ts`): hiện lỗi tải trang bằng `components/LoadError.tsx`, đừng in thẳng `error`. `useNotify().error` tự đổi lỗi offline / lỗi mạng thành câu đã dịch (`bodyKey`).
 - Phiên offline (`auth/supabaseAuth.ts`): hồ sơ lưu ở `scheduler.offlineProfile`, bỏ qua sự kiện `INITIAL_SESSION` (offline với token hết hạn nó đến với session null). Sửa luồng đăng nhập thì giữ hai điều này.
-- Migration 002–009 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`), hàm chưa có thì `serverTime` trả `null` (`isMissingFunction`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`, `displayed`) đọc về là `null`.
+- Migration 002–011 là tuỳ chọn: bảng chưa có thì `listTemplates` / `listActionLogs` trả `null` (`isMissingTable`), hàm chưa có thì `serverTime` trả `null` (`isMissingFunction`) và giao diện hiện thông báo vàng, không được vỡ. Cột chưa có (`role`, `confirmed_at`, `color`, `displayed`) đọc về là `null`.
 - `profiles` gồm cả người đang ẩn (`displayed = false`, ví dụ tài khoản quản lý). Danh sách để **chọn / lọc** nhân viên dùng `rosterProfiles`; bảng xếp ca lọc hàng bằng `showRow` trong `lib/profiles.ts` (người ẩn vẫn hiện nếu có ca). Tra tên theo id thì dùng `profilesById` như cũ.
+- Danh bạ (`Profile`, `listProfiles`) chỉ có id / tên / hiện-ẩn / ngày tạo — từ 011 nhân viên chỉ đọc được các cột đó của `profiles` (quyền theo cột), nên truy vấn `profiles` phải liệt kê cột, không `select('*')`, và không thêm `email` / `role`. Email + vai trò là `Account`: của chính mình qua `my_profile()` (lúc đăng nhập), của mọi người qua `list_accounts()` — máy chủ kiểm tra admin, không phải thì ném `ForbiddenError`. Cột mới thêm vào `profiles` mặc định không ai đọc được qua API, phải grant thêm. `action_logs.actor_email` cũng không đọc được: liệt kê cột khi select.
 
 **Ngày giờ**
 
@@ -78,7 +79,8 @@ ThemeProvider → I18nProvider → AuthProvider → BrowserRouter
 
 - Mọi biến `VITE_` đều xuống trình duyệt: chỉ publishable/anon key, không bao giờ `service_role`.
 - Quyền hiện tại là chủ ý: anon không có gì, mọi nhân viên đã đăng nhập tạo/sửa được mọi ca. Luật nào cần chặn thật thì đặt ở database (RLS, trigger, `check`, `now()` của máy chủ); giao diện chỉ phản ánh lại.
-- Chấm công = xác nhận (`pending` → `confirmed`). Luật cho `staff` nằm trong trigger của `005_attendance.sql`, bản mới nhất của hai hàm trigger là ở `006_shift_rules.sql` (sửa luật thì viết migration mới ghi đè hàm, đừng sửa file đã chạy); `lib/attendance.ts` là bản sao phía client để khoá nút và để mock hành xử giống — sửa luật thì sửa cả ba nơi (SQL, `attendance.ts`, `mockBackend.ts`). `profiles.role` là `null` nghĩa là 005 chưa chạy: không áp luật nào. Ca mẫu chỉ admin tạo / sửa / xoá (trigger trong `008_template_admin.sql`, bản client là `canManageTemplates`); nhân viên chỉ nhận.
+- Chấm công = xác nhận (`pending` → `confirmed`). Luật cho `staff` nằm trong trigger của `005_attendance.sql`, bản mới nhất của hai hàm trigger là ở `010_harden_rules.sql` (sửa luật thì viết migration mới ghi đè hàm, đừng sửa file đã chạy); `lib/attendance.ts` là bản sao phía client để khoá nút và để mock hành xử giống — sửa luật thì sửa cả ba nơi (SQL, `attendance.ts`, `mockBackend.ts`). `profiles.role` là `null` nghĩa là 005 chưa chạy: không áp luật nào. Ca mẫu chỉ admin tạo / sửa / xoá (trigger trong `008_template_admin.sql`, bản client là `canManageTemplates`); nhân viên chỉ nhận.
+- Hàm mới trong schema `public` thì Supabase mặc định cho cả anon gọi qua `/rest/v1/rpc`: viết kèm `revoke execute … from public, anon` (hàm trigger thu luôn của `authenticated`), như 009 / 010. Cột client tự gửi được mà luật dựa vào (mốc thời gian, người tạo) thì trigger phải ghi đè — cột có `default` vẫn nhận giá trị client gửi.
 - `action_logs` chỉ do trigger `record_action_log` ghi. Không thêm đường ghi từ client, không thêm policy insert/update/delete.
 - Một thao tác của người dùng = đúng một dòng nhật ký (nhận ca, xoá ca đều đã gộp). Giữ nguyên tắc này khi thêm thao tác mới.
 

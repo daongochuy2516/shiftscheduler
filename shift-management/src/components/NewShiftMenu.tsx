@@ -12,7 +12,7 @@ import {
 import type { ShiftTemplate } from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule } from '../data/ScheduleContext'
-import { canManageTemplates } from '../lib/attendance'
+import { uiCanManageTemplates } from '../lib/uiBypass'
 import { useI18n } from '../i18n/I18nContext'
 import { templateColor } from '../lib/colors'
 import { formatRange } from '../lib/time'
@@ -40,7 +40,7 @@ export function NewShiftChooser({
   const { t, dateLocale } = useI18n()
   const { templates, templatesAvailable } = useSchedule()
   const { user } = useAuth()
-  const canManage = templatesAvailable && canManageTemplates(user)
+  const canManage = templatesAvailable && uiCanManageTemplates(user)
   const active = useMemo(() => templates.filter((tpl) => tpl.is_active), [templates])
   const [picking, setPicking] = useState(
     () => startAtTemplates && templatesAvailable && active.length > 0,

@@ -16,10 +16,11 @@ import { useI18n } from '../i18n/I18nContext'
 import {
   checkInOpensAt,
   checkInWindow,
-  isRestricted,
+  hoursLocked,
   leaveDeadline,
   removeBlock,
 } from '../lib/attendance'
+import { uiRestricted } from '../lib/uiBypass'
 import {
   formatDuration,
   formatRange,
@@ -82,7 +83,7 @@ export function ShiftSimpleView({
   const { profilesById } = useSchedule()
   const { t, dateLocale } = useI18n()
   const shiftColor = useShiftColor()
-  const restricted = isRestricted(user)
+  const restricted = uiRestricted(user)
 
   const shiftStart = normalizeTime(shift.start_time)
   const shiftEnd = normalizeTime(shift.end_time)
@@ -144,6 +145,17 @@ export function ShiftSimpleView({
 
   const savedStart = saved ? normalizeTime(saved.start_time) : null
   const savedEnd = saved ? normalizeTime(saved.end_time) : null
+  /**
+   * Tới giờ điểm danh thì giờ của mình đứng yên (010, luật G) — vẫn điểm
+   * danh, sửa ghi chú, rời ca được như thường.
+   */
+  const hoursStarted =
+    restricted &&
+    !confirmed &&
+    !!savedStart &&
+    mine?.id === saved?.id &&
+    hoursLocked(shift.date, savedStart, now)
+  const timesLocked = locked || hoursStarted
   const gate =
     saved && savedStart && savedEnd
       ? checkInWindow(shift.date, savedStart, savedEnd, now)
@@ -222,9 +234,9 @@ export function ShiftSimpleView({
               <input
                 id="simple-start"
                 type="time"
-                className={locked ? lockedInputClass : inputClass}
+                className={timesLocked ? lockedInputClass : inputClass}
                 value={start}
-                disabled={locked}
+                disabled={timesLocked}
                 onChange={(e) => setTimes({ start_time: e.target.value })}
               />
             </div>
@@ -235,13 +247,13 @@ export function ShiftSimpleView({
               <input
                 id="simple-end"
                 type="time"
-                className={locked ? lockedInputClass : inputClass}
+                className={timesLocked ? lockedInputClass : inputClass}
                 value={end}
-                disabled={locked}
+                disabled={timesLocked}
                 onChange={(e) => setTimes({ end_time: e.target.value })}
               />
             </div>
-            {!locked && !isWholeShift && (
+            {!timesLocked && !isWholeShift && (
               <button
                 type="button"
                 onClick={() =>
@@ -285,6 +297,12 @@ export function ShiftSimpleView({
               <span className="inline-flex items-center gap-1 text-slate-500">
                 <Lock className="h-3 w-3" />
                 {t('shiftSimple.hoursLocked')}
+              </span>
+            )}
+            {hoursStarted && (
+              <span className="inline-flex items-center gap-1 text-slate-500">
+                <Lock className="h-3 w-3" />
+                {t('shift.hoursLockedStarted')}
               </span>
             )}
           </div>

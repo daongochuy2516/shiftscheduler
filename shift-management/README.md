@@ -86,6 +86,8 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/007_accounts.sql` | Trang Tài khoản: cột `profiles.displayed` (hiện / ẩn trên bảng), admin sửa được mọi tài khoản, người khác không sửa được ([mục 11](#trang-tài-khoản)). Cần 005 trước |
 | `supabase/008_template_admin.sql` | Chỉ admin tạo / sửa / bật-tắt / xoá ca mẫu; nhân viên vẫn nhận ca mẫu bình thường ([mục 7](#quản-lý-ca-mẫu)). Cần 002 và 005 trước |
 | `supabase/009_server_time.sql` | Hàm `server_now()` cho đồng hồ trên thanh trên chạy theo giờ máy chủ. Chưa chạy thì đồng hồ dùng giờ máy, có chấm vàng cạnh giờ. Không cần file nào trước |
+| `supabase/010_harden_rules.sql` | Bịt các đường lách luật khi gọi thẳng Supabase API: mốc thời gian do máy chủ đặt, tới giờ điểm danh thì giờ đứng yên, điểm danh chỉ là đổi trạng thái, ca mẫu giữ giờ gốc, một người một lượt trong ca, thu quyền gọi hàm của anon ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)). Cần 002, 005, 006 trước |
+| `supabase/011_accounts_private.sql` | Email và vai trò chỉ admin đọc được: nhân viên chỉ còn đọc phần danh bạ của `profiles` (id, tên, hiện / ẩn); danh sách tài khoản đầy đủ qua `list_accounts()`, máy chủ kiểm tra admin trước khi trả; `action_logs.actor_email` cũng thu lại ([mục 11](#trang-tài-khoản)). Cần 003, 005, 007 trước |
 
 Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng dụng **vẫn chạy bình thường**, chỉ thiếu tính năng tương ứng:
 
@@ -98,12 +100,20 @@ Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng d�
 | 007 | Trang Tài khoản hiện thông báo vàng và không sửa được gì; cột `displayed` chưa có nên không ai bị ẩn |
 | 008 | Nhân viên vẫn tạo / sửa được ca mẫu như trước |
 | 009 | Đồng hồ trên thanh trên dùng giờ máy, có chấm vàng cạnh giờ |
+| 010 | Giao diện vẫn khoá như mô tả, nhưng nhân viên gọi thẳng API lách được: tự đặt `created_at` để rời ca lúc nào cũng được, sửa giờ lượt chưa điểm danh để điểm danh trễ, thêm mình hai lần vào một ca |
+| 011 | Trang Tài khoản hiện thông báo vàng, không hiện tài khoản nào. Nhân viên gọi thẳng API vẫn đọc được email và vai trò của mọi người trong `profiles`, và email người thao tác trong nhật ký |
 
 > Chạy 005 xong **mọi người đều là nhân viên thường**. Phong admin ngay sau đó (mục 7 trong file, hoặc [mục 11](#11-dành-cho-quản-trị-viên)), nếu không sẽ không còn ai sửa được lượt đã điểm danh.
 
 ### Chế độ dữ liệu mẫu
 
 Không có `.env` thì ứng dụng tự chuyển sang dữ liệu mẫu trong `localStorage`, hiện dải băng vàng *"Đang chạy dữ liệu mẫu"*. Đăng nhập bằng bất kỳ email mẫu nào với mật khẩu `password`. Hữu ích khi muốn xem giao diện mà chưa có Supabase.
+
+### Thử luật database: tắt khoá giao diện
+
+Mở DevTools → Console, gõ `localStorage.bypassuirestrict = 'true'` rồi tải lại trang. Giao diện bỏ mọi khoá theo vai trò như thể bạn là admin, kể cả khi đang là `staff`: ô bị xám mở ra, nút Xoá / Xác nhận / Thêm người khác hiện lại, ô chọn trạng thái dùng được, menu quản lý ca mẫu, ô **Tài khoản** trong nút lưới và mục *Dành cho admin* trong Hướng dẫn hiện ra. Riêng danh sách tài khoản do máy chủ quyết định có trả hay không, nên mở trang Tài khoản vẫn bị báo *Bạn không có quyền truy cập trang này*. Header có dải băng hồng nhắc đang bật.
+
+Chỉ giao diện bỏ khoá. Database vẫn xét vai trò thật, nên bấm thao tác không được phép thì máy chủ từ chối và câu từ chối hiện ở [thông báo](#9c-thông-báo) — đúng cách để thử RLS / trigger mà không phải gọi API tay. Ở chế độ dữ liệu mẫu, bản mock cũng chặn theo vai trò thật y như database. Tắt: `localStorage.removeItem('bypassuirestrict')` rồi tải lại.
 
 ---
 
@@ -294,7 +304,7 @@ Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâ
 | Bạn đang… | Form hiện | Bấm là |
 | --- | --- | --- |
 | Chưa có trong ca | Ô **Từ / Đến** (sẵn giờ của ca), ghi chú, nút **Nhận ca này** | Lưu ngay, đóng form |
-| Có trong ca, chờ xác nhận | Giờ và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca** | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
+| Có trong ca, chờ xác nhận | Giờ và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca**. Từ lúc mở điểm danh thì giờ bị khoá kèm 🔒 (cần 010) | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
 | Đã điểm danh | Giờ bị khoá kèm 🔒, chỉ còn sửa ghi chú | — |
 
 - Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — bạn không có quyền điểm danh trễ*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
@@ -478,6 +488,16 @@ Sau khi chạy thêm `supabase/006_shift_rules.sql` — **nhân viên chỉ thao
 
 006 bỏ luật "ca tạo quá 30 phút thì không xoá được" của 005.
 
+Sau khi chạy thêm `supabase/010_harden_rules.sql`:
+
+| Luật | Chi tiết |
+| --- | --- |
+| Tới giờ điểm danh thì giờ đứng yên | Từ lúc mở điểm danh (30 phút trước giờ vào của bạn) không sửa được giờ vào / ra của lượt đó, không dời ngày ca chứa nó — kể cả khi chưa điểm danh hay đã quá giờ. Cần sửa thì nhắn admin. Ghi chú vẫn sửa được, vẫn điểm danh / rời ca như thường |
+| Ca sinh từ ca mẫu | Giờ của ca theo ca mẫu, nhân viên không sửa (trước đây chỉ giao diện khoá) |
+| Một người một lượt | Không có mặt hai lần trong cùng một ca, kể cả admin |
+
+Phần còn lại của 010 không đổi gì trên giao diện, chỉ chặn việc gọi thẳng API: giờ nhận ca và người tạo ca do máy chủ ghi; điểm danh phải là một lệnh riêng (không thêm lượt ở trạng thái đã xác nhận, không vừa điểm danh vừa sửa giờ / ghi chú); không chuyển lượt sang ca khác; không gắn ca thường vào ca mẫu.
+
 Trên giao diện, thay cho nút **Xác nhận** bạn sẽ thấy:
 
 | Hiển thị | Ý nghĩa |
@@ -486,7 +506,7 @@ Trên giao diện, thay cho nút **Xác nhận** bạn sẽ thấy:
 | *Hết giờ điểm danh — bạn không có quyền điểm danh trễ* | Đã qua giờ kết thúc của bạn |
 | *lúc 07:42 8/9* cạnh nhãn **Đã xác nhận** | Thời điểm điểm danh, do máy chủ ghi |
 
-Trong form sửa ca, ô bị khoá chuyển xám. Khoá **theo luật** thì kèm một dòng 🔒 nói rõ lý do: dòng đã điểm danh (không sửa giờ, không gỡ), dòng của bạn đã nhận quá 30 phút (không rời được), ca đã có người điểm danh (không dời ngày, không xoá), ca bạn nhận quá 30 phút (không xoá). Khoá chỉ vì **ca có người khác** (tên, ngày, giờ của ca; dòng của người khác; nút Xoá) hay vì không phải admin (ô chọn người, thêm người khác) thì chỉ khoá / ẩn, không kèm câu giải thích. Ô ghi chú của ca vẫn mở.
+Trong form sửa ca, ô bị khoá chuyển xám. Khoá **theo luật** thì kèm một dòng 🔒 nói rõ lý do: dòng đã điểm danh (không sửa giờ, không gỡ), dòng của bạn đã nhận quá 30 phút (không rời được), dòng của bạn đã tới giờ điểm danh (không sửa giờ), ca đã có người điểm danh hoặc đã tới giờ điểm danh (không dời ngày), ca đã có người điểm danh (không xoá), ca bạn nhận quá 30 phút (không xoá). Khoá chỉ vì **ca có người khác** (tên, ngày, giờ của ca; dòng của người khác; nút Xoá) hay vì không phải admin (ô chọn người, thêm người khác) thì chỉ khoá / ẩn, không kèm câu giải thích. Ô ghi chú của ca vẫn mở.
 
 Giờ tính theo **đồng hồ máy chủ, múi giờ Việt Nam** — chỉnh đồng hồ máy mình không có tác dụng. Mọi luật nằm trong trigger của database nên gọi thẳng Supabase API cũng không lách được; giao diện chỉ ẩn sẵn những gì database sẽ từ chối. Mọi can thiệp của admin đều vào [Nhật ký](#9b-nhật-ký-thao-tác).
 
@@ -887,7 +907,7 @@ Việc của admin khi nhân viên quên điểm danh: mở trang **Chờ xác n
 
 ### Trang Tài khoản
 
-Chỉ admin thấy ô **Tài khoản** trong nút lưới ở góc phải trên cùng (mobile: trong sheet mở ra khi bấm avatar). Người khác mở thẳng `/accounts` sẽ bị đưa về trang Lịch. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
+Chỉ admin thấy ô **Tài khoản** trong nút lưới ở góc phải trên cùng (mobile: trong sheet mở ra khi bấm avatar). Danh sách tài khoản (email, vai trò) chỉ đến từ hàm `list_accounts()` của `supabase/011_accounts_private.sql`: máy chủ kiểm tra người gọi là admin rồi mới trả, không phải thì từ chối. Người khác mở thẳng `/accounts` (hay đang tắt khoá giao diện) nhận về lời từ chối, trang báo *Bạn không có quyền truy cập trang này*. Chưa chạy 011 thì trang hiện thông báo vàng, không hiện tài khoản nào. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
 
 Mỗi dòng là một tài khoản, kèm email và vai trò:
 
@@ -911,20 +931,24 @@ Database chặn thật: chỉ admin sửa được tên hiển thị và hiện 
 | Email provider | **Bật** |
 | Confirm email | **Tắt** (tài khoản do admin tạo sẵn) |
 | Allow new users to sign up | **Tắt** — đây là thứ chặn đăng ký công khai |
+| Allow anonymous sign-ins | **Tắt** |
+| Secure password change | **Bật** — ô *mật khẩu cũ* trong mục Đổi mật khẩu chỉ kiểm ở trình duyệt |
+| Leaked password protection (Auth → Passwords) | **Bật** |
 | Site URL | `http://localhost:5173` (đổi khi deploy) |
 | Redirect URLs | `http://localhost:5173/**` |
 
 ### Phân quyền
 
-**Anon không có quyền gì.** Mọi nhân viên đã đăng nhập đều **xem** được tất cả ca, thông tin nhân viên, Tổng kết và Nhật ký. Luật nào cần chặn thật thì đặt ở database (RLS, trigger, `check`, `now()` của máy chủ); giao diện chỉ phản ánh lại những gì database sẽ từ chối.
+**Anon không có quyền gì.** Mọi nhân viên đã đăng nhập đều **xem** được tất cả ca, tên và hiện / ẩn của mọi người, Tổng kết và Nhật ký. Email và vai trò của người khác thì chỉ admin xem được (011). Luật nào cần chặn thật thì đặt ở database (RLS, trigger, `check`, `now()` của máy chủ); giao diện chỉ phản ánh lại những gì database sẽ từ chối.
 
 | Việc | Ai làm được | Cần chạy |
 | --- | --- | --- |
 | Tạo ca, nhận ca (thêm **chính mình** vào ca), nhận ca mẫu | Mọi nhân viên | `schema.sql`, 002 |
-| Điểm danh, sửa giờ / ghi chú phần của mình, rời ca, xoá ca trống / ca chỉ có mình | Nhân viên, **trong các giới hạn** ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh) | 005, 006 |
+| Điểm danh, sửa giờ / ghi chú phần của mình, rời ca, xoá ca trống / ca chỉ có mình | Nhân viên, **trong các giới hạn** ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh) | 005, 006, 010 |
 | Thêm / sửa / gỡ lượt của **người khác**, bỏ điểm danh, điểm danh hộ, sửa tên – ngày – giờ của ca có người khác, xoá ca có người khác | Chỉ **admin** | 005, 006 |
 | Tạo / sửa / bật-tắt / xoá ca mẫu | Chỉ **admin** (nhân viên chỉ nhận) | 008 |
 | Đổi tên hiển thị, hiện / ẩn người trên bảng | Chỉ **admin**, của bất kỳ ai | 007 |
+| Xem email, vai trò của người khác (trang Tài khoản) | Chỉ **admin** — máy chủ kiểm tra trước khi trả | 011 |
 | Phong admin | Chỉ làm tay trong SQL Editor ([mục 11](#phong-admin)) | 005 |
 | Sửa / xoá / tạo dòng Nhật ký | **Không ai** qua ứng dụng ([mục 9b](#9b-nhật-ký-thao-tác)) | 003 |
 

@@ -47,6 +47,8 @@ export const en = {
   'auth.mockMode': 'Mock mode',
   'auth.mockHint': 'Any seeded staff email works with the password {{password}}:',
   'auth.mockBanner': 'Running on mock data — Supabase is not connected yet.',
+  'auth.uiBypassBanner':
+    'UI restrictions are off (localStorage bypassuirestrict) — the database still enforces your real role.',
 
   // ---- nav ----
   'nav.timeline': 'Schedule',
@@ -150,6 +152,10 @@ export const en = {
     'Checked in — you don’t have permission to change your shift details.',
   'shift.dateLocked':
     'Someone has checked in — you don’t have permission to move this shift to another day.',
+  'shift.dateLockedStarted':
+    'Check-in has opened — you don’t have permission to move this shift to another day.',
+  'shift.hoursLockedStarted':
+    'Check-in has opened — you don’t have permission to change your hours. Message an admin if they need fixing.',
   'shift.deleteLockedConfirmed':
     'Someone has checked in — you don’t have permission to delete this shift.',
   'shift.deleteLockedLate':
@@ -453,6 +459,12 @@ export const en = {
   'accounts.hidden': 'Hidden',
   'accounts.roleAdmin': 'Admin',
   'accounts.roleStaff': 'Staff',
+  'accounts.forbidden': 'You don’t have permission to access this page.',
+  'accounts.forbiddenHint':
+    'The server refused: only admins can see the account list.',
+  'accounts.privateNotInstalled': 'Account list isn’t installed yet',
+  'accounts.privateNotInstalledHint':
+    'Run supabase/011_accounts_private.sql in the Supabase SQL Editor. Until then this page shows nothing, because the server has no way to check who may see email addresses and roles.',
   'accounts.notInstalled': 'Account settings aren’t installed yet',
   'accounts.notInstalledHint':
     'Run supabase/007_accounts.sql in the Supabase SQL Editor to enable editing.',
@@ -639,6 +651,7 @@ export const en = {
   'status.offline.kind.logs': 'action logs',
   'status.offline.kind.profiles': 'staff profiles',
   'status.offline.kind.templates': 'shift templates',
+  'status.offline.kind.accounts': 'accounts',
   'status.offline.storage': 'Browser storage',
   'status.offline.storageHint': 'navigator.storage.estimate()',
   'status.offline.storageValue': '{{used}} of {{quota}}',
@@ -714,6 +727,8 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'auth.mockHint':
     'Mọi email nhân viên mẫu đều dùng được với mật khẩu {{password}}:',
   'auth.mockBanner': 'Đang chạy dữ liệu mẫu — chưa kết nối Supabase.',
+  'auth.uiBypassBanner':
+    'Đang tắt khoá giao diện (localStorage bypassuirestrict) — database vẫn chặn theo vai trò thật.',
 
   // ---- nav ----
   'nav.timeline': 'Lịch',
@@ -817,6 +832,10 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
     'Đã điểm danh — bạn không có quyền thay đổi thông tin ca của bạn.',
   'shift.dateLocked':
     'Ca đã có người điểm danh — bạn không có quyền dời sang ngày khác.',
+  'shift.dateLockedStarted':
+    'Đã tới giờ điểm danh — bạn không có quyền dời ca sang ngày khác.',
+  'shift.hoursLockedStarted':
+    'Đã tới giờ điểm danh — bạn không có quyền sửa giờ của mình nữa. Cần sửa thì nhắn admin.',
   'shift.deleteLockedConfirmed':
     'Ca đã có người điểm danh — bạn không có quyền xoá ca này.',
   'shift.deleteLockedLate':
@@ -1118,6 +1137,12 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'accounts.roleAdmin': 'Admin',
   // Nhãn vai trò giữ nguyên tiếng Anh ở cả hai ngôn ngữ (Admin / Staff).
   'accounts.roleStaff': 'Staff',
+  'accounts.forbidden': 'Bạn không có quyền truy cập trang này.',
+  'accounts.forbiddenHint':
+    'Máy chủ đã từ chối: chỉ admin mới xem được danh sách tài khoản.',
+  'accounts.privateNotInstalled': 'Chưa cài đặt danh sách tài khoản',
+  'accounts.privateNotInstalledHint':
+    'Chạy supabase/011_accounts_private.sql trong Supabase SQL Editor. Trước đó trang này không hiện gì, vì máy chủ chưa có cách kiểm tra ai được xem email và vai trò.',
   'accounts.notInstalled': 'Chưa cài đặt tính năng tài khoản',
   'accounts.notInstalledHint':
     'Chạy supabase/007_accounts.sql trong SQL Editor của Supabase để sửa được.',

@@ -20,3 +20,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Bộ test RLS gọi thẳng API (chứa email/mật khẩu tài khoản test khi chạy)
+postman/

@@ -1,6 +1,6 @@
 import { addMinutes } from 'date-fns'
 import type {
-  Profile,
+  Account,
   ShiftAssignment,
   ShiftWithAssignments,
   UUID,
@@ -10,8 +10,9 @@ import { fromDateKey, toMinutes } from './time'
 /**
  * Luật chấm công, bản phía client.
  *
- * Nơi quyết định thật là các trigger trong `supabase/005_attendance.sql` và
- * `006_shift_rules.sql` (đồng hồ máy chủ, múi giờ Asia/Ho_Chi_Minh). File này chỉ để giao diện ẩn
+ * Nơi quyết định thật là các trigger trong `supabase/005_attendance.sql`,
+ * `006_shift_rules.sql` và bản mới nhất `010_harden_rules.sql` (đồng hồ máy
+ * chủ, múi giờ Asia/Ho_Chi_Minh). File này chỉ để giao diện ẩn
  * đúng những nút mà database sẽ từ chối, và để bản mock hành xử giống bản
  * thật. Đổi con số ở đây phải đổi cả trong file SQL.
  */
@@ -24,7 +25,7 @@ export const LEAVE_GRACE_MIN = 30
  * nhận ca mẫu. `role` null (005 chưa chạy) thì database không chặn, nên giao
  * diện cũng không.
  */
-export function canManageTemplates(user: Pick<Profile, 'role'> | null): boolean {
+export function canManageTemplates(user: Pick<Account, 'role'> | null): boolean {
   return !isRestricted(user)
 }
 
@@ -32,7 +33,7 @@ export function canManageTemplates(user: Pick<Profile, 'role'> | null): boolean 
  * Luật chỉ áp cho `staff`. Admin được miễn; `role` là `null` nghĩa là
  * migration 005 chưa chạy, database không chặn gì nên giao diện cũng không.
  */
-export function isRestricted(user: Pick<Profile, 'role'> | null): boolean {
+export function isRestricted(user: Pick<Account, 'role'> | null): boolean {
   return user?.role === 'staff'
 }
 
@@ -43,6 +44,15 @@ function at(date: string, time: string): Date {
 /** Thời điểm bắt đầu điểm danh được: 30 phút trước giờ vào của riêng người đó. */
 export function checkInOpensAt(date: string, startTime: string): Date {
   return addMinutes(at(date, startTime), -CHECK_IN_LEAD_MIN)
+}
+
+/**
+ * Cửa sổ điểm danh của lượt đã mở (kể cả đã đóng): nhân viên không sửa giờ
+ * của lượt đó, không dời ngày ca chứa nó nữa (010, luật G). Không thì sửa
+ * lượt chưa điểm danh thành 00:00–23:59 là điểm danh trễ được.
+ */
+export function hoursLocked(date: string, startTime: string, now: Date): boolean {
+  return now >= checkInOpensAt(date, startTime)
 }
 
 export type CheckInWindow = 'early' | 'open' | 'closed'

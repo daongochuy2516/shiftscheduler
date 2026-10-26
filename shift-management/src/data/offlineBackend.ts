@@ -133,6 +133,10 @@ export function withOfflineCache(inner: SchedulerBackend): SchedulerBackend {
     serverTime: () =>
       isOnline() ? inner.serverTime() : Promise.reject(new OfflineError()),
 
+    // Bản lưu riêng từng tài khoản, chỉ có khi máy chủ đã trả (tức là admin):
+    // admin offline vẫn xem được. Bị từ chối thì không có gì để lưu.
+    listAccounts: () => cachedRead('accounts', () => inner.listAccounts()),
+
     updateProfile: online((id, input) => inner.updateProfile(id, input)),
     createShift: online((input, assignments) =>
       inner.createShift(input, assignments),

@@ -24,11 +24,12 @@ import { isListed } from '../lib/profiles'
 import {
   deleteBlock,
   hasOthers,
-  isRestricted,
+  hoursLocked,
   removeBlock,
   type DeleteBlock,
   type RemoveBlock,
 } from '../lib/attendance'
+import { uiRestricted } from '../lib/uiBypass'
 import {
   formatDuration,
   formatShiftWhen,
@@ -168,7 +169,7 @@ export function ShiftModal({
    * bản đã lưu, vì database xét bản đã lưu.
    */
   const { user } = useAuth()
-  const restricted = isRestricted(user)
+  const restricted = uiRestricted(user)
   const confirmedIds = useMemo(
     () =>
       new Set(
@@ -178,8 +179,21 @@ export function ShiftModal({
       ),
     [shift],
   )
-  const dateLocked = restricted && confirmedIds.size > 0
   const [openedAt] = useState(() => new Date())
+  /**
+   * Không dời ngày: ca đã có người điểm danh (005), hoặc đã tới giờ điểm danh
+   * của một lượt trong ca — dời ngày sẽ mở lại cửa sổ đã qua (010, luật G).
+   */
+  const dateLock: 'confirmed' | 'started' | null = !restricted || !shift
+    ? null
+    : confirmedIds.size > 0
+      ? 'confirmed'
+      : shift.assignments.some((a) =>
+            hoursLocked(shift.date, normalizeTime(a.start_time), openedAt),
+          )
+        ? 'started'
+        : null
+  const dateLocked = dateLock !== null
   const deleteLock =
     restricted && shift ? deleteBlock(shift, user?.id ?? null, openedAt) : null
   /**
@@ -657,7 +671,11 @@ export function ShiftModal({
                   className="inline-flex items-start gap-1.5 text-xs text-slate-500 sm:col-span-2"
                 >
                   <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-                  {t('shift.dateLocked')}
+                  {t(
+                    dateLock === 'started'
+                      ? 'shift.dateLockedStarted'
+                      : 'shift.dateLocked',
+                  )}
                 </p>
               )}
 
@@ -730,7 +748,16 @@ export function ShiftModal({
                         : null
                     const othersRow =
                       restricted && !!saved && saved.user_id !== user?.id
-                    const rowLocked = removeLock === 'confirmed' || othersRow
+                    // 010, luật G: tới giờ điểm danh thì giờ của lượt đứng yên.
+                    const hoursStarted =
+                      restricted &&
+                      !!shift &&
+                      !!saved &&
+                      !othersRow &&
+                      saved.status !== 'confirmed' &&
+                      hoursLocked(shift.date, normalizeTime(saved.start_time), openedAt)
+                    const rowLocked =
+                      removeLock === 'confirmed' || othersRow || hoursStarted
                     const personLocked = restricted
                     const rowInputClass = rowLocked ? lockedInputClass : inputClass
                     return (
@@ -875,6 +902,12 @@ export function ShiftModal({
                               <span className="inline-flex items-center gap-1 text-slate-500">
                                 <Lock className="h-3 w-3" />
                                 {t(ROW_LOCK_TEXT[removeLock])}
+                              </span>
+                            )}
+                            {hoursStarted && (
+                              <span className="inline-flex items-center gap-1 text-slate-500">
+                                <Lock className="h-3 w-3" />
+                                {t('shift.hoursLockedStarted')}
                               </span>
                             )}
                           </div>

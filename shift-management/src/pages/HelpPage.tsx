@@ -13,6 +13,7 @@ import { HELP, type HelpBlock, type HelpSection } from '../help/content'
 import { TOURS, TOUR_ORDER, stepsFor, type TourId } from '../help/tours'
 import { useTour } from '../help/TourProvider'
 import { useUrlText } from '../lib/urlParams'
+import { uiIsAdmin } from '../lib/uiBypass'
 
 /** Bỏ dấu, chữ thường — để tìm không dấu vẫn ra. */
 function fold(s: string): string {
@@ -83,7 +84,7 @@ export function HelpPage() {
 
   const visible = useMemo(
     () =>
-      HELP[lang].filter((s) => !s.adminOnly || user?.role === 'admin'),
+      HELP[lang].filter((s) => !s.adminOnly || uiIsAdmin({ role: user?.role ?? null })),
     [lang, user?.role],
   )
   const pinned = useMemo(() => visible.filter((s) => s.pinned), [visible])

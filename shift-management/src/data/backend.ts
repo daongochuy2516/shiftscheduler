@@ -1,4 +1,5 @@
 import type {
+  Account,
   ActionLogPage,
   ActionLogQuery,
   AssignmentInput,
@@ -13,13 +14,19 @@ import type {
   UUID,
 } from '../types'
 
+/** Máy chủ từ chối vì người gọi không có quyền (không phải lỗi mạng). */
+export class ForbiddenError extends Error {}
+
 /**
  * The whole data surface the UI depends on. The mock backend and the Supabase
  * backend both implement this, so switching is a one-line change in
  * `data/index.ts`.
  */
 export interface SchedulerBackend {
-  /** Mọi tài khoản, kể cả người đang ẩn (`displayed = false`). */
+  /**
+   * Danh bạ: mọi người, kể cả người đang ẩn (`displayed = false`). Chỉ tên và
+   * hiện / ẩn — email, vai trò là của `listAccounts`.
+   */
   listProfiles(): Promise<Profile[]>
 
   /**
@@ -105,6 +112,14 @@ export interface SchedulerBackend {
    * migration 009 chưa chạy; phía gọi tự lùi về giờ máy.
    */
   serverTime(): Promise<Date | null>
+
+  /**
+   * Danh sách tài khoản đầy đủ (email, vai trò) cho trang Tài khoản. Máy chủ
+   * tự kiểm tra người gọi là admin (`list_accounts()` của 011); không phải
+   * thì ném `ForbiddenError` — không tin `role` trong phiên hay cờ
+   * `bypassuirestrict`. `null` khi migration 011 chưa chạy.
+   */
+  listAccounts(): Promise<Account[] | null>
 
   /**
    * Calls `onChange` whenever shifts or assignments change elsewhere.

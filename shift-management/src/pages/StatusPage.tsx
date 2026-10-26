@@ -736,13 +736,14 @@ function AppCard() {
   )
 }
 
-const OFFLINE_KINDS: readonly OfflineKind[] = ['shifts', 'bounds', 'logs', 'profiles', 'templates']
+const OFFLINE_KINDS: readonly OfflineKind[] = ['shifts', 'bounds', 'logs', 'profiles', 'templates', 'accounts']
 const KIND_LABEL: Record<OfflineKind, TranslationKey> = {
   shifts: 'status.offline.kind.shifts',
   bounds: 'status.offline.kind.bounds',
   logs: 'status.offline.kind.logs',
   profiles: 'status.offline.kind.profiles',
   templates: 'status.offline.kind.templates',
+  accounts: 'status.offline.kind.accounts',
 }
 
 /** Một ô số trong dải số đếm của phiên. */

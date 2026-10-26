@@ -9,15 +9,13 @@
 
 export type UUID = string
 
+/**
+ * Một người trong danh bạ nhân viên — phần của `profiles` mà mọi người đăng
+ * nhập đọc được (011 thu quyền đọc các cột còn lại).
+ */
 export interface Profile {
   id: UUID
-  email: string
   display_name: string
-  /**
-   * `null` = migration 005 chưa chạy: chưa có vai trò, không luật chấm công
-   * nào được áp (xem lib/attendance.ts).
-   */
-  role: 'staff' | 'admin' | null
   /**
    * `false` = không hiện người này trong các bảng xếp ca và ô chọn nhân viên
    * (ví dụ tài khoản quản lý chỉ vào để xem). `null` = migration 007 chưa
@@ -25,6 +23,20 @@ export interface Profile {
    */
   displayed: boolean | null
   created_at: string
+}
+
+/**
+ * Hồ sơ đầy đủ: của chính người đăng nhập, hoặc danh sách admin đọc qua
+ * `list_accounts()` (011). Email và vai trò của người khác không bao giờ có
+ * trong danh bạ.
+ */
+export interface Account extends Profile {
+  email: string
+  /**
+   * `null` = migration 005 chưa chạy: chưa có vai trò, không luật chấm công
+   * nào được áp (xem lib/attendance.ts).
+   */
+  role: 'staff' | 'admin' | null
 }
 
 /** Những gì admin sửa được ở trang Tài khoản. */
@@ -82,8 +94,10 @@ export interface ActionLog {
   /** ISO timestamp */
   created_at: string
   actor_id: UUID | null
-  /** Ảnh chụp tại thời điểm ghi log — còn đọc được sau khi tài khoản bị xoá. */
-  actor_email: string | null
+  /**
+   * Ảnh chụp tại thời điểm ghi log — còn đọc được sau khi tài khoản bị xoá.
+   * Cột `actor_email` vẫn được ghi nhưng không ai đọc được qua API (011).
+   */
   actor_name: string | null
   /** 'shift.created', 'assignment.claimed', 'template.toggled', … */
   action: string

@@ -1,4 +1,5 @@
 import type {
+  Account,
   ActionLog,
   ActionLogPage,
   ActionLogQuery,
@@ -21,11 +22,12 @@ import {
   checkInWindow,
   deleteBlock,
   hasOthers,
+  hoursLocked,
   isRestricted,
   removeBlock,
   type RemoveBlock,
 } from '../lib/attendance'
-import type { SchedulerBackend } from './backend'
+import { ForbiddenError, type SchedulerBackend } from './backend'
 import {
   MOCK_ASSIGNMENTS,
   MOCK_PROFILES,
@@ -110,7 +112,6 @@ function pushLog(entry: {
       id: uid('log'),
       created_at: new Date().toISOString(),
       actor_id: actor?.id ?? null,
-      actor_email: actor?.email ?? null,
       actor_name: actor?.display_name ?? null,
       action: entry.action,
       entity_type: entry.entity_type,
@@ -122,6 +123,13 @@ function pushLog(entry: {
     },
     ...state.logs,
   ]
+}
+
+/** Tài khoản mẫu kèm phần admin đã sửa ở trang Tài khoản. */
+function mockAccounts(): Account[] {
+  return MOCK_PROFILES.map((p) => ({ ...p, ...state.profileEdits?.[p.id] })).sort(
+    (a, b) => a.display_name.localeCompare(b.display_name),
+  )
 }
 
 function nameOf(userId: UUID): string {
@@ -140,7 +148,7 @@ function withAssignments(shift: Shift): ShiftWithAssignments {
   }
 }
 
-// ---- luật chấm công: bản mô phỏng các trigger của 005 + 006 ----
+// ---- luật chấm công: bản mô phỏng các trigger của 005 + 006 + 010 ----
 // Câu báo lỗi giống hệt bản SQL, để hai chế độ từ chối bằng cùng một câu.
 
 function restricted(): boolean {
@@ -221,6 +229,24 @@ function assertRosterAllowed(
     }
     if (input.user_id !== before.user_id) throw new Error(ADD_OTHER_ERROR)
     if (before.status !== 'confirmed') {
+      const hoursChanged =
+        input.start_time !== before.start_time ||
+        input.end_time !== before.end_time
+      // 010, luật G. `date` là ngày mới: bản thật lưu ca trước rồi mới tới
+      // từng lượt, nên trigger của lượt thấy ngày đã đổi.
+      if (hoursChanged && hoursLocked(date, before.start_time, new Date())) {
+        throw new Error(
+          'Bạn không có quyền sửa giờ khi đã tới giờ điểm danh — cần sửa thì nhắn admin.',
+        )
+      }
+      if (
+        input.status === 'confirmed' &&
+        (hoursChanged || (input.note ?? null) !== (before.note ?? null))
+      ) {
+        throw new Error(
+          'Bạn không có quyền vừa điểm danh vừa sửa lượt: lưu thay đổi trước rồi mới điểm danh.',
+        )
+      }
       if (input.status === 'confirmed') assertCanConfirm(input, date)
       continue
     }
@@ -238,7 +264,24 @@ function assertRosterAllowed(
   for (const input of inputs) {
     if (input.id) continue
     if (input.user_id !== me()) throw new Error(ADD_OTHER_ERROR)
-    if (input.status === 'confirmed') assertCanConfirm(input, date)
+    if (input.status === 'confirmed') {
+      throw new Error(
+        'Bạn không có quyền điểm danh lúc thêm vào ca: thêm vào ca trước rồi mới điểm danh.',
+      )
+    }
+  }
+}
+
+/** Bản sao unique (shift_id, user_id) của 010 — áp cho cả admin. */
+function assertUniqueStaff(inputs: AssignmentInput[]) {
+  const seen = new Set<UUID>()
+  for (const input of inputs) {
+    if (seen.has(input.user_id)) {
+      throw new Error(
+        'duplicate key value violates unique constraint "shift_assignments_shift_user_unique"',
+      )
+    }
+    seen.add(input.user_id)
   }
 }
 
@@ -361,11 +404,23 @@ function involves(row: ActionLog, id: UUID): boolean {
 
 export const mockBackend: SchedulerBackend = {
   listProfiles(): Promise<Profile[]> {
+    // Chỉ phần danh bạ, như bản thật sau 011: email và vai trò không có ở đây.
     return delay(
-      MOCK_PROFILES.map((p) => ({ ...p, ...state.profileEdits?.[p.id] })).sort(
-        (a, b) => a.display_name.localeCompare(b.display_name),
-      ),
+      mockAccounts().map(({ id, display_name, displayed, created_at }) => ({
+        id,
+        display_name,
+        displayed,
+        created_at,
+      })),
     )
+  },
+
+  async listAccounts() {
+    // Bản sao list_accounts() của 011: máy chủ xét vai trò thật.
+    if (currentMockProfile()?.role !== 'admin') {
+      throw new ForbiddenError('Bạn không có quyền truy cập trang này.')
+    }
+    return delay(mockAccounts())
   },
 
   async updateProfile(id: UUID, input: ProfileInput) {
@@ -417,6 +472,7 @@ export const mockBackend: SchedulerBackend = {
 
   async createShift(input: ShiftInput, assignments: AssignmentInput[]) {
     assertRosterAllowed(null, input.date, assignments)
+    assertUniqueStaff(assignments)
     const now = new Date().toISOString()
     const shift: Shift = {
       id: uid('s'),
@@ -458,6 +514,22 @@ export const mockBackend: SchedulerBackend = {
         'Bạn không có quyền sửa tên, ngày và giờ của ca có người khác.',
       )
     }
+    // 010, luật 5: ca sinh từ ca mẫu giữ nguyên giờ và ca mẫu gốc.
+    if (
+      restricted() &&
+      before &&
+      input.template_id !== undefined &&
+      (input.template_id ?? null) !== before.template_id
+    ) {
+      throw new Error('Bạn không có quyền đổi ca mẫu gốc của ca.')
+    }
+    if (
+      restricted() &&
+      before?.template_id &&
+      (before.start_time !== input.start_time || before.end_time !== input.end_time)
+    ) {
+      throw new Error('Bạn không có quyền sửa giờ của ca tạo từ ca mẫu.')
+    }
     if (
       restricted() &&
       before &&
@@ -466,7 +538,21 @@ export const mockBackend: SchedulerBackend = {
     ) {
       throw new Error('Bạn không có quyền đổi ngày của ca đã có người điểm danh.')
     }
+    // 010, luật G: dời ngày là cách khác để mở lại cửa sổ điểm danh đã qua.
+    if (
+      restricted() &&
+      before &&
+      before.date !== input.date &&
+      withAssignments(before).assignments.some((a) =>
+        hoursLocked(before.date, a.start_time, new Date()),
+      )
+    ) {
+      throw new Error(
+        'Bạn không có quyền dời ca sang ngày khác khi đã tới giờ điểm danh.',
+      )
+    }
     assertRosterAllowed(id, input.date, assignments)
+    assertUniqueStaff(assignments)
     state.shifts = state.shifts.map((s) =>
       s.id === id ? { ...s, ...input, updated_at: now } : s,
     )

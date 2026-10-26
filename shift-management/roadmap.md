@@ -8,11 +8,16 @@ Trạng thái hiện tại của ứng dụng nằm ở [README.md](README.md).
 
 **Đã làm** trong `supabase/008_template_admin.sql`: ca mẫu về tay admin (mục 2.1, dòng cuối) — nhân viên chỉ nhận ca mẫu, tạo / sửa / bật-tắt / xoá là của admin.
 
+**Đã làm** trong `supabase/010_harden_rules.sql` (sau đợt review RLS 26/10/2026): bịt các đường lách khi gọi thẳng API — `created_at` / `created_by` do máy chủ ghi (trước đó gửi `created_at` năm 2099 là rời ca lúc nào cũng được); **luật G**: từ lúc mở điểm danh không sửa giờ lượt, không dời ngày ca (trước đó sửa lượt chưa điểm danh thành 00:00–23:59 là điểm danh trễ được); điểm danh chỉ là đổi trạng thái; không chuyển lượt sang ca khác; ca mẫu giữ giờ gốc; unique `(shift_id, user_id)`; khoá dòng ca khi xét luật; thu quyền gọi hàm của anon.
+
 Các câu hỏi treo được chốt theo đề xuất: cửa sổ tính theo **giờ riêng**, nhắn admin **ngoài** ứng dụng, phong admin **bằng tay** trong SQL Editor.
 
 **Chưa làm**:
 
-- Ca đã qua mà trống, hoặc chỉ có mình chưa điểm danh: nhân viên vẫn sửa giờ / tên tự do (ca có người khác thì đã khoá từ 006).
+- Ca đã qua mà **trống**: nhân viên vẫn sửa tên / ngày / giờ hay xoá tự do. Ca chỉ có mình thì từ 010 đã khoá giờ lượt và ngày ca khi tới giờ điểm danh; tên và giờ của ca (chỉ là nhãn) vẫn sửa được.
+- Tự lên lịch rồi điểm danh ngay: nhân viên tạo ca mới bắt đầu từ bây giờ, nhận và điểm danh luôn. Đó là quyền tạo ca vốn có; chỉ đối chiếu được qua `created_at` của lượt và `confirmed_at` sát nhau.
+- Đổi người trên hai dòng của cùng một ca (A ↔ B) giờ vướng unique `(shift_id, user_id)` vì mỗi dòng lưu một lệnh riêng — admin gỡ rồi thêm lại.
+- Thay đổi ở `profiles` (phong admin, đổi tên, ẩn) không vào Nhật ký.
 - Ca qua nửa đêm.
 
 Phần dưới là ghi chú thiết kế gốc, giữ lại để biết vì sao có các luật này.

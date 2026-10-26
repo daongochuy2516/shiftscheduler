@@ -31,6 +31,7 @@ import type { TranslationKey } from '../i18n/translations'
 import { useNotifications } from '../notifications/NotificationContext'
 import { useTheme } from '../theme/ThemeContext'
 import { SCROLL_ROOT_ID } from '../lib/scrollRoot'
+import { UI_BYPASS, uiIsAdmin } from '../lib/uiBypass'
 import { fromDateKey, toDateKey } from '../lib/time'
 import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
@@ -108,7 +109,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // Cùng lát cắt với trang Chờ xác nhận: mở trang đó không phải tải lại.
   const { shifts } = useShifts(user ? { kind: 'pending' } : null)
   const { profilesById } = useSchedule()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = uiIsAdmin(user)
   /**
    * Tên lấy từ danh sách nhân viên chứ không từ phiên đăng nhập: admin vừa
    * đổi tên mình ở trang Tài khoản thì header đổi theo ngay.
@@ -338,6 +339,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {IS_MOCK_BACKEND && (
           <p className="safe-x bg-amber-50 py-1 text-center text-[11px] font-medium text-amber-800">
             {t('auth.mockBanner')}
+          </p>
+        )}
+        {UI_BYPASS && (
+          <p className="safe-x bg-rose-50 py-1 text-center text-[11px] font-medium text-rose-800">
+            {t('auth.uiBypassBanner')}
           </p>
         )}
         <OfflineBanner />

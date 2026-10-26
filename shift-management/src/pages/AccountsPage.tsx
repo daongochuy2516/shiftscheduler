@@ -1,10 +1,11 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Eye, EyeOff, UserCog } from 'lucide-react'
-import type { Profile, ProfileInput } from '../types'
+import { Eye, EyeOff, ShieldAlert, UserCog } from 'lucide-react'
+import type { Account, ProfileInput } from '../types'
 import type { TranslationKey } from '../i18n/translations'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule } from '../data/ScheduleContext'
+import { useAccounts } from '../data/useAccounts'
 import { useI18n } from '../i18n/I18nContext'
 import { useNotify } from '../notifications/NotificationContext'
 import { isListed } from '../lib/profiles'
@@ -20,32 +21,78 @@ const inputClass =
  * Trang Tài khoản — chỉ admin. Sửa tên hiển thị và việc hiện / ẩn một người
  * trên các bảng xếp ca, cho toàn hệ thống.
  *
- * Người không phải admin không thấy link, vào thẳng URL thì bị đưa về trang
- * chính. Chặn thật nằm ở database (007_accounts.sql); ở đây chỉ là lối vào.
+ * Người không phải admin không thấy link. Dữ liệu trang này (email, vai trò)
+ * chỉ đến từ list_accounts() (011): máy chủ kiểm tra admin rồi mới trả, không
+ * phải thì từ chối và trang báo không có quyền — vào thẳng URL hay bật
+ * `bypassuirestrict` cũng vậy. Danh bạ chung không có email / vai trò. Chặn
+ * sửa thật nằm ở database (007_accounts.sql).
  */
 export function AccountsPage() {
   const { user } = useAuth()
-  const { profiles, loading, error, accountsAvailable } = useSchedule()
+  const { accountsAvailable } = useSchedule()
   const { t } = useI18n()
+  const { loading, accounts, forbidden, error, reload } = useAccounts(
+    user?.id ?? null,
+  )
 
-  if (user?.role !== 'admin') return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/" replace />
   if (loading) return <PageSkeleton />
+  if (forbidden) {
+    return (
+      <div className="mx-auto max-w-3xl rounded-xl bg-white px-4 py-10 text-center shadow-sm ring-1 ring-slate-900/5">
+        <ShieldAlert className="mx-auto h-8 w-8 text-slate-400" />
+        <p className="mt-3 font-semibold text-slate-900">
+          {t('accounts.forbidden')}
+        </p>
+        <p className="mt-1 text-sm text-slate-500">
+          {t('accounts.forbiddenHint')}
+        </p>
+      </div>
+    )
+  }
 
-  const hiddenCount = profiles.filter((p) => !isListed(p)).length
+  const header = (
+    <div>
+      <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <UserCog className="h-5 w-5 shrink-0 text-slate-400" />
+        {t('accounts.title')}
+      </h1>
+      <p className="text-sm text-slate-500">{t('accounts.subtitle')}</p>
+    </div>
+  )
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        {header}
+        <LoadError message={error} />
+      </div>
+    )
+  }
+
+  // Chưa chạy 011: chưa có list_accounts() để máy chủ kiểm tra quyền, nên
+  // không hiện gì thay vì đọc thẳng bảng như trước.
+  if (!accounts) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        {header}
+        <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm ring-1 ring-amber-200">
+          <p className="font-medium text-amber-900">
+            {t('accounts.privateNotInstalled')}
+          </p>
+          <p className="mt-0.5 text-amber-800">
+            {t('accounts.privateNotInstalledHint')}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const hiddenCount = accounts.filter((p) => !isListed(p)).length
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-          <UserCog className="h-5 w-5 shrink-0 text-slate-400" />
-          {t('accounts.title')}
-        </h1>
-        <p className="text-sm text-slate-500">{t('accounts.subtitle')}</p>
-      </div>
-
-      {error && (
-        <LoadError message={error} />
-      )}
+      {header}
 
       {!accountsAvailable && (
         <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm ring-1 ring-amber-200">
@@ -59,19 +106,20 @@ export function AccountsPage() {
       )}
 
       <p className="text-sm text-slate-500">
-        {t('accounts.count', { count: profiles.length })}
+        {t('accounts.count', { count: accounts.length })}
         {hiddenCount > 0 &&
           ` · ${t('accounts.hiddenCount', { count: hiddenCount })}`}
       </p>
 
       <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
-        {profiles.map((profile) => (
+        {accounts.map((profile) => (
           <AccountRow
             // key theo cả tên: lưu xong thì bản nháp lấy lại giá trị mới.
             key={`${profile.id}:${profile.display_name}`}
             profile={profile}
             isMe={profile.id === user.id}
             disabled={!accountsAvailable}
+            onSaved={reload}
           />
         ))}
       </ul>
@@ -83,10 +131,13 @@ function AccountRow({
   profile,
   isMe,
   disabled,
+  onSaved,
 }: {
-  profile: Profile
+  profile: Account
   isMe: boolean
   disabled: boolean
+  /** Danh sách này không nằm trong ScheduleContext: lưu xong phải tự tải lại. */
+  onSaved: () => void
 }) {
   const { updateProfile } = useSchedule()
   const { t } = useI18n()
@@ -119,6 +170,7 @@ function AccountRow({
       try {
         await updateProfile(profile.id, input)
         notify.success(title, params, profile.email)
+        onSaved()
       } catch (err) {
         notify.error('notif.account.saveFailed', err, params)
         latest.current = before

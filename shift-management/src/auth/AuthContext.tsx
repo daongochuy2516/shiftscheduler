@@ -7,12 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { Profile } from '../types'
+import type { Account } from '../types'
 import { clearOfflineData, setOfflineOwner } from '../data/offlineCache'
 import { auth } from './index'
 
 interface AuthContextValue {
-  user: Profile | null
+  user: Account | null
   /** True until the initial session check finishes. */
   loading: boolean
   signIn: (email: string, password: string) => Promise<string | null>
@@ -26,7 +26,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Profile | null>(null)
+  const [user, setUser] = useState<Account | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

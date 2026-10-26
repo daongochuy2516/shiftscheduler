@@ -1,5 +1,5 @@
 import { addDays } from 'date-fns'
-import type { Profile, Shift, ShiftAssignment, ShiftTemplate } from '../types'
+import type { Account, Shift, ShiftAssignment, ShiftTemplate } from '../types'
 import { toDateKey } from '../lib/time'
 
 const now = new Date()
@@ -14,7 +14,7 @@ const ts = now.toISOString()
  * Quản lý là admin đang ẩn (displayed = false): vào được web nhưng không hiện
  * trong các bảng xếp ca.
  */
-export const MOCK_PROFILES: Profile[] = [
+export const MOCK_PROFILES: Account[] = [
   {
     id: 'u-huy',
     email: 'huy@thinkwork.test',

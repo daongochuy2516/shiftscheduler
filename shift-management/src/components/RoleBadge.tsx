@@ -1,4 +1,4 @@
-import type { Profile } from '../types'
+import type { Account } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 
 /**
@@ -6,7 +6,7 @@ import { useI18n } from '../i18n/I18nContext'
  * header (cạnh tên người đang đăng nhập) và trang Tài khoản. `role` là `null` khi migration 005 chưa chạy —
  * chưa có vai trò thì không hiện gì.
  */
-export function RoleBadge({ role }: { role: Profile['role'] }) {
+export function RoleBadge({ role }: { role: Account['role'] }) {
   const { t } = useI18n()
   if (role === null) return null
   return (

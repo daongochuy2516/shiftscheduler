@@ -1,4 +1,4 @@
-import type { Profile } from '../types'
+import type { Account } from '../types'
 import { MOCK_PROFILES } from '../data/mockData'
 import { OFFLINE_ERROR_MESSAGE, isOnline } from '../lib/network'
 import { CURRENT_PASSWORD_WRONG, type AuthBackend } from './backend'
@@ -9,9 +9,9 @@ const PASSWORD_KEY = 'scheduler.mock.passwords'
 /** The password every seeded account starts with. */
 export const MOCK_PASSWORD = 'password'
 
-const listeners = new Set<(user: Profile | null) => void>()
+const listeners = new Set<(user: Account | null) => void>()
 
-function readSession(): Profile | null {
+function readSession(): Account | null {
   try {
     const id = localStorage.getItem(SESSION_KEY)
     return MOCK_PROFILES.find((p) => p.id === id) ?? null
@@ -24,7 +24,7 @@ function readSession(): Profile | null {
  * Người đang đăng nhập ở chế độ mock — bản sao của `auth.uid()` phía server,
  * để mock backend ghi được người thực hiện vào nhật ký thao tác.
  */
-export function currentMockProfile(): Profile | null {
+export function currentMockProfile(): Account | null {
   return readSession()
 }
 
