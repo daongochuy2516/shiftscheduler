@@ -141,6 +141,22 @@ function shiftLabel(shiftId: UUID): { title: string; date: string } {
   return { title: shift?.title ?? '?', date: shift?.date ?? '?' }
 }
 
+/**
+ * Ngữ cảnh chung của mọi dòng nhật ký về phân công — cùng các khoá với
+ * `v_meta` của trigger (003_action_logs.sql), để trang Nhật ký đọc như nhau.
+ */
+function assignmentMeta(shiftId: UUID, userId: UUID): Record<string, unknown> {
+  const label = shiftLabel(shiftId)
+  return {
+    shift_id: shiftId,
+    shift_title: label.title,
+    shift_date: label.date,
+    target_user_id: userId,
+    target_name: nameOf(userId),
+    self: userId === me(),
+  }
+}
+
 function withAssignments(shift: Shift): ShiftWithAssignments {
   return {
     ...shift,
@@ -317,7 +333,7 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
       entity_id: gone.id,
       summary: `Gỡ ${nameOf(gone.user_id)} khỏi ca ${label.title} ngày ${label.date}`,
       old_data: { ...gone },
-      metadata: { shift_id: shiftId, ...label, target_name: nameOf(gone.user_id) },
+      metadata: assignmentMeta(shiftId, gone.user_id),
     })
   }
 
@@ -359,7 +375,12 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
           : `Sửa phân công của ${nameOf(input.user_id)} trong ca ${label.title} ngày ${label.date}`,
         old_data: { ...before },
         new_data: { ...after },
-        metadata: { shift_id: shiftId, ...label, target_name: nameOf(input.user_id) },
+        metadata: {
+          ...assignmentMeta(shiftId, input.user_id),
+          ...(onlyStatus
+            ? { old_status: before.status, new_status: input.status }
+            : {}),
+        },
       })
     } else {
       const created: ShiftAssignment = {
@@ -381,7 +402,7 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
         entity_id: created.id,
         summary: `Thêm ${nameOf(input.user_id)} vào ca ${label.title} ngày ${label.date} (${input.start_time}-${input.end_time})`,
         new_data: { ...created },
-        metadata: { shift_id: shiftId, ...label, target_name: nameOf(input.user_id) },
+        metadata: assignmentMeta(shiftId, input.user_id),
       })
     }
   }
@@ -447,6 +468,7 @@ export const mockBackend: SchedulerBackend = {
       if (query.kind === 'pending') {
         return s.assignments.some((a) => a.status === 'pending')
       }
+      if (query.kind === 'shift') return s.id === query.shiftId
       if (query.from && s.date < query.from) return false
       if (query.to && s.date > query.to) return false
       return (query.userIds ?? []).every((id) =>
@@ -674,9 +696,7 @@ export const mockBackend: SchedulerBackend = {
         old_data: { ...before },
         new_data: { ...before, status, confirmed_at, updated_at: now },
         metadata: {
-          shift_id: before.shift_id,
-          ...label,
-          target_name: nameOf(before.user_id),
+          ...assignmentMeta(before.shift_id, before.user_id),
           old_status: before.status,
           new_status: status,
         },
@@ -829,6 +849,7 @@ export const mockBackend: SchedulerBackend = {
           shift_id: shift.id,
           shift_title: shift.title,
           shift_date: date,
+          target_user_id: userId,
           target_name: nameOf(userId),
           self: true,
           template_id: templateId,

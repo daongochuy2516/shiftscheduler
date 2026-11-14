@@ -176,6 +176,8 @@ export interface ShiftAssignment {
  *   có thể lọc thêm những ca có **tất cả** các nhân viên trong `userIds` (AND).
  * - `user`: mọi ca có người này.
  * - `pending`: mọi ca còn ít nhất một lượt chờ xác nhận.
+ * - `shift`: đúng một ca theo id (rỗng nếu ca đã bị xoá) — cho chỗ chỉ biết
+ *   id mà không biết ngày hiện tại của ca, như một dòng Nhật ký.
  */
 export type ShiftQuery =
   | {
@@ -186,6 +188,7 @@ export type ShiftQuery =
     }
   | { kind: 'user'; userId: UUID }
   | { kind: 'pending' }
+  | { kind: 'shift'; shiftId: UUID }
 
 /** A shift together with its assignments — the shape the UI works with. */
 export interface ShiftWithAssignments extends Shift {

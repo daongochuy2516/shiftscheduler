@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import {
+  Braces,
+  CalendarSearch,
+  CalendarX,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  List,
+  Loader2,
   RotateCw,
   ScrollText,
   Search,
   SlidersHorizontal,
 } from 'lucide-react'
-import type { ActionLog, ActionLogFilters, ActionLogQuery } from '../types'
+import type { ActionLog, ActionLogFilters, ActionLogQuery, UUID } from '../types'
 import { useSchedule } from '../data/ScheduleContext'
 import { useActionLogs } from '../data/useActionLogs'
 import { useI18n } from '../i18n/I18nContext'
@@ -19,7 +24,11 @@ import { PageSkeleton } from '../components/PageSkeleton'
 import { Select } from '../components/Select'
 import { DateInput } from '../components/DateInput'
 import { StaffMultiSelect } from '../components/StaffMultiSelect'
-import { effectiveAction, isCheckInAction } from '../lib/actionLog'
+import { useShiftEditor } from '../components/ShiftEditorProvider'
+import { LogSimpleView } from '../components/LogSimpleView'
+import { useNotify } from '../notifications/NotificationContext'
+import { effectiveAction, isCheckInAction, shiftTarget } from '../lib/actionLog'
+import { isNetworkError } from '../lib/network'
 import { dateParam, useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
 import { LoadError } from '../components/LoadError'
 
@@ -69,6 +78,30 @@ function actionTone(action: string): string {
   return 'bg-sky-50 text-sky-700 ring-sky-200'
 }
 
+/**
+ * Kiểu xem phần Chi tiết. Là thói quen đọc của từng người (như Đơn giản /
+ * Nâng cao của form ca), không phải bộ lọc, nên nhớ trên máy chứ không ghi
+ * lên URL. Không đọc được thì mặc định Đơn giản.
+ */
+type DetailMode = 'simple' | 'advanced'
+const DETAIL_MODE_KEY = 'scheduler.logDetailMode'
+
+function readDetailMode(): DetailMode {
+  try {
+    return localStorage.getItem(DETAIL_MODE_KEY) === 'advanced' ? 'advanced' : 'simple'
+  } catch {
+    return 'simple'
+  }
+}
+
+function writeDetailMode(mode: DetailMode) {
+  try {
+    localStorage.setItem(DETAIL_MODE_KEY, mode)
+  } catch {
+    // Trình duyệt chặn lưu trữ: lần sau về mặc định, không sao.
+  }
+}
+
 const controlClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
 const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
@@ -99,6 +132,13 @@ export function ActionLogPage() {
   // lên URL (và về trang 1).
   const [searchInput, setSearchInput] = useUrlText('q', PAGE_RESET)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // Giữ ở trang chứ không ở từng dòng: đổi ở một dòng thì mọi dòng đang mở
+  // đổi theo.
+  const [detailMode, setDetailModeState] = useState<DetailMode>(readDetailMode)
+  function setDetailMode(mode: DetailMode) {
+    setDetailModeState(mode)
+    writeDetailMode(mode)
+  }
 
   // Điểm danh / Gỡ điểm danh không có trong dữ liệu (đều là "Đổi trạng
   // thái"): hỏi máy chủ hành động gốc, rồi lọc chiều ngay trong trang tải về.
@@ -346,7 +386,12 @@ export function ActionLogPage() {
         <>
           <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
             {rows.map((row) => (
-              <LogRow key={row.id} row={row} />
+              <LogRow
+                key={row.id}
+                row={row}
+                detailMode={detailMode}
+                onDetailModeChange={setDetailMode}
+              />
             ))}
             {rows.length === 0 && (
               <li className="px-4 py-8 text-center text-sm text-slate-500">
@@ -405,7 +450,15 @@ export function ActionLogPage() {
   }
 }
 
-function LogRow({ row }: { row: ActionLog }) {
+function LogRow({
+  row,
+  detailMode,
+  onDetailModeChange,
+}: {
+  row: ActionLog
+  detailMode: DetailMode
+  onDetailModeChange: (mode: DetailMode) => void
+}) {
   const { t, dateLocale } = useI18n()
   const [open, setOpen] = useState(false)
 
@@ -415,6 +468,7 @@ function LogRow({ row }: { row: ActionLog }) {
   const actionLabel = t(`log.action.${action}` as TranslationKey)
   const entityLabel = t(`log.entity.${row.entity_type}` as TranslationKey)
   const hasDetails = row.old_data !== null || row.new_data !== null
+  const target = shiftTarget(row)
 
   return (
     <li>
@@ -457,45 +511,159 @@ function LogRow({ row }: { row: ActionLog }) {
           {row.summary}
         </p>
 
-        {hasDetails && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            className="mt-1.5 inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:mt-0 sm:min-h-0 sm:py-1"
-          >
-            {t('log.details')}
-            <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
-            />
-          </button>
+        {(target || hasDetails) && (
+          <div className="mt-1.5 flex shrink-0 flex-wrap items-center gap-1 sm:mt-0">
+            {target && (
+              <ShiftInfoButton
+                shiftId={target.shiftId}
+                assignmentId={target.assignmentId}
+              />
+            )}
+            {hasDetails && (
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:min-h-0 sm:py-1"
+              >
+                {t('log.details')}
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+                />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
       {open && hasDetails && (
-        <div className="grid gap-3 border-t border-slate-100 bg-slate-50/70 px-4 py-3 md:grid-cols-2">
-          {row.old_data && (
-            <JsonBlock
-              title={t('log.before')}
-              value={row.old_data}
-              diff={row.new_data && { against: row.new_data, side: 'old' }}
-            />
-          )}
-          {row.new_data && (
-            <JsonBlock
-              title={t('log.after')}
-              value={row.new_data}
-              diff={row.old_data && { against: row.old_data, side: 'new' }}
-            />
-          )}
-          {Object.keys(row.metadata).length > 0 && (
-            <div className="md:col-span-2">
-              <JsonBlock title={t('log.context')} value={row.metadata} />
+        <div className="space-y-3 border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+          <div
+            role="group"
+            aria-label={t('log.view.label')}
+            className="flex rounded-md bg-slate-200/60 p-0.5 sm:inline-flex"
+          >
+            {(
+              [
+                { id: 'simple', label: 'log.view.simple', Icon: List },
+                { id: 'advanced', label: 'log.view.advanced', Icon: Braces },
+              ] as const
+            ).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onDetailModeChange(id)}
+                aria-pressed={detailMode === id}
+                className={`inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded px-3 text-sm font-medium transition sm:min-h-0 sm:flex-none sm:py-1 sm:text-xs ${
+                  detailMode === id
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {t(label)}
+              </button>
+            ))}
+          </div>
+
+          {detailMode === 'simple' ? (
+            <LogSimpleView row={row} />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {row.old_data && (
+                <JsonBlock
+                  title={t('log.before')}
+                  value={row.old_data}
+                  diff={row.new_data && { against: row.new_data, side: 'old' }}
+                />
+              )}
+              {row.new_data && (
+                <JsonBlock
+                  title={t('log.after')}
+                  value={row.new_data}
+                  diff={row.old_data && { against: row.old_data, side: 'new' }}
+                />
+              )}
+              {Object.keys(row.metadata).length > 0 && (
+                <div className="md:col-span-2">
+                  <JsonBlock title={t('log.context')} value={row.metadata} />
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
     </li>
+  )
+}
+
+/**
+ * Mở form sửa của ca mà dòng nhật ký nói tới. Dòng chỉ giữ id, và ca có thể
+ * đã đổi ngày hay bị xoá từ đó tới giờ, nên hỏi máy chủ lúc bấm thay vì
+ * dựng lại ca từ ảnh chụp trong nhật ký.
+ */
+function ShiftInfoButton({
+  shiftId,
+  assignmentId,
+}: {
+  shiftId: UUID
+  assignmentId: UUID | null
+}) {
+  const { t } = useI18n()
+  const { fetchShift } = useSchedule()
+  const { openEdit } = useShiftEditor()
+  const { notify, error: notifyError } = useNotify()
+  const [status, setStatus] = useState<'idle' | 'loading' | 'gone'>('idle')
+
+  async function open() {
+    setStatus('loading')
+    try {
+      const shift = await fetchShift(shiftId)
+      if (!shift) {
+        setStatus('gone')
+        return
+      }
+      setStatus('idle')
+      openEdit(shift, assignmentId ?? undefined)
+    } catch (err) {
+      setStatus('idle')
+      // Câu mạng mặc định của useNotify nói về phép ghi ("chưa gửi gì đi");
+      // đây là phép đọc không có bản lưu trên máy.
+      if (isNetworkError(err)) {
+        notify({ kind: 'error', title: 'notif.shift.openFailed', bodyKey: 'offline.noCache' })
+      } else {
+        notifyError('notif.shift.openFailed', err)
+      }
+    }
+  }
+
+  if (status === 'gone') {
+    return (
+      <span
+        data-tooltip={t('log.shiftGoneHint')}
+        className="inline-flex min-h-9 shrink-0 items-center gap-1 px-2 text-xs font-medium text-slate-400 sm:min-h-0 sm:py-1"
+      >
+        <CalendarX className="h-3.5 w-3.5" />
+        {t('log.shiftGone')}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void open()}
+      disabled={status === 'loading'}
+      data-tooltip={t('log.shiftInfoHint')}
+      className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50 hover:text-indigo-800 disabled:opacity-60 sm:min-h-0 sm:py-1"
+    >
+      {status === 'loading' ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <CalendarSearch className="h-3.5 w-3.5" />
+      )}
+      {t('log.shiftInfo')}
+    </button>
   )
 }
 

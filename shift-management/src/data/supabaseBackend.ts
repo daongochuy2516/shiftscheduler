@@ -249,6 +249,8 @@ export const supabaseBackend: SchedulerBackend = {
         .from('shifts')
         .select(`${all}, match_0:shift_assignments!inner(status)`)
         .eq('match_0.status', 'pending')
+    } else if (query.kind === 'shift') {
+      request = supabase.from('shifts').select(all).eq('id', query.shiftId)
     } else {
       const userIds = query.userIds ?? []
       request = supabase

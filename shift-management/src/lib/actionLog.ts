@@ -1,4 +1,36 @@
-import type { ActionLog } from '../types'
+import type { ActionLog, UUID } from '../types'
+
+/**
+ * Ca mà một dòng nhật ký nói tới, để mở form của ca đó. `assignmentId` là
+ * lượt cần tô sáng trong form (dòng nói về một người).
+ *
+ * `null` khi dòng không gắn với ca nào (ca mẫu), hoặc chính dòng đó là xoá
+ * ca. Ca bị xoá ở một lần sau thì ở đây không biết được — phải hỏi máy chủ.
+ */
+export function shiftTarget(
+  row: ActionLog,
+): { shiftId: UUID; assignmentId: UUID | null } | null {
+  if (row.entity_type === 'shift') {
+    if (row.action === 'shift.deleted' || !row.entity_id) return null
+    return { shiftId: row.entity_id, assignmentId: null }
+  }
+  if (row.entity_type === 'assignment') {
+    // Trigger ghi `shift_id` vào ngữ cảnh; ảnh chụp lượt phân công cũng có,
+    // dùng làm dự phòng cho dòng cũ thiếu ngữ cảnh.
+    const shiftId = [
+      row.metadata.shift_id,
+      row.new_data?.shift_id,
+      row.old_data?.shift_id,
+    ].find((v): v is string => typeof v === 'string' && v !== '')
+    if (!shiftId) return null
+    return {
+      shiftId,
+      // Người đã bị gỡ khỏi ca thì không còn dòng nào để tô.
+      assignmentId: row.action === 'assignment.deleted' ? null : row.entity_id,
+    }
+  }
+  return null
+}
 
 /**
  * Hai hành động "ảo" của nhật ký. Database chỉ ghi `assignment.status_changed`
