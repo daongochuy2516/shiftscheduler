@@ -47,6 +47,7 @@ const IDLE_STATE: ShiftQueryState = {
 export function shiftQueryKey(query: ShiftQuery): string {
   if (query.kind === 'user') return `user|${query.userId}`
   if (query.kind === 'pending') return 'pending'
+  if (query.kind === 'shift') return `shift|${query.shiftId}`
   // Sắp xếp id để cùng một nhóm người luôn ra cùng một khoá, bất kể thứ tự chọn.
   const ids = [...(query.userIds ?? [])].sort().join('+')
   return `range|${query.from ?? ''}|${query.to ?? ''}|${ids}`
@@ -56,6 +57,7 @@ export function parseShiftQueryKey(key: string): ShiftQuery {
   const [kind, a = '', b = '', c = ''] = key.split('|')
   if (kind === 'user') return { kind: 'user', userId: a }
   if (kind === 'pending') return { kind: 'pending' }
+  if (kind === 'shift') return { kind: 'shift', shiftId: a }
   return {
     kind: 'range',
     from: a || null,

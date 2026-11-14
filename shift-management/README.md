@@ -569,7 +569,12 @@ Dưới các ô là một dòng nhắc luật ghi nhận ở trên.
 
 Trang **Nhật ký** ghi lại mọi thay đổi dữ liệu: tạo/sửa/xoá ca, thêm/gỡ nhân viên, nhận ca, đổi trạng thái, và tạo/sửa/xoá/bật-tắt ca mẫu.
 
-Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem `old_data` / `new_data` / ngữ cảnh dạng JSON. Với thao tác sửa (có cả trước lẫn sau), những trường bị đổi được tô màu: đỏ kèm dấu `-` ở bản trước, xanh kèm dấu `+` ở bản sau.
+Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem bản ghi trước / sau và ngữ cảnh, có hai kiểu xem (gạt ở đầu phần Chi tiết; app nhớ kiểu bạn chọn trên máy này, mặc định **Đơn giản**):
+
+- **Đơn giản** — viết thành chữ: tên nhân viên thay cho id, ngày kèm thứ, giờ gộp một dòng (`18:00 – 23:00`), trạng thái đã dịch, ghi chú, ca mẫu theo tên. Thao tác sửa có mục **Thay đổi** chỉ liệt kê những trường bị đổi dạng `cũ → mới`; phần còn lại nằm ở mục **Thông tin** (kèm ca mà dòng nói tới). Người tự thao tác trên phần của chính mình được gắn nhãn *tự làm*. Xoá ca thì có thêm danh sách **Nhân viên bị gỡ**. Các cột kỹ thuật (`id`, `shift_id`, `created_at`, `updated_at`) không hiện ở đây.
+- **Nâng cao** — JSON gốc `old_data` / `new_data` / `metadata`. Với thao tác sửa (có cả trước lẫn sau), những trường bị đổi được tô màu: đỏ kèm dấu `-` ở bản trước, xanh kèm dấu `+` ở bản sau.
+
+Dòng nói về một ca (loại đối tượng **Ca** hoặc **Phân công**, trừ dòng *Xoá ca*) có thêm nút **Thông tin ca**: mở form sửa của chính ca đó, giống bấm **Sửa** ở trang Tất cả ca. Dòng về một người trong ca thì người đó được tô sáng trong form. Form hiện ca **như bây giờ**, không phải như lúc ghi dòng nhật ký — muốn xem bản lúc đó thì dùng **Chi tiết**. Ca đã bị xoá sau đó thì nút đổi thành *Ca đã bị xoá*.
 
 ### Một thao tác = một dòng
 

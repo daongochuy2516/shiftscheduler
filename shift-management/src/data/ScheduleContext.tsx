@@ -18,6 +18,7 @@ import type {
   ShiftInput,
   ShiftQuery,
   ShiftTemplate,
+  ShiftWithAssignments,
   TemplateInput,
   UUID,
 } from '../types'
@@ -49,6 +50,12 @@ interface ScheduleContextValue {
   refresh: () => Promise<void>
   /** Ngày ca sớm nhất / muộn nhất, tuỳ chọn chỉ tính ca có tất cả `userIds`. */
   shiftDateBounds: (userIds: UUID[]) => Promise<ShiftDateBounds>
+  /**
+   * Bản mới nhất của một ca theo id, `null` nếu ca đã bị xoá. Hỏi thẳng máy
+   * chủ, không qua bộ đệm: dùng để mở form sửa ca từ chỗ chỉ có id (Nhật
+   * ký), và form cần đúng danh sách người hiện tại chứ không phải bản cũ.
+   */
+  fetchShift: (id: UUID) => Promise<ShiftWithAssignments | null>
   /**
    * Tăng mỗi lần dữ liệu đổi (mình lưu, hoặc Realtime báo người khác vừa
    * sửa). Thứ gì tự hỏi backend ngoài bộ đệm ca thì dựa vào số này để biết
@@ -224,6 +231,11 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     (userIds: UUID[]) => backend.shiftDateBounds(userIds),
     [],
   )
+  const fetchShift = useCallback(
+    async (id: UUID) =>
+      (await backend.listShifts({ kind: 'shift', shiftId: id }))[0] ?? null,
+    [],
+  )
 
   const profilesById = useMemo(
     () => new Map(profiles.map((p) => [p.id, p])),
@@ -247,6 +259,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
       shiftDateBounds,
+      fetchShift,
       dataVersion,
       createShift,
       updateShift,
@@ -270,6 +283,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
       shiftDateBounds,
+      fetchShift,
       dataVersion,
       createShift,
       updateShift,
