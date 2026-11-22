@@ -1,10 +1,13 @@
+import { useMemo } from 'react'
 import { format, isSameDay } from 'date-fns'
 import { CalendarOff } from 'lucide-react'
-import type { UUID } from '../types'
+import type { Location, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
+import { useSchedule } from '../data/ScheduleContext'
 import { useShiftColor } from '../data/useShiftColor'
 import { formatMinutesDuration, formatRange, toDateKey } from '../lib/time'
-import type { SummaryRow } from '../lib/summary'
+import { locationsById, sortLocationIds } from '../lib/locations'
+import type { RecordedEntry, SummaryRow } from '../lib/summary'
 import { Avatar } from './Avatar'
 
 const LEFT_COL = 176
@@ -15,8 +18,8 @@ const DAY_DENSE = 56
 /**
  * Bảng tổng kết: nhân viên theo hàng × ngày theo cột, đọc như bảng công.
  *
- * Chỉ để xem — bấm vào một ca không mở form sửa. Tổng kết là ảnh chụp việc
- * đã trực xong, muốn sửa thì đi qua trang Lịch.
+ * Bấm một khối ca mở form sửa như trang Lịch (`onSelectEntry`). Chế độ
+ * Tháng mỗi ô chỉ là tổng giờ của nhiều ca nên không bấm được.
  */
 export function SummaryGrid({
   days,
@@ -26,6 +29,7 @@ export function SummaryGrid({
   profileCount,
   currentUserId,
   dense,
+  onSelectEntry,
 }: {
   days: Date[]
   rows: SummaryRow[]
@@ -35,8 +39,12 @@ export function SummaryGrid({
   currentUserId: UUID | null
   /** Tháng có tới 31 cột nên mỗi ô chỉ ghi số giờ, không ghi từng ca. */
   dense: boolean
+  /** Bấm một khối ca; không truyền thì chỉ để xem. */
+  onSelectEntry?: (shiftId: UUID, assignmentId: UUID) => void
 }) {
   const { t, dateLocale } = useI18n()
+  const { locations } = useSchedule()
+  const locationById = useMemo(() => locationsById(locations), [locations])
   const today = toDateKey(new Date())
   const dayWidth = dense ? DAY_DENSE : DAY_MIN
   const gridTemplate = `${LEFT_COL}px repeat(${days.length}, minmax(${dayWidth}px, 1fr)) ${TOTAL_COL}px`
@@ -122,6 +130,8 @@ export function SummaryGrid({
                   gridTemplate={gridTemplate}
                   isMe={row.profile.id === currentUserId}
                   youLabel={t('common.you')}
+                  locationById={locationById}
+                  onSelectEntry={onSelectEntry}
                 />
               ))}
 
@@ -165,6 +175,8 @@ function StaffRow({
   gridTemplate,
   isMe,
   youLabel,
+  locationById,
+  onSelectEntry,
 }: {
   row: SummaryRow
   days: Date[]
@@ -172,8 +184,19 @@ function StaffRow({
   gridTemplate: string
   isMe: boolean
   youLabel: string
+  locationById: ReadonlyMap<UUID, Location>
+  onSelectEntry?: (shiftId: UUID, assignmentId: UUID) => void
 }) {
   const shiftColor = useShiftColor()
+  const { t } = useI18n()
+
+  /** "Ca · 08:00–13:00 · Fanpage, Discord" — nơi trực chỉ nằm trong tooltip. */
+  function entryTooltip(e: RecordedEntry): string {
+    const where = sortLocationIds(e.locationIds, locationById)
+      .map((id) => locationById.get(id)?.name ?? t('loc.unknown'))
+      .join(', ')
+    return `${e.title} · ${formatRange(e.start, e.end)}${where ? ` · ${where}` : ''}`
+  }
   return (
     <div
       className={`grid border-b border-slate-100 last:border-b-0 ${
@@ -217,9 +240,7 @@ function StaffRow({
           >
             {dense ? (
               <span
-                data-tooltip={entries
-                  .map((e) => `${e.title} · ${formatRange(e.start, e.end)}`)
-                  .join('\n')}
+                data-tooltip={entries.map(entryTooltip).join('\n')}
                 className={`text-xs font-medium tabular-nums ${
                   minutes > 0 ? 'text-slate-700' : 'text-slate-300'
                 }`}
@@ -232,18 +253,33 @@ function StaffRow({
                   id: entry.shiftId,
                   template_id: entry.templateId,
                 })
-                return (
-                  <div
-                    key={entry.assignmentId}
-                    data-tooltip={`${entry.title} · ${formatRange(entry.start, entry.end)}`}
-                    className={`rounded border px-1.5 py-1 ${color.block}`}
-                  >
+                const body = (
+                  <>
                     <span className="block truncate text-[11px] font-semibold">
                       {entry.title}
                     </span>
                     <span className="block truncate text-[10px] opacity-75">
                       {entry.start}–{entry.end}
                     </span>
+                  </>
+                )
+                return onSelectEntry ? (
+                  <button
+                    key={entry.assignmentId}
+                    type="button"
+                    onClick={() => onSelectEntry(entry.shiftId, entry.assignmentId)}
+                    data-tooltip={entryTooltip(entry)}
+                    className={`block w-full rounded border px-1.5 py-1 text-left transition focus:ring-2 focus:ring-indigo-500 focus:outline-none ${color.block}`}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div
+                    key={entry.assignmentId}
+                    data-tooltip={entryTooltip(entry)}
+                    className={`rounded border px-1.5 py-1 ${color.block}`}
+                  >
+                    {body}
                   </div>
                 )
               })

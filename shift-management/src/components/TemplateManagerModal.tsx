@@ -38,11 +38,58 @@ function emptyDraft(templates: ShiftTemplate[]): Draft {
   }
 }
 
-export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
+function toDraft(template: ShiftTemplate): Draft {
+  return {
+    id: template.id,
+    title: template.title,
+    start_time: template.start_time,
+    end_time: template.end_time,
+    note: template.note,
+    weekdays: template.weekdays,
+    is_active: template.is_active,
+    color: templateColorKey(template),
+  }
+}
+
+/**
+ * Hộp Quản lý ca mẫu. Đang xem danh sách hay form của mẫu nào nằm trên URL
+ * (`item=<id>` / `item=new`, AppLayout đọc rồi truyền vào): copy link là người
+ * khác mở đúng form đó. Chữ đang gõ dở trong form thì vẫn là state cục bộ.
+ */
+export function TemplateManagerModal({
+  item,
+  onItemChange,
+  onClose,
+}: {
+  /** `null` = danh sách, `'new'` = form tạo, còn lại là id mẫu đang sửa. */
+  item: string | null
+  onItemChange: (item: string | null) => void
+  onClose: () => void
+}) {
   const { t, dateLocale } = useI18n()
   const { templates, createTemplate, updateTemplate, deleteTemplate } =
     useSchedule()
-  const [draft, setDraft] = useState<Draft | null>(null)
+  const [rawDraft, setDraft] = useState<Draft | null>(null)
+  /** `item` mà `rawDraft` được dựng cho — URL đổi sang mục khác thì dựng lại. */
+  const [draftFor, setDraftFor] = useState<string | null>(null)
+  if (item !== draftFor) {
+    if (item === null) {
+      setDraftFor(null)
+      setDraft(null)
+    } else if (item === 'new') {
+      setDraftFor(item)
+      setDraft(emptyDraft(templates))
+    } else {
+      const source = templates.find((tpl) => tpl.id === item)
+      // Chưa thấy id (danh sách còn đang tải): chờ. Id lạ hẳn thì AppLayout
+      // bỏ khỏi URL khi đã tải xong.
+      if (source) {
+        setDraftFor(item)
+        setDraft(toDraft(source))
+      }
+    }
+  }
+  const draft = item !== null && draftFor === item ? rawDraft : null
   const [saving, setSaving] = useState(false)
   const notify = useNotify()
   const [confirmingDelete, setConfirmingDelete] = useState<UUID | null>(null)
@@ -105,7 +152,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
         await createTemplate(payload)
         notify.success('notif.tpl.created', params, when)
       }
-      setDraft(null)
+      onItemChange(null)
     } catch (err) {
       notify.error('notif.tpl.saveFailed', err, params)
     } finally {
@@ -128,19 +175,6 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  function toDraft(template: ShiftTemplate): Draft {
-    return {
-      id: template.id,
-      title: template.title,
-      start_time: template.start_time,
-      end_time: template.end_time,
-      note: template.note,
-      weekdays: template.weekdays,
-      is_active: template.is_active,
-      color: templateColorKey(template),
-    }
-  }
-
   return (
     <Modal
       title={t('tpl.manage')}
@@ -153,7 +187,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
-              onClick={() => setDraft(null)}
+              onClick={() => onItemChange(null)}
               disabled={saving}
             >
               {t('common.cancel')}
@@ -172,7 +206,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className="mr-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50"
-              onClick={() => setDraft(emptyDraft(templates))}
+              onClick={() => onItemChange('new')}
             >
               <Plus className="h-4 w-4" />
               {t('tpl.new')}
@@ -342,7 +376,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
         // ---- empty state ----
         <button
           type="button"
-          onClick={() => setDraft(emptyDraft(templates))}
+          onClick={() => onItemChange('new')}
           className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 px-4 py-10 text-sm text-slate-500 transition hover:border-indigo-400 hover:bg-indigo-50/40 hover:text-indigo-700"
         >
           <CalendarPlus className="h-5 w-5" />
@@ -384,7 +418,7 @@ export function TemplateManagerModal({ onClose }: { onClose: () => void }) {
                   <div className="ml-auto flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setDraft(toDraft(template))}
+                      onClick={() => onItemChange(template.id)}
                       aria-label={t('common.edit')}
                       className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                     >

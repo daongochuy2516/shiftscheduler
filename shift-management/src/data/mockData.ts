@@ -1,5 +1,11 @@
 import { addDays } from 'date-fns'
-import type { Account, Shift, ShiftAssignment, ShiftTemplate } from '../types'
+import type {
+  Account,
+  Location,
+  Shift,
+  ShiftAssignment,
+  ShiftTemplate,
+} from '../types'
 import { toDateKey } from '../lib/time'
 
 const now = new Date()
@@ -83,6 +89,7 @@ function shift(
   start_time: string,
   end_time: string,
   note: string | null = null,
+  template_id: string | null = null,
 ): Shift {
   return {
     id,
@@ -92,7 +99,7 @@ function shift(
     end_time,
     note,
     created_by: MOCK_CURRENT_USER_ID,
-    template_id: null,
+    template_id,
     created_at: ts,
     updated_at: ts,
   }
@@ -105,6 +112,7 @@ function assignment(
   start_time: string,
   end_time: string,
   status: ShiftAssignment['status'] = 'confirmed',
+  location_ids: string[] = [],
   note: string | null = null,
 ): ShiftAssignment {
   return {
@@ -116,104 +124,124 @@ function assignment(
     status,
     confirmed_at: status === 'confirmed' ? ts : null,
     note,
+    // Cùng dạng trigger của 012 lưu: không trùng, sắp theo id.
+    location_ids: [...location_ids].sort(),
     created_at: ts,
     updated_at: ts,
   }
 }
 
-export const MOCK_SHIFTS: Shift[] = [
-  shift(
-    's-page-support',
-    'Page Support',
-    TODAY,
-    '08:00',
-    '18:00',
-    'Front desk + inbound pages. Hand over notes in the channel.',
-  ),
-  shift('s-standup', 'Standup Coverage', TODAY, '11:00', '13:00'),
-  shift('s-late-desk', 'Late Desk', TODAY, '16:00', '22:00', 'Close the office.'),
-  shift('s-morning-prep', 'Morning Prep', TODAY, '06:00', '09:00'),
-  shift('s-yesterday-support', 'Page Support', YESTERDAY, '08:00', '18:00'),
-  shift('s-tomorrow-support', 'Page Support', TOMORROW, '08:00', '18:00'),
-  shift('s-tomorrow-training', 'New Hire Training', TOMORROW, '13:00', '17:00', 'Room 2B.'),
+/** Hai nơi trực như dữ liệu thật sau 013. */
+export const MOCK_LOCATIONS: Location[] = [
+  {
+    id: 'loc-fanpage',
+    name: 'Fanpage',
+    short_name: 'Page',
+    color: 'indigo',
+    sort_order: 0,
+    is_active: true,
+    created_by: MOCK_CURRENT_USER_ID,
+    created_at: ts,
+    updated_at: ts,
+  },
+  {
+    id: 'loc-discord',
+    name: 'Discord',
+    short_name: 'Dis',
+    color: 'teal',
+    sort_order: 1,
+    is_active: true,
+    created_by: MOCK_CURRENT_USER_ID,
+    created_at: ts,
+    updated_at: ts,
+  },
 ]
 
-/** Weekday numbers follow JS: 0 = Sunday … 6 = Saturday. */
-export const MOCK_TEMPLATES: ShiftTemplate[] = [
-  {
-    id: 't-page-support',
-    title: 'Page Support',
-    start_time: '08:00',
-    end_time: '18:00',
-    note: 'Front desk + inbound pages.',
-    weekdays: [1, 2, 3, 4, 5],
-    is_active: true,
-    color: 'teal',
-    created_by: MOCK_CURRENT_USER_ID,
-    created_at: ts,
-    updated_at: ts,
-  },
-  {
-    id: 't-late-desk',
-    title: 'Late Desk',
-    start_time: '16:00',
-    end_time: '22:00',
-    note: 'Close the office.',
-    weekdays: [1, 2, 3, 4, 5],
-    is_active: true,
-    color: 'violet',
-    created_by: MOCK_CURRENT_USER_ID,
-    created_at: ts,
-    updated_at: ts,
-  },
-  {
-    id: 't-weekend-oncall',
-    title: 'Weekend On-call',
-    start_time: '09:00',
-    end_time: '17:00',
+const FANPAGE = 'loc-fanpage'
+const DISCORD = 'loc-discord'
+
+function template(
+  id: string,
+  title: string,
+  start_time: string,
+  end_time: string,
+  color: string,
+): ShiftTemplate {
+  return {
+    id,
+    title,
+    start_time,
+    end_time,
     note: null,
-    weekdays: [0, 6],
-    is_active: true,
-    color: 'amber',
-    created_by: MOCK_CURRENT_USER_ID,
-    created_at: ts,
-    updated_at: ts,
-  },
-  {
-    id: 't-morning-prep',
-    title: 'Morning Prep',
-    start_time: '06:00',
-    end_time: '09:00',
-    note: null,
+    // Rỗng = lặp mọi ngày.
     weekdays: [],
     is_active: true,
-    color: null,
+    color,
     created_by: MOCK_CURRENT_USER_ID,
     created_at: ts,
     updated_at: ts,
-  },
+  }
+}
+
+/**
+ * Ba khung giờ như dữ liệu thật sau 013; nơi trực chọn lúc nhận ca, không
+ * nằm trong ca mẫu.
+ */
+export const MOCK_TEMPLATES: ShiftTemplate[] = [
+  template('t-sang', 'Sáng', '08:00', '13:00', 'amber'),
+  template('t-chieu', 'Chiều', '13:00', '18:00', 'sky'),
+  template('t-toi', 'Tối', '18:00', '23:00', 'violet'),
+]
+
+export const MOCK_SHIFTS: Shift[] = [
+  shift(
+    's-sang-today',
+    'Sáng',
+    TODAY,
+    '08:00',
+    '13:00',
+    'Bàn giao trong kênh trước khi rời ca.',
+    't-sang',
+  ),
+  shift('s-chieu-today', 'Chiều', TODAY, '13:00', '18:00', null, 't-chieu'),
+  shift('s-toi-today', 'Tối', TODAY, '18:00', '23:00', null, 't-toi'),
+  shift('s-meeting-today', 'Họp đầu tuần', TODAY, '11:00', '12:00'),
+  shift('s-sang-yesterday', 'Sáng', YESTERDAY, '08:00', '13:00', null, 't-sang'),
+  shift('s-toi-yesterday', 'Tối', YESTERDAY, '18:00', '23:00', null, 't-toi'),
+  shift('s-sang-tomorrow', 'Sáng', TOMORROW, '08:00', '13:00', null, 't-sang'),
+  shift(
+    's-training-tomorrow',
+    'Đào tạo nhân viên mới',
+    TOMORROW,
+    '13:00',
+    '17:00',
+    'Phòng 2B.',
+  ),
 ]
 
 export const MOCK_ASSIGNMENTS: ShiftAssignment[] = [
-  // Page Support 08:00–18:00 — three staff, three different ranges.
-  assignment('a-1', 's-page-support', 'u-huy', '08:00', '12:00'),
-  assignment('a-2', 's-page-support', 'u-thien', '10:00', '16:00'),
-  assignment('a-3', 's-page-support', 'u-an', '15:00', '18:00', 'pending'),
+  // Sáng — ba người, giờ khác nhau; Thien trực cả hai nơi cùng lúc.
+  assignment('a-1', 's-sang-today', 'u-huy', '08:00', '13:00', 'confirmed', [FANPAGE]),
+  assignment('a-2', 's-sang-today', 'u-thien', '08:00', '13:00', 'confirmed', [FANPAGE, DISCORD]),
+  assignment('a-3', 's-sang-today', 'u-an', '10:00', '13:00', 'pending', [DISCORD]),
 
-  // Overlaps with Huy's Page Support block — exercises the stacking logic.
-  assignment('a-4', 's-standup', 'u-huy', '11:00', '13:00', 'pending'),
-  assignment('a-5', 's-standup', 'u-mai', '11:00', '12:00'),
+  assignment('a-4', 's-chieu-today', 'u-mai', '13:00', '18:00', 'pending', [FANPAGE]),
+  assignment('a-5', 's-chieu-today', 'u-huy', '13:00', '15:00', 'pending', [DISCORD]),
 
-  assignment('a-6', 's-late-desk', 'u-long', '16:00', '22:00'),
-  assignment('a-7', 's-late-desk', 'u-ngoc', '18:00', '22:00', 'pending'),
+  assignment('a-6', 's-toi-today', 'u-long', '18:00', '23:00', 'confirmed', [FANPAGE, DISCORD]),
+  assignment('a-7', 's-toi-today', 'u-ngoc', '19:00', '23:00', 'pending', [DISCORD]),
 
-  assignment('a-8', 's-morning-prep', 'u-mai', '06:00', '09:00'),
+  // Trùng giờ với ca Sáng của Huy — để thử phần xếp chồng. Ca không phải
+  // trực nên không có nơi trực.
+  assignment('a-8', 's-meeting-today', 'u-huy', '11:00', '12:00', 'pending'),
+  assignment('a-9', 's-meeting-today', 'u-mai', '11:00', '12:00'),
 
-  assignment('a-9', 's-yesterday-support', 'u-huy', '08:00', '14:00'),
-  assignment('a-10', 's-yesterday-support', 'u-ngoc', '13:00', '18:00'),
+  assignment('a-10', 's-sang-yesterday', 'u-huy', '08:00', '13:00', 'confirmed', [FANPAGE]),
+  assignment('a-11', 's-sang-yesterday', 'u-ngoc', '08:00', '13:00', 'confirmed', [DISCORD]),
+  assignment('a-12', 's-toi-yesterday', 'u-thien', '18:00', '23:00', 'confirmed', [FANPAGE, DISCORD]),
 
-  assignment('a-11', 's-tomorrow-support', 'u-thien', '08:00', '13:00', 'pending'),
-  assignment('a-12', 's-tomorrow-support', 'u-huy', '12:00', '18:00', 'pending'),
-  assignment('a-13', 's-tomorrow-training', 'u-an', '13:00', '17:00'),
-  assignment('a-14', 's-tomorrow-training', 'u-long', '13:00', '15:00', 'pending'),
+  assignment('a-13', 's-sang-tomorrow', 'u-thien', '08:00', '13:00', 'pending', [FANPAGE]),
+  assignment('a-14', 's-sang-tomorrow', 'u-huy', '08:00', '13:00', 'pending', [DISCORD]),
+  assignment('a-15', 's-training-tomorrow', 'u-an', '13:00', '17:00'),
+  assignment('a-16', 's-training-tomorrow', 'u-long', '13:00', '15:00', 'pending'),
 ]

@@ -6,7 +6,12 @@ import { ShiftList } from '../components/ShiftList'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { ShiftSearchBar } from '../components/ShiftSearchBar'
 import type { ShiftFilters } from '../lib/shiftFilters'
-import { dateParam, useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
+import { useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
+import {
+  orderedRange,
+  useCanonicalParams,
+  validDateParam,
+} from '../lib/canonicalParams'
 import { planMonthChunks } from '../lib/shiftChunks'
 import { scrollRoot } from '../lib/scrollRoot'
 import { fromDateKey, toDateKey } from '../lib/time'
@@ -15,6 +20,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { LoadError } from '../components/LoadError'
+import { locationsById } from '../lib/locations'
 
 type Window = 'upcoming' | 'past' | 'all'
 
@@ -49,7 +55,9 @@ export function AllShiftsPage() {
   const {
     rosterProfiles,
     profilesById,
+    locations,
     loading,
+    error: scheduleError,
     shiftDateBounds,
     dataVersion,
   } = useSchedule()
@@ -60,16 +68,43 @@ export function AllShiftsPage() {
   const tabParam = params.get('tab')
   const window: Window =
     tabParam === 'past' || tabParam === 'all' ? tabParam : 'upcoming'
-  // Một object cho mỗi URL: giữ tham chiếu để các useMemo phía dưới không
-  // chạy lại ở mỗi lần vẽ.
+
+  // Ngày không có thật bị bỏ; `from` > `to` (chỉ có ở link gõ tay — ô chọn
+  // ngày đã chặn) thì đảo lại thay vì bỏ một đầu: giữ được ý người gửi link.
+  const range = orderedRange(
+    validDateParam(params.get('from')),
+    validDateParam(params.get('to')),
+  )
+  const rawStaff = params.getAll('staff')
+  const rosterReady = !loading && !scheduleError
+  // Chỉ giữ người có trong danh sách chọn (lặp thì bỏ bản sau). Chờ danh sách
+  // nhân viên tải xong mới lọc, không thì link nào cũng mất hết người.
+  const staffIds = rosterReady
+    ? [...new Set(rawStaff)].filter((id) => rosterProfiles.some((p) => p.id === id))
+    : rawStaff
+  const order = params.get('order') === 'desc' ? 'desc' : 'asc'
+
+  // Tham số lạ (tab, chiều, ngày, người) ghi lại đúng thứ đang hiện.
+  useCanonicalParams({
+    tab: window === 'upcoming' ? null : window,
+    from: range.from,
+    to: range.to,
+    order: order === 'desc' ? 'desc' : null,
+    ...(rosterReady ? { staff: staffIds } : {}),
+  })
+
+  // Một object cho mỗi bộ lọc: phụ thuộc vào chuỗi chứ không vào cả `params`,
+  // để mở form ca (thêm `shift=` lên URL) không làm các useMemo phía dưới
+  // chạy lại.
+  const staffParam = staffIds.join('\n')
   const filters = useMemo<ShiftFilters>(
     () => ({
-      from: dateParam(params.get('from')),
-      to: dateParam(params.get('to')),
-      staffIds: params.getAll('staff'),
-      order: params.get('order') === 'desc' ? 'desc' : 'asc',
+      from: range.from,
+      to: range.to,
+      staffIds: staffParam ? staffParam.split('\n') : [],
+      order,
     }),
-    [params],
+    [range.from, range.to, staffParam, order],
   )
 
   const today = toDateKey(new Date())
@@ -178,18 +213,26 @@ export function AllShiftsPage() {
   const loaded = useShiftChunks(queries)
   const { shifts } = loaded
 
+  const locationById = useMemo(() => locationsById(locations), [locations])
+
   // Tìm kiếm lọc ngay trên phần đã tải; lọc theo người đã làm ở database.
+  // Tên nơi trực cũng khớp: từ khi gộp ca mẫu, "Discord" không còn nằm trong
+  // tiêu đề ca mà nằm ở từng lượt phân công.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return shifts
     return shifts.filter((shift) => {
       if (shift.title.toLowerCase().includes(q)) return true
       if (shift.note?.toLowerCase().includes(q)) return true
-      return shift.assignments.some((a) =>
-        profilesById.get(a.user_id)?.display_name.toLowerCase().includes(q),
+      return shift.assignments.some(
+        (a) =>
+          profilesById.get(a.user_id)?.display_name.toLowerCase().includes(q) ||
+          a.location_ids.some((id) =>
+            locationById.get(id)?.name.toLowerCase().includes(q),
+          ),
       )
     })
-  }, [shifts, query, profilesById])
+  }, [shifts, query, profilesById, locationById])
 
   // ---- cuộn vô hạn -------------------------------------------------------
   // Phần tử canh gác ở cuối danh sách, còn cách đáy 600px là tải lát kế tiếp.

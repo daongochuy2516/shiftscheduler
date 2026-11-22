@@ -3,9 +3,11 @@ import { addDays, format } from 'date-fns'
 import { ArrowRight } from 'lucide-react'
 import type { ActionLog } from '../types'
 import { useSchedule } from '../data/ScheduleContext'
+import { LocationChip, LocationChips } from './LocationChip'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { SHIFT_COLOR_KEYS, colorByKey, type ShiftColorKey } from '../lib/colors'
+import { locationsById } from '../lib/locations'
 import { formatRange, fromDateKey } from '../lib/time'
 
 type Rec = Record<string, unknown>
@@ -21,14 +23,19 @@ const HIDDEN = new Set(['id', 'shift_id', 'created_at', 'updated_at'])
  */
 const FIELDS: { keys: readonly string[]; label: TranslationKey }[] = [
   { keys: ['title'], label: 'log.f.title' },
+  // Tên nơi trực (bảng `locations`); ca và ca mẫu dùng `title`.
+  { keys: ['name'], label: 'log.f.name' },
+  { keys: ['short_name'], label: 'log.f.shortName' },
   { keys: ['user_id'], label: 'log.f.staff' },
   { keys: ['date'], label: 'log.f.date' },
   { keys: ['start_time', 'end_time'], label: 'log.f.time' },
+  { keys: ['location_ids'], label: 'log.f.locations' },
   { keys: ['weekdays'], label: 'tpl.repeatOn' },
   { keys: ['status'], label: 'log.f.status' },
   { keys: ['confirmed_at'], label: 'log.f.confirmedAt' },
   { keys: ['is_active'], label: 'tpl.active' },
   { keys: ['color'], label: 'tpl.color' },
+  { keys: ['sort_order'], label: 'log.f.order' },
   { keys: ['note'], label: 'log.f.note' },
   { keys: ['template_id'], label: 'log.f.template' },
   { keys: ['created_by'], label: 'log.f.createdBy' },
@@ -56,6 +63,10 @@ const KNOWN_META = new Set([
   'shift_created',
   'shift_snapshot',
   'is_active',
+  // Tên nơi trực chụp lúc ghi: hiện thành dòng riêng chỉ khi bản ghi không có
+  // cột tương ứng (`name` / `location_ids`), xem phần ngữ cảnh bên dưới.
+  'location_name',
+  'location_names',
 ])
 
 /** Thứ Hai 1/1/2024 — mốc để lấy tên thứ theo ngôn ngữ đang dùng. */
@@ -86,7 +97,17 @@ interface Line {
 }
 
 function isBlank(rec: Rec, keys: readonly string[]): boolean {
-  return keys.every((k) => rec[k] === null || rec[k] === undefined || rec[k] === '')
+  return keys.every((k) => {
+    const v = rec[k]
+    // Lượt không có nơi trực nào lưu `[]` — với nơi trực đó là "trống". (Còn
+    // `weekdays` rỗng nghĩa là mọi ngày, nên không áp chung cho mảng.)
+    if (k === 'location_ids' && Array.isArray(v)) return v.length === 0
+    return v === null || v === undefined || v === ''
+  })
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
 }
 
 /**
@@ -96,7 +117,9 @@ function isBlank(rec: Rec, keys: readonly string[]): boolean {
  */
 export function LogSimpleView({ row }: { row: ActionLog }) {
   const { t, dateLocale } = useI18n()
-  const { profilesById, templates } = useSchedule()
+  const { profilesById, templates, locations } = useSchedule()
+  const locationMap = locationsById(locations)
+  const isLocation = row.entity_type === 'location'
   const meta = row.metadata
   const before = row.old_data
   const after = row.new_data
@@ -179,12 +202,23 @@ export function LogSimpleView({ row }: { row: ActionLog }) {
           )
           .join(', ')
       }
+      case 'location_ids': {
+        if (!Array.isArray(value)) return raw(value)
+        const ids = stringList(value)
+        if (ids.length === 0) return t('log.v.noLocations')
+        // Nơi trực đã xoá hiện nhãn "đã xoá" (xoá chỉ được khi không lượt nào
+        // còn dùng, nên chỉ gặp ở bản ghi cũ).
+        return <LocationChips ids={ids} byId={locationMap} size="xs" />
+      }
+      case 'sort_order':
+        return raw(value)
       case 'is_active':
         if (value === true) return t('log.v.yes')
         if (value === false) return t('log.v.no')
         return raw(value)
       case 'color':
-        if (value === null) return t('log.v.autoColor')
+        // Ca mẫu không màu thì lấy màu tự động; nơi trực không màu là nhãn xám.
+        if (value === null) return isLocation ? t('loc.noColor') : t('log.v.autoColor')
         if (!isColorKey(value)) return raw(value)
         return (
           <span className="inline-flex items-center gap-1.5">
@@ -217,7 +251,11 @@ export function LogSimpleView({ row }: { row: ActionLog }) {
   const has = (key: string) => key in current || (before !== null && key in before)
 
   const fields = [
-    ...FIELDS.map((f) => ({ keys: f.keys, label: t(f.label) })),
+    ...FIELDS.map((f) => ({
+      keys: f.keys,
+      // "Đang dùng" của ca mẫu, với nơi trực là "Hiện khi nhận ca".
+      label: t(isLocation && f.keys[0] === 'is_active' ? 'loc.active' : f.label),
+    })),
     // Cột chưa có tên dễ đọc: vẫn hiện, dưới tên gốc.
     ...[...new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])]
       .filter((key) => !HIDDEN.has(key) && !FIELD_KEYS.has(key))
@@ -257,6 +295,39 @@ export function LogSimpleView({ row }: { row: ActionLog }) {
   }
   if (!has('title') && typeof meta.template_title === 'string') {
     context.push({ key: 'meta.template_title', label: t('log.f.template'), value: meta.template_title })
+  }
+  if (!has('name') && typeof meta.location_name === 'string') {
+    context.push({ key: 'meta.location_name', label: t('log.f.location'), value: meta.location_name })
+  }
+  // Tên chụp lúc ghi (`location_names`) nói được người đó trực ở đâu khi bản
+  // ghi không có `location_ids`, hoặc có id của nơi trực nay đã xoá (chip chỉ
+  // còn "đã xoá"). Hiện thành danh sách riêng: thứ tự tên không khớp thứ tự id.
+  const metaLocationNames = stringList(meta.location_names)
+  const recordLocationIds = [
+    ...stringList(before?.location_ids),
+    ...stringList(after?.location_ids),
+  ]
+  const hasDeletedLocation = recordLocationIds.some((id) => !locationMap.has(id))
+  if (
+    metaLocationNames.length > 0 &&
+    (!has('location_ids') || hasDeletedLocation)
+  ) {
+    context.push({
+      key: 'meta.location_names',
+      label: t(has('location_ids') ? 'log.f.locationsAtTime' : 'log.f.locations'),
+      value: (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          {metaLocationNames.map((name) => (
+            <LocationChip
+              key={name}
+              name={name}
+              location={locations.find((l) => l.name === name) ?? null}
+              size="xs"
+            />
+          ))}
+        </span>
+      ),
+    })
   }
   if (!has('user_id') && typeof meta.target_user_id === 'string') {
     context.push({ key: 'meta.target', label: t('log.f.staff'), value: personName(meta.target_user_id) })
@@ -334,6 +405,9 @@ export function LogSimpleView({ row }: { row: ActionLog }) {
             >
               {show('start_time', r)}
               <span className="text-slate-500"> · {show('status', r)}</span>
+              {stringList(r.location_ids).length > 0 && (
+                <span className="mt-0.5 block">{show('location_ids', r)}</span>
+              )}
               {typeof r.note === 'string' && r.note.trim() !== '' && (
                 <span className="block text-slate-500">{show('note', r)}</span>
               )}

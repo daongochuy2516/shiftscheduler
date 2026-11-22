@@ -32,7 +32,9 @@ import {
   toMinutes,
 } from '../lib/time'
 import { useNotify } from '../notifications/NotificationContext'
+import { locationsById } from '../lib/locations'
 import { Avatar } from './Avatar'
+import { LocationChips } from './LocationChip'
 import { Modal } from './Modal'
 import { StatusBadge } from './StatusBadge'
 
@@ -69,7 +71,8 @@ export function ShiftList({
    */
   order?: 'asc' | 'desc'
 }) {
-  const { profilesById, setAssignmentStatus } = useSchedule()
+  const { profilesById, locations, setAssignmentStatus } = useSchedule()
+  const locationById = useMemo(() => locationsById(locations), [locations])
   const { t, dateLocale } = useI18n()
   const shiftColor = useShiftColor()
   const { openEdit } = useShiftEditor()
@@ -253,15 +256,25 @@ export function ShiftList({
                               size="sm"
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-slate-800">
-                                {profile?.display_name ??
-                                  t('common.unknownStaff')}
-                                {isMine && (
-                                  <span className="ml-1.5 text-[11px] font-medium text-indigo-600">
-                                    {t('common.you')}
-                                  </span>
-                                )}
-                              </p>
+                              {/* Nơi trực đứng ngay sau tên: hai người cùng ca
+                                  khác nhau ở chỗ trực, không phải ở giờ. Hết
+                                  chỗ thì nhãn xuống dòng, tên vẫn cắt gọn. */}
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                                <p className="min-w-0 truncate text-sm font-medium text-slate-800">
+                                  {profile?.display_name ??
+                                    t('common.unknownStaff')}
+                                  {isMine && (
+                                    <span className="ml-1.5 text-[11px] font-medium text-indigo-600">
+                                      {t('common.you')}
+                                    </span>
+                                  )}
+                                </p>
+                                <LocationChips
+                                  ids={assignment.location_ids}
+                                  byId={locationById}
+                                  size="xs"
+                                />
+                              </div>
                               {assignment.note && (
                                 <p className="truncate text-xs text-slate-500 select-text">
                                   {assignment.note}

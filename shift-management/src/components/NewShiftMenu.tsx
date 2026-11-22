@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   Layers,
+  MapPin,
   PenLine,
   Plus,
   Settings2,
@@ -28,19 +29,23 @@ export function NewShiftChooser({
   onManual,
   onTemplate,
   onManage,
+  onManageLocations,
   startAtTemplates = false,
 }: {
   onManual: () => void
   onTemplate: (template: ShiftTemplate) => void
   /** Mở hộp Quản lý ca mẫu. Chỉ hiện với người được quản lý (admin, 008). */
   onManage: () => void
+  /** Mở hộp Quản lý nơi trực. Cùng quyền với ca mẫu (admin, 012). */
+  onManageLocations: () => void
   /** Mở thẳng vào danh sách ca mẫu (lệnh "Nhận ca mẫu" trong Ctrl + K). */
   startAtTemplates?: boolean
 }) {
   const { t, dateLocale } = useI18n()
-  const { templates, templatesAvailable } = useSchedule()
+  const { templates, templatesAvailable, locationsAvailable } = useSchedule()
   const { user } = useAuth()
   const canManage = templatesAvailable && uiCanManageTemplates(user)
+  const canManageLocations = locationsAvailable && uiCanManageTemplates(user)
   const active = useMemo(() => templates.filter((tpl) => tpl.is_active), [templates])
   const [picking, setPicking] = useState(
     () => startAtTemplates && templatesAvailable && active.length > 0,
@@ -140,16 +145,28 @@ export function NewShiftChooser({
         onClick={onManual}
       />
       {/* Quản lý ca mẫu chuyển về đây từ thanh ca mẫu cũ trên trang Lịch. */}
-      {canManage && (
-        <div className="border-t border-slate-100 pt-1">
-          <Option
-            icon={Settings2}
-            tone="bg-teal-50 text-teal-600"
-            tour="new-shift-manage"
-            label={t('tpl.manage')}
-            hint={t('newShift.manageHint')}
-            onClick={onManage}
-          />
+      {(canManage || canManageLocations) && (
+        <div className="space-y-1 border-t border-slate-100 pt-1">
+          {canManage && (
+            <Option
+              icon={Settings2}
+              tone="bg-teal-50 text-teal-600"
+              tour="new-shift-manage"
+              label={t('tpl.manage')}
+              hint={t('newShift.manageHint')}
+              onClick={onManage}
+            />
+          )}
+          {canManageLocations && (
+            <Option
+              icon={MapPin}
+              tone="bg-sky-50 text-sky-600"
+              tour="new-shift-manage-locations"
+              label={t('loc.manage')}
+              hint={t('loc.manageHint')}
+              onClick={onManageLocations}
+            />
+          )}
         </div>
       )}
     </div>
@@ -207,10 +224,12 @@ export function NewShiftButton({
   onManual,
   onTemplate,
   onManage,
+  onManageLocations,
 }: {
   onManual: () => void
   onTemplate: (template: ShiftTemplate) => void
   onManage: () => void
+  onManageLocations: () => void
 }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
@@ -264,6 +283,10 @@ export function NewShiftButton({
             onManage={() => {
               setOpen(false)
               onManage()
+            }}
+            onManageLocations={() => {
+              setOpen(false)
+              onManageLocations()
             }}
           />
         </NewShiftPanel>

@@ -30,7 +30,15 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    // Cả query lẫn hash: link gửi nhau (ca đang mở, bộ lọc) phải còn nguyên
+    // sau khi đăng nhập xong.
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname + location.search + location.hash }}
+      />
+    )
   }
 
   // `key`: đổi tài khoản là mount lại, đọc đúng ngăn thông báo của người đó.

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Bell,
   BookOpen,
@@ -28,11 +28,13 @@ import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { IS_MOCK_BACKEND } from '../data'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
-import { useNotifications } from '../notifications/NotificationContext'
+import { useNotifications, useNotify } from '../notifications/NotificationContext'
 import { useTheme } from '../theme/ThemeContext'
 import { SCROLL_ROOT_ID } from '../lib/scrollRoot'
-import { UI_BYPASS, uiIsAdmin } from '../lib/uiBypass'
+import { UI_BYPASS, uiCanManageTemplates, uiIsAdmin } from '../lib/uiBypass'
 import { fromDateKey, toDateKey } from '../lib/time'
+import { useOverlayParams } from '../lib/urlParams'
+import { validDateParam } from '../lib/canonicalParams'
 import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
 import { Modal } from './Modal'
@@ -43,6 +45,7 @@ import { CommandPalette } from './CommandPalette'
 import { NewShiftButton, NewShiftChooser } from './NewShiftMenu'
 import { ClaimTemplateModal } from './ClaimTemplateModal'
 import { TemplateManagerModal } from './TemplateManagerModal'
+import { LocationManagerModal } from './LocationManagerModal'
 import type { ShiftTemplate } from '../types'
 import { useTwoStep } from './useTwoStep'
 import { RoleBadge } from './RoleBadge'
@@ -108,7 +111,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
   // Cùng lát cắt với trang Chờ xác nhận: mở trang đó không phải tải lại.
   const { shifts } = useShifts(user ? { kind: 'pending' } : null)
-  const { profilesById } = useSchedule()
+  const {
+    profilesById,
+    templates,
+    templatesAvailable,
+    locations,
+    locationsAvailable,
+    locationsLoaded,
+    loading,
+    error,
+  } = useSchedule()
   const isAdmin = uiIsAdmin(user)
   /**
    * Tên lấy từ danh sách nhân viên chứ không từ phiên đăng nhập: admin vừa
@@ -122,7 +134,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { t, lang, setLang } = useI18n()
   const { pref: themePref, setPref: setThemePref } = useTheme()
   const navigate = useNavigate()
-  const [params] = useSearchParams()
+  const notify = useNotify()
+  const overlay = useOverlayParams()
+  const { params } = overlay
   const [signingOut, setSigningOut] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -132,8 +146,123 @@ export function AppLayout({ children }: { children: ReactNode }) {
    * danh sách mẫu). Trên PC nút Tạo ca tự xổ menu của nó.
    */
   const [newShift, setNewShift] = useState<'menu' | 'templates' | null>(null)
-  const [claimTarget, setClaimTarget] = useState<ShiftTemplate | null>(null)
-  const [managingTemplates, setManagingTemplates] = useState(false)
+
+  /*
+   * Hộp nhận ca mẫu và hộp quản lý ca mẫu / nơi trực nằm trên URL (xem
+   * OVERLAY_PARAMS trong lib/urlParams.ts): copy link là người khác mở đúng
+   * hộp đó, Back của trình duyệt đóng hộp.
+   *   claim=<id mẫu>                hộp nhận ca mẫu (ngày, nơi trực chọn trong
+   *                                 hộp vẫn là state cục bộ)
+   *   manage=templates|locations    hộp quản lý (chỉ admin), đang ở danh sách
+   *   manage=…&item=<id>|new        form sửa / tạo bên trong hộp quản lý
+   * Giá trị không dùng được (mẫu đã xoá / tắt, không phải admin, id lạ) thì
+   * bỏ khỏi URL để link luôn khớp với thứ đang hiện.
+   */
+  /** Đã tải xong nhân viên + ca mẫu mà không lỗi: lúc đó mới biết id nào là lạ. */
+  const metaReady = !loading && !error
+  /*
+   * Link cũ / gõ tay có thể mang nhiều hộp thoại cùng lúc (`?shift=…&claim=…`).
+   * Mỗi lúc chỉ một hộp: ưu tiên form ca > nhận ca mẫu > quản lý; tham số của
+   * hộp thua bị bỏ khỏi URL (thay, không báo lỗi). Xét theo có mặt trên URL,
+   * không theo hợp lệ: hộp thắng mà hỏng thì tự bị gỡ, không mở hộp thua.
+   */
+  const hasShift = params.get('shift') !== null
+  const rawClaim = params.get('claim')
+  const shadowClaim = hasShift && rawClaim !== null
+  const shadowManage =
+    (hasShift || rawClaim !== null) &&
+    (params.get('manage') !== null || params.get('item') !== null)
+  const claimId = shadowClaim ? null : rawClaim
+  const claimTarget =
+    claimId && templatesAvailable
+      ? (templates.find((tpl) => tpl.id === claimId && tpl.is_active) ?? null)
+      : null
+  const canManage = uiCanManageTemplates(user)
+  const manageParam = shadowManage ? null : params.get('manage')
+  const manage =
+    canManage && manageParam === 'templates' && templatesAvailable
+      ? 'templates'
+      : canManage && manageParam === 'locations' && locationsAvailable
+        ? 'locations'
+        : null
+  const itemParam = shadowManage ? null : params.get('item')
+  /** Danh sách của hộp quản lý đã tải đủ để nói một id là lạ chưa. */
+  const itemsReady =
+    manage === 'templates' ? metaReady : manage === 'locations' && locationsLoaded
+  const itemKnown =
+    itemParam === 'new' ||
+    (manage === 'templates' ? templates : manage === 'locations' ? locations : []).some(
+      (x) => x.id === itemParam,
+    )
+  /** Chưa tải xong thì cứ truyền id xuống: hộp tự chờ tới khi thấy mục đó. */
+  const manageItem = manage && itemParam && (itemKnown || !itemsReady) ? itemParam : null
+
+  // Những tham số phải bỏ, tính lại mỗi lần vẽ; effect dưới ghi lên URL.
+  const stripClaim = claimId !== null && claimTarget === null && metaReady
+  const manageKnownValue = manageParam === 'templates' || manageParam === 'locations'
+  const stripManage =
+    manageParam !== null &&
+    manage === null &&
+    (!canManage || !manageKnownValue || metaReady)
+  const stripItem =
+    !stripManage &&
+    itemParam !== null &&
+    (manageParam === null || (manage !== null && itemsReady && !itemKnown))
+  const search = params.toString()
+  /** URL đã xử lý: StrictMode / vẽ lại trước khi URL kịp đổi không báo hai lần. */
+  const strippedFor = useRef<string | null>(null)
+  const { open: openOverlay, close: closeOverlay, set: setOverlay, marked: overlayMarked } =
+    overlay
+  useEffect(() => {
+    if (!stripClaim && !stripManage && !stripItem && !shadowClaim && !shadowManage) {
+      // URL đã sạch: lần sau quay lại đúng link hỏng (Forward) thì xử lý lại.
+      strippedFor.current = null
+      return
+    }
+    if (strippedFor.current === search) return
+    strippedFor.current = search
+    if (stripClaim) {
+      notify.notify({
+        kind: 'error',
+        title: 'notif.claim.missing',
+        bodyKey: 'notif.claim.missingBody',
+      })
+    }
+    const patch: Record<string, null> = {}
+    if (stripClaim) patch.claim = null
+    if (stripManage) {
+      patch.manage = null
+      patch.item = null
+    }
+    if (stripItem) patch.item = null
+    if (shadowClaim) patch.claim = null
+    if (shadowManage) {
+      patch.manage = null
+      patch.item = null
+    }
+    // Bỏ cả hộp thoại mà mục lịch sử này do app mở (có dấu): lùi về như bấm
+    // Back. Chỉ bỏ `item` (về danh sách), hay bỏ hộp thua khi hộp ưu tiên
+    // vẫn mở, thì thay URL, giữ dấu.
+    if (overlayMarked && (stripClaim || stripManage) && !hasShift) closeOverlay()
+    else setOverlay(patch)
+  }, [
+    stripClaim,
+    stripManage,
+    stripItem,
+    shadowClaim,
+    shadowManage,
+    hasShift,
+    search,
+    overlayMarked,
+    closeOverlay,
+    setOverlay,
+    notify,
+  ])
+
+  const openClaim = (template: ShiftTemplate) => openOverlay({ claim: template.id })
+  const openManage = (kind: 'templates' | 'locations') => openOverlay({ manage: kind })
+  /** Đổi giữa danh sách và form trong hộp quản lý: thay URL, Back vẫn đóng cả hộp. */
+  const setManageItem = (next: string | null) => setOverlay({ item: next })
   const [installHelpOpen, setInstallHelpOpen] = useState(false)
   const install = useInstallState()
   /**
@@ -209,7 +338,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
    * Nút nổi tạo ca theo đúng ngày đang xem, không phải luôn là hôm nay: đang
    * mở lịch ngày 20 mà bấm tạo lại ra ca hôm nay thì rất dễ tạo nhầm.
    */
-  const createDate = params.get('date') ?? toDateKey(new Date())
+  const createDate = validDateParam(params.get('date')) ?? toDateKey(new Date())
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -276,9 +405,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
             {/* Bấm là xổ menu: nhận ca mẫu, hay tạo ca thủ công. */}
             <NewShiftButton
-              onManual={() => openCreate(toDateKey(new Date()))}
-              onTemplate={setClaimTarget}
-              onManage={() => setManagingTemplates(true)}
+              onManual={() => openCreate(createDate)}
+              onTemplate={openClaim}
+              onManage={() => openManage('templates')}
+              onManageLocations={() => openManage('locations')}
             />
 
             <button
@@ -564,25 +694,44 @@ export function AppLayout({ children }: { children: ReactNode }) {
             }}
             onTemplate={(tpl) => {
               setNewShift(null)
-              setClaimTarget(tpl)
+              openClaim(tpl)
             }}
             onManage={() => {
               setNewShift(null)
-              setManagingTemplates(true)
+              openManage('templates')
+            }}
+            onManageLocations={() => {
+              setNewShift(null)
+              openManage('locations')
             }}
           />
         </Modal>
       )}
 
-      {managingTemplates && (
-        <TemplateManagerModal onClose={() => setManagingTemplates(false)} />
+      {/* Chờ tải xong danh sách để không chớp qua màn "chưa có mẫu nào". */}
+      {manage === 'templates' && !loading && (
+        <TemplateManagerModal
+          item={manageItem}
+          onItemChange={setManageItem}
+          onClose={closeOverlay}
+        />
+      )}
+
+      {manage === 'locations' && !loading && (
+        <LocationManagerModal
+          item={manageItem}
+          onItemChange={setManageItem}
+          onClose={closeOverlay}
+        />
       )}
 
       {claimTarget && (
         <ClaimTemplateModal
+          // Đổi sang mẫu khác (Back / link) thì chọn ngày lại từ đầu.
+          key={claimTarget.id}
           template={claimTarget}
           viewedDate={fromDateKey(createDate)}
-          onClose={() => setClaimTarget(null)}
+          onClose={closeOverlay}
         />
       )}
 
@@ -591,6 +740,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           onClose={() => setPaletteOpen(false)}
           onCreateShift={() => openCreate(createDate)}
           onClaimTemplate={() => setNewShift('templates')}
+          onManageLocations={() => openManage('locations')}
           onChangePassword={() => setChangingPassword(true)}
           onSignOut={handleSignOut}
         />

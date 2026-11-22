@@ -3,14 +3,25 @@ import { CalendarOff, Clock3 } from 'lucide-react'
 import type { Profile, ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { formatRange, normalizeTime, toDateKey, toMinutes } from '../lib/time'
 import { showRow } from '../lib/profiles'
+import { locationLabels, locationsById, sortLocationIds } from '../lib/locations'
+import { pickLocationFit } from '../lib/locationFit'
+import { textWidth } from '../lib/textWidth'
+import { useSchedule } from '../data/ScheduleContext'
 import { useShiftColor } from '../data/useShiftColor'
 import { useI18n } from '../i18n/I18nContext'
 import { Avatar } from './Avatar'
+import { LocationChip } from './LocationChip'
 
 const LEFT_COL = 176 // px — the sticky staff column
 const HOUR_WIDTH = 76 // px per hour
 const LANE_HEIGHT = 40
 const LANE_GAP = 6
+
+// Để tính chỗ cho nhãn nơi trực (pickLocationFit) — khớp class của khối bên
+// dưới: `px-2` + viền 1px hai bên; đồng hồ `h-3 w-3` + `gap-1`.
+const BLOCK_CHROME_PX = 18
+const CLOCK_PX = 12
+const GAP_PX = 4
 
 export interface HourRange {
   /** Whole hour, 0–23 */
@@ -80,6 +91,8 @@ export function Timeline({
 }) {
   const { t } = useI18n()
   const shiftColor = useShiftColor()
+  const { locations } = useSchedule()
+  const locationById = useMemo(() => locationsById(locations), [locations])
   const rangeStart = range.startHour * 60
   const rangeEnd = range.endHour * 60
   const span = Math.max(60, rangeEnd - rangeStart)
@@ -271,6 +284,42 @@ export function Timeline({
                       const width = ((clampedEnd - clampedStart) / span) * 100
                       const color = shiftColor(shift)
                       const pending = assignment.status === 'pending'
+                      const locationIds = sortLocationIds(
+                        assignment.location_ids,
+                        locationById,
+                      )
+                      const locationText = locationIds
+                        .map(
+                          (id) =>
+                            locationById.get(id)?.name ?? t('loc.unknown'),
+                        )
+                        .join(', ')
+                      const timeText = `${normalizeTime(assignment.start_time)}–${normalizeTime(assignment.end_time)}`
+                      const fit =
+                        locationIds.length === 0
+                          ? null
+                          : pickLocationFit({
+                              innerPx:
+                                Math.max((width / 100) * trackWidth, 44) -
+                                BLOCK_CHROME_PX,
+                              titlePx:
+                                (pending ? CLOCK_PX + GAP_PX : 0) +
+                                textWidth(shift.title, 12, 600),
+                              timePx: textWidth(timeText, 11),
+                              ...locationLabels(locationIds, locationById, t('loc.unknown')),
+                            })
+                      const chips = fit && (
+                        <span className="flex shrink-0 items-center gap-1">
+                          {locationIds.map((id) => (
+                            <LocationChip
+                              key={id}
+                              location={locationById.get(id) ?? null}
+                              size="xs"
+                              variant={fit.variant}
+                            />
+                          ))}
+                        </span>
+                      )
 
                       return (
                         <button
@@ -281,7 +330,9 @@ export function Timeline({
                           data-tooltip={`${shift.title} · ${row.profile.display_name} · ${formatRange(
                             assignment.start_time,
                             assignment.end_time,
-                          )}${pending ? ` · ${t('status.pending')}` : ''}`}
+                          )}${locationText ? ` · ${locationText}` : ''}${
+                            pending ? ` · ${t('status.pending')}` : ''
+                          }`}
                           className={`absolute z-10 flex flex-col justify-center overflow-hidden rounded-md border px-2 text-left transition focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:outline-none ${
                             color.block
                           } ${pending ? 'border-dashed' : ''}`}
@@ -292,15 +343,23 @@ export function Timeline({
                             height: LANE_HEIGHT,
                           }}
                         >
-                          <span className="flex items-center gap-1 truncate text-xs font-semibold">
+                          {/* Nhãn nơi trực: khối cao cố định nên không xuống
+                              dòng, mà chọn cách hiện vừa chỗ (pickLocationFit):
+                              tên đủ → tên tắt → chấm màu, trên dòng giờ trước,
+                              không vừa thì dòng tên ca. Chỉ ẩn khi cả chấm
+                              cũng không vừa; tooltip luôn đủ tên. */}
+                          <span className="flex min-w-0 items-center gap-1 text-xs font-semibold">
                             {pending && (
                               <Clock3 className="h-3 w-3 shrink-0 opacity-70" />
                             )}
                             <span className="truncate">{shift.title}</span>
+                            {fit?.row === 'title' && chips}
                           </span>
-                          <span className="truncate text-[11px] opacity-75">
-                            {normalizeTime(assignment.start_time)}–
-                            {normalizeTime(assignment.end_time)}
+                          <span className="flex min-w-0 items-center gap-1 overflow-hidden">
+                            <span className="shrink-0 text-[11px] opacity-75">
+                              {timeText}
+                            </span>
+                            {fit?.row === 'time' && chips}
                           </span>
                         </button>
                       )

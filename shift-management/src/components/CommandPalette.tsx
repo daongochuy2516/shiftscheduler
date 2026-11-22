@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
   Bell,
@@ -14,6 +14,7 @@ import {
   Layers,
   LayoutList,
   LogOut,
+  MapPin,
   Monitor,
   Moon,
   Plus,
@@ -33,13 +34,14 @@ import { useNotifications } from '../notifications/NotificationContext'
 import { useTheme, type ThemePref } from '../theme/ThemeContext'
 import { quickCalc, type CalcResult } from '../lib/quickCalc'
 import { scrollRoot } from '../lib/scrollRoot'
-import { uiIsAdmin } from '../lib/uiBypass'
+import { uiCanManageTemplates, uiIsAdmin } from '../lib/uiBypass'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
 import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
 import { useTour } from '../help/TourProvider'
 import { TOURS, TOUR_ORDER } from '../help/tours'
 import { corrections } from '../lib/autocorrect'
+import { validDateParam } from '../lib/canonicalParams'
 
 /**
  * `help`: trang Hướng dẫn và các bài từng bước. Tách riêng để luôn xếp cuối —
@@ -129,21 +131,31 @@ export function CommandPalette({
   onClose,
   onCreateShift,
   onClaimTemplate,
+  onManageLocations,
   onChangePassword,
   onSignOut,
 }: {
   onClose: () => void
   onCreateShift: () => void
   onClaimTemplate: () => void
+  /** Mở hộp Quản lý nơi trực (chỉ hiện lệnh với admin, khi đã chạy 012). */
+  onManageLocations: () => void
   onChangePassword: () => void
   onSignOut: () => void
 }) {
   const { t, lang, setLang, dateLocale } = useI18n()
   const { user } = useAuth()
-  const { profiles } = useSchedule()
+  // Danh sách để chọn / lọc người: bỏ tài khoản đang ẩn (quản lý…).
+  const { rosterProfiles, locationsAvailable } = useSchedule()
   const { pref, setPref } = useTheme()
   const { setCenterOpen } = useNotifications()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  /**
+   * Ngày đang xem (Lịch / Tổng kết), không có thì hôm nay. Lệnh mở Lịch / Tổng
+   * kết ghi sẵn `date=` để link luôn đầy đủ và đổi chế độ xem không nhảy ngày.
+   */
+  const viewedDate = validDateParam(params.get('date')) ?? toDateKey(new Date())
   const signOut = useTwoStep(onSignOut)
   const { start: startTour } = useTour()
 
@@ -171,6 +183,8 @@ export function CommandPalette({
   }, [copiedId])
 
   const isAdmin = uiIsAdmin(user)
+  // Cùng điều kiện với mục "Quản lý nơi trực" trong menu Tạo ca.
+  const canManageLocations = locationsAvailable && uiCanManageTemplates(user)
 
   // ---- danh sách lệnh cố định ---------------------------------------------
   const fixed = useMemo<Command[]>(() => {
@@ -184,11 +198,11 @@ export function CommandPalette({
       { id: 'system', icon: Monitor, label: 'theme.systemShort', kw: 'giao dien he thong theme system auto' },
     ]
     const list: Command[] = [
-      { id: 'nav-day', group: 'nav', icon: CalendarDays, label: t('nav.timeline'), keywords: 'lich ngay schedule calendar day timeline', run: go('/') },
-      { id: 'nav-week', group: 'nav', icon: CalendarDays, label: t('palette.weekView'), keywords: 'lich tuan schedule calendar week', run: go('/?view=week') },
-      { id: 'nav-month', group: 'nav', icon: CalendarDays, label: t('palette.monthView'), keywords: 'lich thang schedule calendar month', run: go('/?view=month') },
+      { id: 'nav-day', group: 'nav', icon: CalendarDays, label: t('nav.timeline'), keywords: 'lich ngay schedule calendar day timeline', run: go(`/?date=${viewedDate}`) },
+      { id: 'nav-week', group: 'nav', icon: CalendarDays, label: t('palette.weekView'), keywords: 'lich tuan schedule calendar week', run: go(`/?view=week&date=${viewedDate}`) },
+      { id: 'nav-month', group: 'nav', icon: CalendarDays, label: t('palette.monthView'), keywords: 'lich thang schedule calendar month', run: go(`/?view=month&date=${viewedDate}`) },
       { id: 'nav-shifts', group: 'nav', icon: LayoutList, label: t('nav.allShifts'), keywords: 'tat ca ca all shifts list danh sach', run: go('/shifts') },
-      { id: 'nav-summary', group: 'nav', icon: ClipboardCheck, label: t('nav.summary'), keywords: 'tong ket summary cham cong tinh cong hours', run: go('/summary') },
+      { id: 'nav-summary', group: 'nav', icon: ClipboardCheck, label: t('nav.summary'), keywords: 'tong ket summary cham cong tinh cong hours', run: go(`/summary?date=${viewedDate}`) },
       { id: 'nav-mine', group: 'nav', icon: User, label: t('nav.myShifts'), keywords: 'ca cua toi my shifts', run: go('/my-shifts') },
       { id: 'nav-pending', group: 'nav', icon: Clock3, label: t('nav.pending'), keywords: 'cho xac nhan pending diem danh confirm', run: go('/pending') },
       { id: 'nav-logs', group: 'nav', icon: ScrollText, label: t('nav.actionLog'), keywords: 'nhat ky activity log logs', run: go('/logs') },
@@ -205,6 +219,13 @@ export function CommandPalette({
         id: 'act-new', group: 'action', icon: Plus, label: t('newShift.manual'), keywords: 'tao ca moi thu cong new shift create manual them',
         run: () => (onCreateShift(), 'close'),
       },
+      ...(canManageLocations
+        ? [{
+            id: 'act-locations', group: 'action' as const, icon: MapPin, label: t('loc.manage'),
+            keywords: 'quan ly noi truc dia diem vi tri manage locations location fanpage discord',
+            run: () => (onManageLocations(), 'close' as const),
+          }]
+        : []),
       {
         id: 'act-notif', group: 'action', icon: Bell, label: t('notif.title'), keywords: 'thong bao notifications',
         run: () => (setCenterOpen(true), 'close'),
@@ -243,7 +264,7 @@ export function CommandPalette({
       },
     ]
     return list
-  }, [t, lang, pref, isAdmin, navigate, setPref, setLang, setCenterOpen, onCreateShift, onClaimTemplate, onChangePassword, signOut, startTour])
+  }, [t, lang, pref, isAdmin, canManageLocations, viewedDate, navigate, setPref, setLang, setCenterOpen, onCreateShift, onClaimTemplate, onManageLocations, onChangePassword, signOut, startTour])
 
   // ---- kết quả tính nhanh ---------------------------------------------------
   const calc = useMemo(() => quickCalc(query), [query])
@@ -312,7 +333,7 @@ export function CommandPalette({
     const words = query.trim().split(/\s+/).filter(Boolean)
     // Chỉ gợi ý người khi đã gõ: danh sách cả nhóm ngay từ đầu thì quá dài.
     const staff: Command[] = words.length
-      ? profiles.map((p) => ({
+      ? rosterProfiles.map((p) => ({
           id: `staff-${p.id}`,
           group: 'staff' as const,
           icon: Users,
@@ -382,7 +403,7 @@ export function CommandPalette({
       items: [...results, ...ranked],
       corrected: changed ? tokens.join(' ') : null,
     }
-  }, [query, results, fixed, profiles, t, navigate])
+  }, [query, results, fixed, rosterProfiles, t, navigate])
 
   const activeIndex = Math.min(active, Math.max(0, items.length - 1))
 

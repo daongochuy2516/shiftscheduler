@@ -2,13 +2,13 @@
 
 Ứng dụng xếp ca nội bộ cho nhân viên. React + Vite + TypeScript + Tailwind, backend là Supabase (Postgres + Auth + Realtime). Không có server riêng: trình duyệt nói chuyện thẳng với Supabase, các luật quan trọng nằm ở database.
 
-Mô hình dữ liệu cốt lõi: **một ca chứa nhiều lượt phân công**, mỗi nhân viên trong ca có khung giờ và trạng thái (*chờ xác nhận* / *đã xác nhận*) riêng.
+Mô hình dữ liệu cốt lõi: **một ca chứa nhiều lượt phân công**, mỗi nhân viên trong ca có khung giờ, trạng thái (*chờ xác nhận* / *đã xác nhận*) và **nơi trực** (một hoặc nhiều, ví dụ Fanpage, Discord) riêng.
 
 ```
-Ca: Trực trang, 08:00–18:00
-├── Huy    08:00–12:00   đã xác nhận
-├── Thiên  10:00–16:00   đã xác nhận
-└── An     15:00–18:00   chờ xác nhận
+Ca: Sáng, 08:00–13:00
+├── Huy    08:00–13:00   đã xác nhận    Fanpage, Discord
+├── Thiên  10:00–13:00   đã xác nhận    Discord
+└── An     08:00–11:00   chờ xác nhận   Fanpage
 ```
 
 Các trang: **Lịch**, **Tất cả ca**, **Tổng kết**, **Ca của tôi**, **Chờ xác nhận**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, và **Tài khoản** (chỉ admin).
@@ -88,6 +88,10 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/009_server_time.sql` | Hàm `server_now()` cho đồng hồ trên thanh trên chạy theo giờ máy chủ. Chưa chạy thì đồng hồ dùng giờ máy, có chấm vàng cạnh giờ. Không cần file nào trước |
 | `supabase/010_harden_rules.sql` | Bịt các đường lách luật khi gọi thẳng Supabase API: mốc thời gian do máy chủ đặt, tới giờ điểm danh thì giờ đứng yên, điểm danh chỉ là đổi trạng thái, ca mẫu giữ giờ gốc, một người một lượt trong ca, thu quyền gọi hàm của anon ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)). Cần 002, 005, 006 trước |
 | `supabase/011_accounts_private.sql` | Email và vai trò chỉ admin đọc được: nhân viên chỉ còn đọc phần danh bạ của `profiles` (id, tên, hiện / ẩn); danh sách tài khoản đầy đủ qua `list_accounts()`, máy chủ kiểm tra admin trước khi trả; `action_logs.actor_email` cũng thu lại ([mục 11](#trang-tài-khoản)). Cần 003, 005, 007 trước |
+| `supabase/012_locations.sql` | **Nơi trực**: bảng `locations` (chỉ admin thêm / sửa / ẩn / xoá; không xoá được nơi đang có trong ca), cột `shift_assignments.location_ids` (mỗi lượt một hoặc nhiều nơi), luật nơi trực trong trigger điểm danh, nhật ký cho nơi trực ([mục 7](#quản-lý-nơi-trực)). Chạy lại an toàn. Cần 002, 003, 005, 008, 010, 011 trước |
+| `supabase/013_merge_location_templates.sql` | **Chuyển dữ liệu một lần, riêng cho Thinkmay**: gộp 6 ca mẫu cũ *Sáng / Chiều / Tối – trực page / discord* thành 3 ca mẫu **Sáng**, **Chiều**, **Tối**; tạo nơi trực **Fanpage** và **Discord**; mỗi cặp ca page + discord cùng ngày cùng khung gộp thành một ca, người đứng cả hai thành **một lượt hai nơi trực**. Một transaction, **không ghi dòng nhật ký nào**; chạy lại khi không còn ca mẫu cũ thì không làm gì. Cần 012 trước |
+| `supabase/014_location_short_name.sql` | **Tên tắt** cho nơi trực (cột `short_name`, tối đa 10 ký tự), dùng trên khối ca ngắn ở dòng thời gian. Đặt sẵn *Page* cho Fanpage và *Dis* cho Discord (không ghi nhật ký). Cần 012 trước |
+| `supabase/015_claim_requires_location.sql` | **Nhận ca phải có nơi trực**: ghi đè trigger điểm danh — tự thêm chính mình vào ca sinh từ ca mẫu (nhận ca) phải kèm **ít nhất một nơi trực**, áp cho mọi người đăng nhập kể cả admin; nhân viên không được sửa lượt của mình trên ca mẫu thành không còn nơi trực nào (admin được). Chạy trong SQL Editor (không có phiên đăng nhập) thì không áp. Chạy lại an toàn. Cần 012 trước |
 
 Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng dụng **vẫn chạy bình thường**, chỉ thiếu tính năng tương ứng:
 
@@ -102,6 +106,12 @@ Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng d�
 | 009 | Đồng hồ trên thanh trên dùng giờ máy, có chấm vàng cạnh giờ |
 | 010 | Giao diện vẫn khoá như mô tả, nhưng nhân viên gọi thẳng API lách được: tự đặt `created_at` để rời ca lúc nào cũng được, sửa giờ lượt chưa điểm danh để điểm danh trễ, thêm mình hai lần vào một ca |
 | 011 | Trang Tài khoản hiện thông báo vàng, không hiện tài khoản nào. Nhân viên gọi thẳng API vẫn đọc được email và vai trò của mọi người trong `profiles`, và email người thao tác trong nhật ký |
+| 012 | Không có nơi trực: hộp nhận ca không hỏi nơi trực, form ca không có ô chọn, *Quản lý nơi trực* báo chưa cài đặt |
+| 013 | Ca mẫu và ca cũ giữ nguyên như trước (6 ca mẫu, mỗi khung hai ca song song) |
+| 014 | Không có ô *Tên tắt*: chỗ chật dùng 3 chữ đầu của tên ("Fan", "Dis") |
+| 015 | Luật "nhận ca phải có nơi trực" chỉ có ở giao diện (hộp nhận ca, form ca); gọi thẳng API vẫn nhận ca không nơi trực được |
+
+> **Thứ tự triển khai nơi trực**: chạy `012_locations.sql` → `013_merge_location_templates.sql` trong SQL Editor, **rồi** mới deploy bản web mới. Bản web mới chạy được cả khi chưa chạy 012 (ẩn mọi thứ về nơi trực). Bản web cũ vẫn đọc được sau 013, nhưng nhận ca theo ca mẫu cũ sẽ lỗi vì mẫu đó đã bị xoá.
 
 > Chạy 005 xong **mọi người đều là nhân viên thường**. Phong admin ngay sau đó (mục 7 trong file, hoặc [mục 11](#11-dành-cho-quản-trị-viên)), nếu không sẽ không còn ai sửa được lượt đã điểm danh.
 
@@ -130,14 +140,14 @@ Vài điểm cần biết:
 
 - Nút **Tiếng Việt / English** nằm ngay trên form, đổi được trước cả khi đăng nhập.
 - Sai email hoặc mật khẩu sẽ hiện *"Email hoặc mật khẩu không đúng."* Các lỗi khác (bị khoá, giới hạn số lần thử) hiện nguyên văn để dễ báo cho quản trị viên.
-- Nếu bạn dán một đường dẫn sâu (ví dụ `/pending`) khi chưa đăng nhập, hệ thống ghi nhớ và **đưa bạn về đúng trang đó** sau khi đăng nhập xong. Chỉ nhớ tên trang: các bộ lọc nằm sau dấu `?` trên link (ngày, chế độ xem…) **không** được giữ lại, sau khi đăng nhập bạn mở lại link đó một lần nữa.
+- Nếu bạn mở một đường dẫn sâu khi chưa đăng nhập (ví dụ `/pending`, hay link đồng nghiệp gửi tới một ca `/?date=2026-09-08&shift=<id>`), hệ thống ghi nhớ **nguyên cả link** — trang, ngày, chế độ xem, bộ lọc, form đang mở — và **đưa bạn về đúng màn hình đó** sau khi đăng nhập xong, không phải mở lại link.
 - Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
 
 **Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Phải **bấm hai lần**: lần đầu ô chuyển đỏ, hiện *Bấm lần nữa để đăng xuất*; bấm tiếp trong 4 giây mới đăng xuất, để quá thì trở lại như cũ. Bạn sẽ được đưa về trang đăng nhập ngay.
 
 ### Quên mật khẩu
 
-Link **Quên mật khẩu?** nằm bên phải nhãn *Mật khẩu* trên form đăng nhập. Bấm vào chỉ hiện một hộp thoại hướng dẫn — **không có chức năng tự đặt lại mật khẩu**, quản trị viên phải đặt lại thủ công (xem [mục 11](#11-dành-cho-quản-trị-viên)).
+Link **Quên mật khẩu?** nằm bên phải nhãn *Mật khẩu* trên form đăng nhập. Bấm vào chỉ hiện một hộp thoại hướng dẫn — **không có chức năng tự đặt lại mật khẩu**, quản trị viên phải đặt lại thủ công (xem [mục 11](#11-dành-cho-quản-trị-viên)). Hộp thoại này nằm trên đường dẫn (`/login?forgot=1`): gửi link đó là người nhận thấy ngay hướng dẫn.
 
 Cố ý làm vậy: bật tính năng gửi email đặt lại mật khẩu của Supabase sẽ cho phép bất kỳ ai biết email nhân viên cũng kích hoạt được luồng đó.
 
@@ -180,7 +190,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | **Chờ xác nhận** | Các lượt phân công chưa xác nhận — có **số đếm** hiển thị ngay trên nhãn |
 | **Nhật ký** | Nhật ký thao tác, chỉ đọc ([mục 9b](#9b-nhật-ký-thao-tác)) |
 | Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. **Bấm** vào đồng hồ (rê chuột không bật gì) để mở bảng giống đồng hồ taskbar của Windows: giờ to, ngày đầy đủ kèm thứ, và **lịch tháng** — `‹ ›` đổi tháng, bấm tên tháng để chọn nhanh tháng rồi năm, bấm một ngày là mở trang Lịch của ngày đó. Ô **tô tím đặc** là ngày đang xem (ngày trên đường dẫn của trang Lịch / Tổng kết — mở lại bảng sau khi bấm là thấy ngay ngày vừa chọn, lịch mở đúng tháng đó); trang không có ngày thì tô hôm nay. Hôm nay, nếu khác ngày đang xem, có viền tím. Bấm đồng hồ lần nữa, bấm ra ngoài hoặc **Esc** để đóng. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
-| **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định **hôm nay**) |
+| **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định ngày đang xem ở Lịch / Tổng kết, các trang khác là **hôm nay**) |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) và email. Tên lấy từ danh sách nhân viên nên admin vừa đổi tên bạn ở trang Tài khoản thì thanh trên đổi theo ngay. Dưới 768px chỉ còn avatar |
 | ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô, theo thứ tự: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối, [mục 9f](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** ([mục 9e](#9e-trang-trạng-thái)), **Hướng dẫn** ([mục 9d](#9d-hướng-dẫn-và-bài-từng-bước)), **Đổi mật khẩu**, **Đăng xuất**. Cuối bảng có dòng nhắc *Ctrl + K — Quick Search*. Bấm ô Giao diện hay Ngôn ngữ thì bảng giữ nguyên để bấm tiếp; các ô còn lại đóng bảng |
 
@@ -223,15 +233,37 @@ Dòng dưới tiêu đề luôn cho biết phạm vi đang xem có bao nhiêu ca
 
 ### Chế độ **Ngày**
 
-Timeline chi tiết theo giờ. Đây là chế độ duy nhất có:
+Timeline chi tiết theo giờ ([mục 5](#5-đọc-timeline-ngày)). Chế độ này có:
 
-- **Bộ chọn khung giờ**: *Vừa theo ngày* (tự co giãn theo dữ liệu thực tế), *06:00–22:00*, *08:00–20:00*, *Cả ngày*.
-- Nút **Thêm ca vào ngày này** — khác với nút "Tạo ca" ở thanh trên (nút đó luôn dùng ngày hôm nay).
+- **Bộ chọn khung giờ**: *Vừa theo ngày* (tự co giãn theo dữ liệu thực tế), *06:00–22:00*, *08:00–20:00*, *Cả ngày*. Trên máy tính bộ chọn này cũng dùng cho chế độ **Tuần** (xem dưới).
+- Nút **Thêm ca vào ngày này** — mở form ca mới với ngày đang xem (nút **Tạo ca → Tạo ca thủ công** ở thanh trên cũng lấy ngày đang xem khi bạn ở trang Lịch / Tổng kết).
 - Dải chip liệt kê các ca trong ngày ở cuối trang; bấm chip là mở ca đó ra sửa.
 
 ### Chế độ **Tuần**
 
-Lưới **nhân viên theo hàng × 7 ngày theo cột**, tuần bắt đầu từ Thứ Hai.
+Tuần bắt đầu từ Thứ Hai. Máy tính và điện thoại hiện khác nhau.
+
+**Máy tính (màn hình từ 640px)** — dạng lịch giống Google Calendar:
+
+```
+      ┃ T2 8      ┃ T3 9      ┃ T4 (10)   ┃ …
+08:00 ┃ ┌Huy────┐ ┃           ┃ ┌Huy┐┌An┐ ┃      ← hai người trùng giờ: đứng cạnh nhau
+09:00 ┃ │       │ ┃ ┌Mai────┐ ┃ │   ││  │ ┃
+10:00 ┃ └───────┘ ┃ │       │ ┃ ●━━━━━━━━ ┃      ← vạch đỏ: bây giờ (cột hôm nay)
+11:00 ┃           ┃ └───────┘ ┃ └───┘└──┘ ┃
+```
+
+- **Mỗi ngày một cột** (Thứ Hai → Chủ Nhật), **trục giờ dọc** bên trái ghi `HH:00`. Mỗi giờ cao cố định, lịch dài theo trang (cuộn cùng trang, không có thanh cuộn riêng); hàng tiêu đề ngày dính ở đầu khi cuộn.
+- **Mỗi khối là một lượt phân công**, đặt theo **giờ riêng của người đó** (không phải giờ chung của ca). Trong khối, từ trên xuống: **tên người**, giờ `HH:mm–HH:mm`, nhãn **nơi trực**, và tên ca (chỉ khi khối đủ cao — lượt dài hơn 1 tiếng, khoảng từ 1 tiếng 15 phút trở lên). Khối quá ngắn thì tên và giờ chung một dòng. Rê chuột vào khối luôn thấy đủ: tên ca · người · giờ · nơi trực · chờ xác nhận.
+- **Màu khối theo người**, trùng màu avatar của người đó — nhìn màu là biết ai. (Dòng thời gian của chế độ Ngày vẫn tô màu **theo ca**.)
+- **Nhiều người trùng giờ** (ví dụ hai người cùng một ca) thì các khối **đứng cạnh nhau**, chia đôi / chia ba bề rộng cột; khối nào bên phải còn trống thì giãn ra chiếm chỗ.
+- Viền nét đứt + icon đồng hồ = chờ xác nhận, viền liền = đã xác nhận, như dòng thời gian.
+- Cột **hôm nay** nền indigo nhạt, số ngày nằm trong vòng tròn indigo; **vạch đỏ ngang** trên cột hôm nay là giờ hiện tại (tự chạy mỗi phút).
+- **Bấm một khối** để mở ca đó ra sửa; **bấm tiêu đề cột ngày** để sang chế độ Ngày của ngày đó.
+- **Bộ chọn khung giờ** áp dụng cho cả tuần: *Vừa theo tuần* (tên của mục *Vừa theo ngày* khi ở chế độ Tuần) co theo **mọi lượt trong tuần đang xem** (sớm nhất lùi 1 tiếng, muộn nhất thêm 1 tiếng, ít nhất 6 tiếng; tuần trống thì 08:00–20:00). Lượt nằm hẳn ngoài khung giờ đang chọn thì không vẽ, dải vàng báo số lượt bị khuất — chọn **Cả ngày** để thấy.
+- Không có ô tích *Chỉ nhân viên có ca* (lịch không có hàng nhân viên nên không có hàng trống để ẩn) và không có cột **Tổng** giờ theo người — xem số giờ ở trang **Tổng kết**.
+
+**Điện thoại (dưới 640px)** — giữ lưới cũ: **nhân viên theo hàng × 7 ngày theo cột**.
 
 - Mỗi ô là các chip ca của người đó trong ngày đó; bấm chip để sửa.
 - Cột **Tổng** ở ngoài cùng bên phải là tổng số giờ làm trong tuần của từng người — dùng để cân đối khối lượng.
@@ -246,9 +278,9 @@ Lịch tháng dạng lưới, tuần bắt đầu từ Thứ Hai, có hiển th�
 - Bấm **số ngày** hoặc **"+N nữa"** để mở chế độ Ngày.
 - Bấm một chip ca để sửa ca đó.
 
-> Chế độ Tuần và Ngày có ô tích **"Chỉ nhân viên có ca"** để ẩn những người không được phân công, giúp lưới gọn lại khi công ty đông người. Trên điện thoại ô này và bộ chọn khung giờ gom vào nút **Bộ lọc** (icon thanh trượt, cạnh nút Ngày | Tuần | Tháng); chế độ Tháng không có bộ lọc nào.
+> Chế độ Ngày (và chế độ Tuần trên điện thoại) có ô tích **"Chỉ nhân viên có ca"** để ẩn những người không được phân công, giúp lưới gọn lại khi công ty đông người. Lịch tuần trên máy tính không có ô này vì không có hàng nhân viên. Trên điện thoại ô này và bộ chọn khung giờ gom vào nút **Bộ lọc** (icon thanh trượt, cạnh nút Ngày | Tuần | Tháng); chế độ Tháng không có bộ lọc nào.
 
-Ngày đang xem, chế độ xem, khung giờ và ô tích đều nằm trên đường dẫn ([mục 10](#10-tra-cứu-nhanh)): gửi link là người nhận mở ra đúng màn hình bạn đang xem, F5 cũng không mất.
+Ngày đang xem, chế độ xem, khung giờ và ô tích đều nằm trên đường dẫn ([mục 10](#10-tra-cứu-nhanh)): gửi link là người nhận mở ra đúng màn hình bạn đang xem, F5 cũng không mất. Ngày **luôn** được ghi lên link, kể cả khi đang xem hôm nay (`/?date=2026-11-22`), nên link gửi hôm nay mà ngày mai mới mở vẫn ra đúng ngày người gửi đã xem. Bấm **Hôm nay / Tuần này / Tháng này** là ghi ngày hôm nay lên link.
 
 ---
 
@@ -289,23 +321,40 @@ Timeline cuộn ngang được khi khung giờ rộng; cột tên nhân viên lu
 
 | Cách | Kết quả |
 | --- | --- |
-| Nút **Tạo ca** trên thanh điều hướng → **Tạo ca thủ công** | Ca mới, ngày = hôm nay |
-| Nút tròn (điện thoại) → **Tạo ca thủ công** | Ca mới, ngày = ngày đang xem |
+| Nút **Tạo ca** trên thanh điều hướng → **Tạo ca thủ công** (hay *tạo ca* trong Ctrl + K) | Ca mới, ngày = ngày đang xem ở trang Lịch / Tổng kết; ở các trang khác là hôm nay |
+| Nút tròn (điện thoại) → **Tạo ca thủ công** | Như trên |
 | Nút **Thêm ca vào ngày này** (chế độ Ngày) | Ca mới, ngày = ngày đang xem |
-| Bấm một khối trên timeline / chip tuần / chip tháng | Sửa ca đã có |
+| Bấm một khối trên timeline / khối hoặc chip tuần / chip tháng | Sửa ca đã có |
 | Nút **Sửa** trên thẻ ca ở các trang danh sách | Sửa ca đã có |
+| Mở một link có `shift=…` | Đúng form đó, trên đúng trang người gửi đang xem |
+
+### Form ca nằm trên đường dẫn
+
+Mở form là đường dẫn đổi theo, nên **copy link lúc form đang mở rồi gửi đi, người nhận mở ra đúng màn hình đó**: cùng trang, cùng ngày / bộ lọc phía sau, cùng ca, cùng người đang được tô sáng, cùng chế độ Đơn giản / Nâng cao. F5 cũng không mất form (phần đang gõ dở chưa lưu thì mất).
+
+| Tham số | Ý nghĩa |
+| --- | --- |
+| `shift=<id>` | Form sửa ca có id đó |
+| `shift=new` + `shiftDate=yyyy-MM-dd` | Form tạo ca mới vào ngày đó (thiếu hoặc sai ngày thì là hôm nay) |
+| `assignment=<id>` | Lượt phân công được tô sáng trong form (bấm khối của một người trên timeline / lịch tuần) |
+| `shiftView=advanced` | Mở ở chế độ **Nâng cao**; không có = Đơn giản |
+
+- Mở form tạo thêm một bước trong lịch sử trình duyệt: **bấm Back (hay vuốt lùi trên điện thoại) là đóng form**, không rời trang. Đóng bằng ✕ / Esc / bấm nền cũng bỏ bước đó, nên Back lần sau về đúng trang trước.
+- Ca chưa có trong bộ đệm (ví dụ link tới một ca tháng khác) thì form hiện vòng quay trong lúc tải.
+- Link tới ca **đã bị xoá**, hoặc id sai: hiện thông báo *Không mở được ca* — *Ca này đã bị xoá, hoặc đường dẫn không đúng.*, rồi tham số được gỡ khỏi link. Mất mạng mà chưa có bản lưu thì thông báo nói rõ là do mạng.
+- Giá trị lạ (ví dụ `shiftView=abc`, `assignment` không thuộc ca đó, `shiftDate` đi kèm form sửa) được tự gỡ / sửa lại để link luôn khớp với thứ đang hiện.
 
 ### Hai chế độ: **Đơn giản** và **Nâng cao**
 
-Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâng cao**. Form nhớ chế độ bạn chọn lần trước (trên trình duyệt đó); lần đầu là **Đơn giản**. Tạo ca mới thì luôn là form đầy đủ.
+Khi mở một ca **đã có**, đầu form có công tắc **Đơn giản | Nâng cao**. Form nhớ chế độ bạn chọn lần trước (trên trình duyệt đó); lần đầu là **Đơn giản**. Chế độ cũng nằm trên link (`shiftView=advanced`). Bấm mở ca trong app thì form theo lựa chọn đã nhớ và ghi nó lên link; mở một link thì **theo link** (có `shiftView=advanced` là Nâng cao, không có là Đơn giản), không theo lựa chọn đã nhớ của người mở. Gạt công tắc thì đổi cả link lẫn lựa chọn đã nhớ. Tạo ca mới thì luôn là form đầy đủ.
 
 **Đơn giản** chỉ xoay quanh *phần của bạn* trong ca. Thông tin ca và những người khác chỉ hiện để xem.
 
 | Bạn đang… | Form hiện | Bấm là |
 | --- | --- | --- |
-| Chưa có trong ca | Ô **Từ / Đến** (sẵn giờ của ca), ghi chú, nút **Nhận ca này** | Lưu ngay, đóng form |
-| Có trong ca, chờ xác nhận | Giờ và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca**. Từ lúc mở điểm danh thì giờ bị khoá kèm 🔒 (cần 010) | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
-| Đã điểm danh | Giờ bị khoá kèm 🔒, chỉ còn sửa ghi chú | — |
+| Chưa có trong ca | Ô **Từ / Đến** (sẵn giờ của ca), **Nơi trực**, ghi chú, nút **Nhận ca này**. Ca sinh từ ca mẫu (cần 012): phải chọn **ít nhất một nơi trực** trước, nút mới bấm được — chưa chọn thì có dòng đỏ *Chọn ít nhất một nơi trực.*; chưa có nơi trực nào đang bật thì dòng đó là *Chưa có nơi trực nào để chọn — nhờ admin thêm trong Quản lý nơi trực.* | Lưu ngay, đóng form |
+| Có trong ca, chờ xác nhận | Giờ, **nơi trực** và ghi chú sửa được, nút **Cả ca** để về khung giờ của ca, nút **Điểm danh** khi tới giờ, nút **Rời ca**. Từ lúc mở điểm danh thì giờ bị khoá kèm 🔒 (cần 010) | **Điểm danh** và **Rời ca** lưu ngay. Sửa giờ / ghi chú thì bấm **Lưu thay đổi** ở chân form |
+| Đã điểm danh | Giờ và nơi trực bị khoá kèm 🔒, chỉ còn sửa ghi chú | — |
 
 - Nút **Điểm danh** theo đúng luật ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh): chưa tới giờ thì hiện *Mở điểm danh lúc …*, quá giờ thì *Hết giờ điểm danh — bạn không có quyền điểm danh trễ*. Điểm danh trước giờ bắt đầu (trong 30 phút sớm) sẽ được hỏi lại một lần.
 - Vừa đổi giờ mà chưa lưu thì không điểm danh được: lưu giờ mới trước.
@@ -323,12 +372,13 @@ Khung giờ ở đây là khung giờ *tổng* của ca. Từng nhân viên vẫ
 
 ### Phần nhân viên trong ca
 
-Mỗi dòng gồm: **chọn người** · **Từ** · **Đến** · **Trạng thái** · nút xoá · ô ghi chú riêng cho người đó.
+Mỗi dòng gồm: **chọn người** · **Từ** · **Đến** · **Trạng thái** · nút xoá · **Nơi trực** · ô ghi chú riêng cho người đó.
 
 - **Thêm nhân viên**: thêm một dòng mới, mặc định lấy khung giờ của ca và trạng thái *Chờ xác nhận*. Với nhân viên thường, nút này là **Thêm tôi vào ca** — chỉ admin thêm được người khác ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)).
 - Người đã có trong ca sẽ bị **làm mờ** trong danh sách chọn, tránh trùng.
 - Nút thùng rác **gỡ người đó khỏi ca**. Thay đổi chỉ có hiệu lực sau khi bấm **Lưu thay đổi**.
 - Dưới mỗi dòng hiện **thời lượng** đã tính sẵn (ví dụ `4h 30m`).
+- **Nơi trực**: bấm từng chip để bật / tắt, chọn được nhiều nơi. Chỉ hiện nơi đang bật, cộng những nơi lượt đó đã có sẵn (kể cả nơi đã bị ẩn, để không lặng lẽ mất). Nhân viên chỉ đổi được nơi trực **của mình** khi **chưa điểm danh** — không phụ thuộc giờ; dòng của người khác hay dòng đã điểm danh thì chip bị khoá. Trên ca sinh từ ca mẫu: dòng **mới** của chính bạn (tự thêm mình vào ca = nhận ca, kể cả admin) phải chọn ít nhất một nơi, và nhân viên không bỏ được nơi cuối cùng của dòng mình đã lưu — dòng đó báo *Chọn ít nhất một nơi trực.* và nút Lưu bị khoá (dòng mới mà không còn nơi trực nào để chọn thì báo *Chưa có nơi trực nào để chọn — nhờ admin thêm trong Quản lý nơi trực.*). Dòng của người khác (admin thêm / sửa hộ) không bị luật này. Chưa chạy 012 thì không có ô này.
 
 ### Kiểm tra dữ liệu
 
@@ -348,13 +398,13 @@ Nhân viên chỉ xoá được ca **đang trống**, hoặc ca **chỉ có chí
 
 ### Đóng form
 
-Ba cách: nút **✕**, phím **Esc**, hoặc bấm ra vùng nền tối bên ngoài. Thay đổi chưa lưu sẽ bị bỏ.
+Bốn cách: nút **✕**, phím **Esc**, bấm ra vùng nền tối bên ngoài, hoặc nút **Back** của trình duyệt (vuốt lùi trên điện thoại). Thay đổi chưa lưu sẽ bị bỏ. Khi nhiều hộp thoại chồng lên nhau, mỗi lần Esc chỉ đóng hộp trên cùng.
 
 ---
 
 ## 7. Ca mẫu và nhận ca nhanh
 
-Ca mẫu là **định nghĩa ca lặp lại** — ví dụ *Trực trang 08:00–18:00, Thứ 2 đến Thứ 6*. Nhân viên nhận ca chỉ bằng một cú bấm, không phải điền form.
+Ca mẫu là **định nghĩa ca lặp lại** — ví dụ *Sáng 08:00–13:00, mọi ngày*. Nhân viên nhận ca chỉ bằng một cú bấm, không phải điền form. **Nơi trực** (Fanpage, Discord…) không nằm trong ca mẫu: mỗi người chọn lúc nhận, nên một khung giờ chỉ cần một ca mẫu.
 
 Mọi thứ về ca mẫu nằm trong nút **Tạo ca** (máy tính: thanh trên; điện thoại: nút tròn ở góc dưới), dùng được ở bất cứ trang nào. Trang Lịch không còn thanh ca mẫu riêng.
 
@@ -363,6 +413,12 @@ Mọi thứ về ca mẫu nằm trong nút **Tạo ca** (máy tính: thanh trên
 Bấm **Tạo ca → Nhận ca mẫu**: menu liệt kê mọi ca mẫu đang dùng, mỗi dòng ghi giờ và các thứ mẫu lặp vào. Trong Ctrl + K, gõ *nhận ca mẫu* để vào thẳng danh sách này.
 
 Bấm một mẫu sẽ mở hộp thoại **chọn ngày** — bạn không bị mặc định nhận vào ngày đang xem, và **chọn được nhiều ngày cùng lúc**.
+
+Hộp thoại này nằm trên đường dẫn (`claim=<id ca mẫu>`): gửi link là người nhận mở thẳng hộp nhận đúng ca mẫu đó. Chỉ ca mẫu nằm trên link — các ngày và nơi trực đã chọn thì không (mỗi người tự chọn). Back đóng hộp thoại như form ca. Link tới ca mẫu đã bị xoá hoặc đang tắt thì hiện thông báo *Không mở được ca mẫu — Ca mẫu này không còn hoặc đã bị tắt.* và tham số bị gỡ.
+
+**Nơi trực** (hàng chip đầu hộp thoại, cần 012): bấm để chọn **một hoặc nhiều** nơi bạn sẽ trực. **Bắt buộc chọn ít nhất một**, với mọi người kể cả admin — bấm Nhận khi chưa chọn sẽ bị nhắc chọn; database chặn cả khi gọi thẳng API (*Nhận ca phải chọn ít nhất một nơi trực.*, cần 015). Lựa chọn được nhớ trên trình duyệt (theo tài khoản) cho lần nhận sau. Chỉ hiện các nơi đang bật. **Chưa có nơi trực nào đang bật** (admin chưa tạo, hoặc đã ẩn hết) thì hộp thoại hiện thông báo vàng *Chưa có nơi trực nào để chọn — nhờ admin thêm trong Quản lý nơi trực.* và nút Nhận bị khoá: chưa ai nhận ca được cho tới khi admin thêm nơi trực. Nếu danh sách nơi trực chỉ là **chưa tải được** (vd mở app lúc mất mạng) thì thông báo là *Chưa tải được danh sách nơi trực — kiểm tra kết nối rồi thử lại.* kèm nút **Thử lại**. Chưa chạy 012 thì không có hàng này và nhận ca như cũ, không cần nơi trực.
+
+Đã nhận rồi thì trên ca sinh từ ca mẫu, nhân viên **không bỏ được nơi trực cuối cùng** của lượt mình (*Lượt của ca mẫu phải giữ ít nhất một nơi trực.*): muốn đổi nơi, chọn nơi mới trước rồi bỏ nơi cũ. Lượt cũ vốn chưa có nơi trực nào thì vẫn sửa giờ / ghi chú / điểm danh bình thường.
 
 **Chọn nhanh** (hàng chip phía trên):
 
@@ -380,7 +436,8 @@ Bấm một mẫu sẽ mở hộp thoại **chọn ngày** — bạn không bị
 | Hiển thị | Ý nghĩa |
 | --- | --- |
 | Ô nền indigo | Đang chọn |
-| Ô nền xanh lá + dấu ✓ | Bạn **đã nhận** ngày đó rồi — không bấm được |
+| Ô nền xanh lá + dấu ✓ | Bạn **đã nhận** ngày đó rồi, và lượt đó đã có mọi nơi trực đang chọn hoặc **đã điểm danh** — không bấm được |
+| Ô xanh lá **viền nét đứt** + dấu ✓ | Đã nhận, **chưa điểm danh**, nhưng lượt đó **thiếu** nơi trực đang chọn — bấm để **thêm nơi trực** vào lượt sẵn có |
 | Chấm tròn nhỏ dưới số ngày | Ngày ca mẫu lặp lại |
 | Số ngày màu nhạt | Ngoài các ngày lặp — **vẫn chọn được** nếu bạn muốn làm bù |
 | Viền indigo mảnh | Hôm nay |
@@ -391,7 +448,8 @@ Với mỗi ngày được chọn, hệ thống làm đúng ba việc:
 
 1. Nếu ngày đó **chưa ai** nhận ca mẫu này → tạo ca thật từ mẫu.
 2. Nếu **đã có người** nhận → bạn được thêm vào **chính ca đó**.
-3. Bạn được phân công với khung giờ của mẫu, trạng thái **Chờ xác nhận**.
+3. Bạn được phân công với khung giờ của mẫu, trạng thái **Chờ xác nhận**, và các nơi trực đã chọn.
+4. Nếu **bạn đã có trong ca đó** → không tạo lượt thứ hai: nơi trực mới được **cộng thêm** vào lượt sẵn có (giờ, trạng thái, ghi chú giữ nguyên). Ví dụ nhận *Sáng* với Fanpage, rồi nhận lại *Sáng* cùng ngày với Discord → một lượt hai nơi trực *Fanpage, Discord*. Không có nơi nào mới, hoặc lượt đó **đã điểm danh**, thì không làm gì (cần đổi nơi trực của lượt đã điểm danh thì nhờ admin sửa trong form ca).
 
 > Một ca mẫu + một ngày = **đúng một ca**. Ràng buộc này nằm ở tầng cơ sở dữ liệu, nên hai người bấm cùng lúc cũng không tạo ra ca trùng.
 
@@ -409,6 +467,21 @@ Bấm **Tạo ca → Quản lý ca mẫu**. **Chỉ admin** thấy lựa chọn 
 - **Đang dùng**: bỏ tích để tạm ngừng — mẫu vẫn được lưu nhưng không ai nhận được nữa.
 - **Xoá ca mẫu**: các ca đã tạo từ mẫu đó **vẫn được giữ nguyên**, chỉ mất liên kết với mẫu.
 
+Hộp **Quản lý ca mẫu** và **Quản lý nơi trực** đều nằm trên đường dẫn: `manage=templates` / `manage=locations` là danh sách, thêm `item=<id>` là đang sửa mục đó, `item=new` là đang tạo mới. Chuyển giữa danh sách và form bên trong không thêm bước lịch sử, nên **Back đóng cả hộp thoại** chứ không lùi về danh sách. Người không phải admin mở link này thì không thấy gì và tham số bị gỡ; `item` trỏ tới mục không còn cũng bị gỡ (về danh sách).
+
+### Quản lý nơi trực
+
+Bấm **Tạo ca → Quản lý nơi trực**. **Chỉ admin** thấy lựa chọn này và chỉ admin sửa được — database chặn cả khi gọi thẳng API (*Bạn không có quyền sửa nơi trực.*). Nhân viên chỉ chọn nơi trực khi nhận / sửa ca. Cần `supabase/012_locations.sql`; chưa chạy thì hộp thoại báo nơi trực chưa được cài đặt.
+
+- **Thêm nơi trực**: tên (bắt buộc, tối đa 50 ký tự, không trùng tên nơi khác — không phân biệt hoa thường), **màu** (màu chip cạnh tên người trong ca; *Không màu* là chip xám), **thứ tự** (số nhỏ đứng trước — thứ tự chip ở mọi nơi), **tên tắt** (tuỳ chọn, tối đa 10 ký tự, cần `014_location_short_name.sql`; để trống thì lấy 3 chữ đầu của tên).
+- **Trên dòng thời gian** (chế độ Ngày), nhãn nơi trực tự co theo độ rộng khối ca: **tên đầy đủ** → **tên tắt** → **chấm màu**, đặt ở dòng giờ, không đủ chỗ thì lên dòng tên ca. Chỉ khi đến chấm màu cũng không vừa thì mới ẩn; rê chuột vào khối luôn thấy đủ tên.
+- **Chế độ Tuần**: cùng cách co như dòng thời gian (tên đầy đủ → tên tắt → chấm màu), tính theo bề rộng **khối** lúc đó. Trên máy tính (lịch tuần của trang Lịch và trang Tổng kết) nhãn đặt ở dòng giờ, không đủ chỗ thì lên dòng tên người; khối càng hẹp khi nhiều người trùng giờ đứng cạnh nhau. Trên điện thoại (lưới nhân viên × ngày) theo bề rộng cột ngày. Màn hình rộng thì khối rộng, hiện được nhiều hơn. **Chế độ Tháng** không hiện nơi trực.
+- **Đổi tên / màu**: đổi một lần là **mọi ca đổi theo** — lượt phân công chỉ giữ id của nơi trực, không giữ tên.
+- **Hiện khi nhận ca**: bỏ tích để **ẩn** — ca cũ vẫn giữ chip, nhưng không ai chọn thêm được nơi đó nữa (lượt đang có nó vẫn lưu được bình thường).
+- **Xoá**: chỉ được khi **chưa lượt nào dùng** nơi đó, kể cả admin. Đang dùng thì máy chủ từ chối với *Nơi trực đang được dùng — hãy ẩn thay vì xoá.*
+
+Mỗi lần lưu một nơi trực là một dòng nhật ký ([mục 9b](#9b-nhật-ký-thao-tác)).
+
 ### Nếu lựa chọn "Nhận ca mẫu" mờ đi
 
 Dòng giải thích bên dưới nói rõ lý do: *Chưa có ca mẫu nào* (admin cần tạo ở **Quản lý ca mẫu**), hoặc *Chưa cài đặt ca mẫu* — file `supabase/002_shift_templates.sql` chưa được chạy. Mọi phần khác của ứng dụng vẫn hoạt động bình thường.
@@ -422,7 +495,7 @@ Dòng giải thích bên dưới nói rõ lý do: *Chưa có ca mẫu nào* (adm
 Danh sách đầy đủ, **nhóm theo ngày**, tiêu đề nhóm ghi rõ *Hôm nay / Ngày mai / Hôm qua* khi phù hợp.
 
 - **Sắp tới / Đã qua / Tất cả**: lọc theo mốc hôm nay.
-- **Ô tìm kiếm**: lọc theo tiêu đề ca, ghi chú, **và tên nhân viên**. Bộ lọc nằm **ngay trong ô này**, kiểu thanh lọc của Supabase:
+- **Ô tìm kiếm**: lọc theo tiêu đề ca, ghi chú, **tên nhân viên và tên nơi trực** (gõ *discord* ra mọi ca có người trực Discord). Bộ lọc nằm **ngay trong ô này**, kiểu thanh lọc của Supabase:
   - Bấm **Lọc** ở cuối ô → chọn loại → chọn giá trị. Mỗi bộ lọc đang bật thành một **chip** trong ô, ô dài ra theo số chip (hết chỗ thì chip xuống dòng).
   - Bấm chip để sửa, bấm **×** trên chip để bỏ. Ô chữ đang trống mà bấm **Backspace** thì bỏ chip cuối.
   - Nút **×** lớn ở cuối ô xoá cả chữ lẫn mọi chip. Tab giữ nguyên.
@@ -434,7 +507,7 @@ Danh sách đầy đủ, **nhóm theo ngày**, tiêu đề nhóm ghi rõ *Hôm n
   | **Sắp xếp** | Mặc định Cũ → mới; chỉ hiện chip khi chọn Mới → cũ |
 - **Cuộn vô hạn**: danh sách tải từng tháng một **theo chiều sắp xếp** — Cũ → mới thì tiến dần từ đầu khoảng, Mới → cũ thì lùi dần từ cuối khoảng. Tháng mới luôn nối vào cuối. Tới hết thì hiện *"Đã hết ca trong khoảng này."*
 - **Tìm kiếm** lọc trên phần đã tải. Nếu chưa khớp ca nào mà vẫn còn tháng chưa tải, danh sách tự tải tiếp cho tới hết — thu hẹp ngày trong bộ lọc để tìm nhanh hơn.
-- Mỗi thẻ ca liệt kê toàn bộ nhân viên kèm giờ, thời lượng và trạng thái.
+- Mỗi thẻ ca liệt kê toàn bộ nhân viên kèm giờ, thời lượng, trạng thái và chip nơi trực.
 - Dòng của bạn có nền indigo nhạt và nhãn *"Bạn"*.
 - Dòng đang **chờ xác nhận** có nút **✓ Xác nhận** để duyệt ngay tại chỗ, không cần mở form.
 
@@ -496,6 +569,20 @@ Sau khi chạy thêm `supabase/010_harden_rules.sql`:
 | Ca sinh từ ca mẫu | Giờ của ca theo ca mẫu, nhân viên không sửa (trước đây chỉ giao diện khoá) |
 | Một người một lượt | Không có mặt hai lần trong cùng một ca, kể cả admin |
 
+Sau khi chạy thêm `supabase/012_locations.sql` — **nơi trực**:
+
+| Luật | Chi tiết |
+| --- | --- |
+| Nơi trực của mình | Đổi tự do khi **chưa điểm danh**, không phụ thuộc giờ (khác giờ vào / ra, khoá từ lúc mở điểm danh) |
+| Đã điểm danh | Không đổi nơi trực nữa (*Bạn không có quyền sửa nơi trực của lượt đã điểm danh.*) |
+| Lượt của người khác | Không đổi nơi trực của họ, như mọi phần khác của lượt người khác |
+| Chỉ chọn nơi đang bật | Thêm một nơi đã ẩn hoặc không tồn tại bị từ chối (*Nơi trực không tồn tại hoặc đã bị ẩn.*). Nơi đã có sẵn trong lượt thì vẫn giữ được dù sau đó bị ẩn |
+| Điểm danh là lệnh riêng | Không vừa điểm danh vừa đổi nơi trực trong một lần lưu |
+| Nhận ca phải có nơi trực (015) | Tự thêm mình vào ca sinh từ ca mẫu mà không kèm nơi trực nào bị từ chối (*Nhận ca phải chọn ít nhất một nơi trực.*) — **áp cả admin** |
+| Giữ ít nhất một nơi trực (015) | Trên ca sinh từ ca mẫu, không sửa lượt của mình thành không còn nơi trực nào (*Lượt của ca mẫu phải giữ ít nhất một nơi trực.*). Lượt vốn đã trống thì không sao |
+
+Admin được miễn các luật này, trừ *Nhận ca phải có nơi trực*. Danh sách nơi trực chỉ admin quản lý ([mục 7](#quản-lý-nơi-trực)).
+
 Phần còn lại của 010 không đổi gì trên giao diện, chỉ chặn việc gọi thẳng API: giờ nhận ca và người tạo ca do máy chủ ghi; điểm danh phải là một lệnh riêng (không thêm lượt ở trạng thái đã xác nhận, không vừa điểm danh vừa sửa giờ / ghi chú); không chuyển lượt sang ca khác; không gắn ca thường vào ca mẫu.
 
 Trên giao diện, thay cho nút **Xác nhận** bạn sẽ thấy:
@@ -529,7 +616,7 @@ Lượt chưa xác nhận thì **không bao giờ** vào bảng, dù ca đã qua
 
 ### Cách xem
 
-Giống trang Lịch: nút `‹ Hôm nay / Tuần này / Tháng này ›` và bộ chuyển **Ngày | Tuần | Tháng**. Khác Lịch ở hai điểm: mở ra mặc định là **Tuần**, và chế độ Tháng lấy đúng các ngày của tháng đó (không đệm thêm ngày tháng liền kề cho tròn tuần — bảng tháng 9 không cộng ngày 31/8).
+Giống trang Lịch: nút `‹ Tuần này / Tháng này ›` và bộ chuyển **Tuần | Tháng** — không có chế độ Ngày (số liệu một ngày đã nằm ở cột ngày đó của lịch tuần; link cũ `?view=day` mở tuần chứa ngày đó và tham số `view=day` được gỡ khỏi link). Khác Lịch ở hai điểm: mở ra mặc định là **Tuần**, và chế độ Tháng lấy đúng các ngày của tháng đó (không đệm thêm ngày tháng liền kề cho tròn tuần — bảng tháng 9 không cộng ngày 31/8).
 
 Bốn ô số ở đầu trang:
 
@@ -544,16 +631,29 @@ Dưới các ô là một dòng nhắc luật ghi nhận ở trên.
 
 ### Đọc bảng
 
+**Chế độ Tuần trên máy tính (từ 640px)** là lịch giống chế độ Tuần của trang Lịch ([mục 4](#chế-độ-tuần)), chỉ khác:
+
+- Chỉ vẽ các lượt **đã ghi nhận** (cùng luật ở trên). Khối màu **theo người** (trùng màu avatar), người trùng giờ đứng cạnh nhau, nơi trực co như mọi nơi khác; rê chuột để xem đủ.
+- **Bấm một khối** để mở ca đó (form sửa ca như trang Lịch, tô sáng đúng người); sửa xong tổng kết tự tính lại. Tiêu đề ngày không bấm được (Tổng kết không có chế độ Ngày).
+- Dưới mỗi ngày ở hàng tiêu đề là **tổng giờ ngày đó** (`—` nếu chưa có).
+- Khung giờ tự vừa theo các lượt trong tuần (không có bộ chọn khung giờ).
+- Dưới lịch là bảng **Số giờ trong tuần**: mỗi người một dòng gồm avatar, tên, số lượt và số giờ cả tuần (`—` nếu 0), dòng cuối **Tổng** của cả tuần. Bạn ở dòng đầu với nhãn *Bạn*, còn lại theo tên. Ô tích **Hiện cả nhân viên không có ca** quyết định có liệt kê người 0 giờ hay không.
+
+**Các chế độ còn lại** (Tháng, và Tuần trên điện thoại) là bảng nhân viên × ngày:
+
 - **Hàng** là nhân viên — bạn luôn ở hàng đầu (nền indigo nhạt, nhãn *Bạn*), còn lại xếp theo tên. **Cột** là ngày, cuối cùng là cột **Tổng** của từng người; hàng cuối **Theo ngày** là tổng giờ từng ngày.
-- Chế độ Ngày và Tuần: mỗi ô là các khối ca của người đó trong ngày, cùng màu với trên Lịch, ghi tên ca và khung giờ **riêng của người đó**.
+- Chế độ Tuần (điện thoại): mỗi ô là các khối ca của người đó trong ngày, cùng màu với trên Lịch, ghi tên ca và khung giờ **riêng của người đó**.
 - Chế độ Tháng có tới 31 cột nên mỗi ô chỉ ghi **số giờ** (`·` nếu không có); rê chuột vào để xem tên ca và giờ.
+
+Chung cho mọi chế độ:
+
 - Ô tích **Hiện cả nhân viên không có ca** (điện thoại: *Hiện tất cả*) hiện thêm những người không có lượt nào trong khoảng; mặc định ẩn để bảng không đầy dòng rỗng. Người đang bị **ẩn** (tài khoản quản lý, xem [Trang Tài khoản](#trang-tài-khoản)) chỉ hiện khi họ có công thật.
-- Bảng **chỉ để xem**: bấm vào một ca không mở form sửa. Muốn sửa thì đi qua trang Lịch.
+- Bấm một ca (khối trên lịch tuần, hay khối trong bảng tuần trên điện thoại) mở form sửa ca như trang Lịch. Ô của chế độ Tháng chỉ là tổng giờ nhiều ca nên không bấm được — sang Tuần để mở từng ca.
 - Chưa có tài khoản nhân viên nào thì bảng báo *Chưa có tài khoản nhân viên*; có tài khoản mà khoảng này chưa ghi nhận được ca nào thì báo *Chưa ghi nhận được ca nào trong khoảng này.*
 
 > Tổng kết **không phải ảnh chụp bất biến**: nó tính lại từ dữ liệu hiện có mỗi lần mở. Nếu một ca đã qua bị sửa (admin sửa giờ, gỡ người…) thì con số cũ đổi theo. Chứng cứ bất biến về việc ai đã làm gì nằm ở [Nhật ký](#9b-nhật-ký-thao-tác).
 
-Đường dẫn: `/summary`, tham số `date`, `view` (`day` / `month`; tuần là mặc định nên không ghi), `all=1` — xem [mục 10](#10-tra-cứu-nhanh).
+Đường dẫn: `/summary`, tham số `date` (**luôn có**, kể cả tuần này — như trang Lịch), `view` (`month`; tuần là mặc định nên không ghi), `all=1` — xem [mục 10](#10-tra-cứu-nhanh). Bấm một khối mở form ca có địa chỉ riêng như ở trang Lịch ([mục 6](#form-ca-nằm-trên-đường-dẫn)), kể cả khi ca đó nằm ngoài khoảng đang tải.
 
 ---
 
@@ -561,20 +661,20 @@ Dưới các ô là một dòng nhắc luật ghi nhận ở trên.
 
 **Ngôn ngữ.** Mặc định tiếng Việt. Ô **Ngôn ngữ** trong nút lưới (điện thoại: bảng avatar) đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
 
-**Thời gian thực.** Ứng dụng lắng nghe thay đổi trên `shifts`, `shift_assignments` và `shift_templates` qua Supabase Realtime. Khi đồng nghiệp tạo ca, nhận ca hay xác nhận, màn hình của bạn **tự cập nhật** — không cần F5.
+**Thời gian thực.** Ứng dụng lắng nghe thay đổi trên `shifts`, `shift_assignments`, `shift_templates` và `locations` qua Supabase Realtime. Khi đồng nghiệp tạo ca, nhận ca hay xác nhận, màn hình của bạn **tự cập nhật** — không cần F5.
 
 ---
 
 ## 9b. Nhật ký thao tác
 
-Trang **Nhật ký** ghi lại mọi thay đổi dữ liệu: tạo/sửa/xoá ca, thêm/gỡ nhân viên, nhận ca, đổi trạng thái, và tạo/sửa/xoá/bật-tắt ca mẫu.
+Trang **Nhật ký** ghi lại mọi thay đổi dữ liệu: tạo/sửa/xoá ca, thêm/gỡ nhân viên, nhận ca, đổi trạng thái, tạo/sửa/xoá/bật-tắt ca mẫu, và thêm/sửa/ẩn-hiện/xoá nơi trực.
 
-Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem bản ghi trước / sau và ngữ cảnh, có hai kiểu xem (gạt ở đầu phần Chi tiết; app nhớ kiểu bạn chọn trên máy này, mặc định **Đơn giản**):
+Mỗi dòng gồm thời điểm, người thực hiện, hành động, loại đối tượng và câu mô tả. Bấm **Chi tiết** để xem bản ghi trước / sau và ngữ cảnh, có hai kiểu xem (gạt ở đầu phần Chi tiết; mặc định **Đơn giản**). Các dòng đang mở Chi tiết và kiểu xem đều nằm trên đường dẫn — `log=<id dòng>` (một tham số cho mỗi dòng đang mở) và `detail=advanced` — nên gửi link là người nhận thấy đúng các dòng đó đang mở, đúng kiểu xem. Mở link có `detail` thì link thắng; không có thì lần mở Chi tiết đầu tiên lấy kiểu bạn chọn lần trước trên máy này; gạt kiểu xem thì đổi cả link lẫn lựa chọn đã nhớ. Đóng hết các dòng thì `detail` cũng rời link. Id không thuộc trang đang xem (hay dòng không có chi tiết) bị gỡ khỏi link.
 
-- **Đơn giản** — viết thành chữ: tên nhân viên thay cho id, ngày kèm thứ, giờ gộp một dòng (`18:00 – 23:00`), trạng thái đã dịch, ghi chú, ca mẫu theo tên. Thao tác sửa có mục **Thay đổi** chỉ liệt kê những trường bị đổi dạng `cũ → mới`; phần còn lại nằm ở mục **Thông tin** (kèm ca mà dòng nói tới). Người tự thao tác trên phần của chính mình được gắn nhãn *tự làm*. Xoá ca thì có thêm danh sách **Nhân viên bị gỡ**. Các cột kỹ thuật (`id`, `shift_id`, `created_at`, `updated_at`) không hiện ở đây.
+- **Đơn giản** — viết thành chữ: tên nhân viên thay cho id, ngày kèm thứ, giờ gộp một dòng (`18:00 – 23:00`), trạng thái đã dịch, ghi chú, ca mẫu theo tên, nơi trực thành chip theo tên (nơi đã bị xoá hiện *Nơi trực đã xoá*). Thao tác sửa có mục **Thay đổi** chỉ liệt kê những trường bị đổi dạng `cũ → mới`; phần còn lại nằm ở mục **Thông tin** (kèm ca mà dòng nói tới). Người tự thao tác trên phần của chính mình được gắn nhãn *tự làm*. Xoá ca thì có thêm danh sách **Nhân viên bị gỡ**. Các cột kỹ thuật (`id`, `shift_id`, `created_at`, `updated_at`) không hiện ở đây.
 - **Nâng cao** — JSON gốc `old_data` / `new_data` / `metadata`. Với thao tác sửa (có cả trước lẫn sau), những trường bị đổi được tô màu: đỏ kèm dấu `-` ở bản trước, xanh kèm dấu `+` ở bản sau.
 
-Dòng nói về một ca (loại đối tượng **Ca** hoặc **Phân công**, trừ dòng *Xoá ca*) có thêm nút **Thông tin ca**: mở form sửa của chính ca đó, giống bấm **Sửa** ở trang Tất cả ca. Dòng về một người trong ca thì người đó được tô sáng trong form. Form hiện ca **như bây giờ**, không phải như lúc ghi dòng nhật ký — muốn xem bản lúc đó thì dùng **Chi tiết**. Ca đã bị xoá sau đó thì nút đổi thành *Ca đã bị xoá*.
+Dòng nói về một ca (loại đối tượng **Ca** hoặc **Phân công**, trừ dòng *Xoá ca*) có thêm nút **Thông tin ca**: mở form sửa của chính ca đó, giống bấm **Sửa** ở trang Tất cả ca. Dòng về một người trong ca thì người đó được tô sáng trong form. Form có địa chỉ riêng như mọi nơi khác (`shift=…&assignment=…`, [mục 6](#form-ca-nằm-trên-đường-dẫn)), Back là đóng. Form hiện ca **như bây giờ**, không phải như lúc ghi dòng nhật ký — muốn xem bản lúc đó thì dùng **Chi tiết**. Ca đã bị xoá sau đó — kể cả ca bị `013_merge_location_templates.sql` gộp vào ca khác cùng ngày cùng khung — thì nút đổi thành *Ca đã bị xoá*; người trong ca bị gộp vẫn còn ở ca được giữ lại, mở từ Lịch.
 
 ### Một thao tác = một dòng
 
@@ -610,6 +710,21 @@ Cách làm: trigger trên bảng `shifts` **cố ý bỏ qua** những ca có `t
 
 > Kèm theo đó, nếu bước thêm phân công thất bại sau khi ca đã được tạo, ứng dụng **xoá luôn ca vừa tạo**. Nếu để lại thì sẽ có một ca không nằm trong bất kỳ dòng nhật ký nào.
 
+**Nơi trực.** Mỗi lần lưu một nơi trực trong *Quản lý nơi trực* là một dòng, loại đối tượng **Nơi trực**:
+
+| Hành động | Khi nào | Câu mô tả |
+| --- | --- | --- |
+| *Tạo nơi trực* | Thêm mới | `Tạo nơi trực Fanpage` |
+| *Ẩn/hiện nơi trực* | Chỉ đổi ô **Hiện khi nhận ca** | `Ẩn nơi trực Discord` / `Hiện nơi trực Discord` |
+| *Sửa nơi trực* | Đổi tên, màu, thứ tự (kể cả khi đổi kèm ẩn / hiện) | `Sửa nơi trực Fanpage` |
+| *Xoá nơi trực* | Xoá | `Xoá nơi trực Fanpage` |
+
+Lưu mà không đổi gì thì không ghi dòng nào. `metadata.location_name` là tên lúc ghi. Đổi thứ tự là sửa từng nơi, nên mỗi nơi đổi số là một dòng *Sửa nơi trực*.
+
+Dòng về lượt phân công mang thêm `metadata.location_names` — tên các nơi trực của lượt lúc ghi, theo thứ tự hiển thị. Câu mô tả của *Nhận ca* và *Thêm nhân viên* nối tên nơi trực vào cuối (`Nhận ca Sáng ngày 2026-11-22 (08:00-13:00) — Fanpage, Discord`), nên ô tìm của Nhật ký tìm được theo tên nơi trực. Đổi nơi trực của một lượt là *Sửa phân công* (không phải *Đổi trạng thái*), kể cả khi nhận lại để thêm nơi trực. Xoá ca thì `staff_removed` chụp cả `location_ids` của từng người.
+
+Chuyển dữ liệu bằng `013_merge_location_templates.sql` **không ghi dòng nhật ký nào** (trigger tắt trong lúc chạy): nhật ký cũ giữ nguyên tên ca cũ và id ca cũ, kể cả của những ca đã bị gộp.
+
 **Bộ lọc**: từ ngày, đến ngày (gõ `dd/mm/yyyy` hoặc bấm icon lịch, có nút ✕ để bỏ; *Từ* không chọn được sau *Đến* và ngược lại), nhân viên liên quan, hành động, loại đối tượng, và tìm kiếm trong phần mô tả. Phân trang 50 dòng mỗi trang, không tải toàn bộ. Ô **Hành động** có thêm **Điểm danh** và **Gỡ điểm danh**, tách hai chiều của *Đổi trạng thái* (lọc *Đổi trạng thái* vẫn ra cả hai). Hai mục này lọc ngay trên từng trang tải về, nên một trang có thể ít hơn 50 dòng hoặc trống, và không hiện tổng số dòng.
 
 **Nhân viên liên quan** chọn được nhiều người, theo **AND**: dòng phải dính tới **tất cả** người đã chọn. Một người được coi là liên quan tới một dòng khi họ là:
@@ -628,7 +743,7 @@ Dự án cho **mọi nhân viên đăng nhập sửa được toàn bộ ca**, n
 
 | Lớp | Cơ chế |
 | --- | --- |
-| Sinh log | Trigger `record_action_log` trên cả ba bảng. Thao tác thành công là log được ghi, không phụ thuộc frontend gọi đúng hay không |
+| Sinh log | Trigger `record_action_log` trên `shifts`, `shift_assignments`, `shift_templates` và `locations`. Thao tác thành công là log được ghi, không phụ thuộc frontend gọi đúng hay không |
 | Quyền SQL | `revoke all`, chỉ `grant select` cho `authenticated` |
 | RLS | Chỉ có policy cho `SELECT`. **Không có** policy `INSERT`/`UPDATE`/`DELETE` |
 | Ghi được nhờ đâu | Hàm trigger là `SECURITY DEFINER`, chạy dưới quyền chủ sở hữu bảng |
@@ -646,7 +761,7 @@ Muốn tự kiểm chứng, mục 5 trong `supabase/003_action_logs.sql` có s�
 
 ## 9c. Thông báo
 
-Mọi thao tác ghi dữ liệu — tạo / lưu / xoá ca, nhận ca, rời ca, điểm danh, xác nhận hộ, nhận ca mẫu, quản lý ca mẫu, đổi mật khẩu — đều báo kết quả bằng **thông báo** thay vì dòng chữ trong form.
+Mọi thao tác ghi dữ liệu — tạo / lưu / xoá ca, nhận ca, rời ca, điểm danh, xác nhận hộ, nhận ca mẫu, quản lý ca mẫu, quản lý nơi trực, đổi mật khẩu — đều báo kết quả bằng **thông báo** thay vì dòng chữ trong form.
 
 **Popup ở góc.** Khi máy chủ trả kết quả, một popup hiện ở góc trên bên phải, ngay dưới thanh trên cùng (mobile: trên cùng màn hình). Popup mới nhất nằm trên. Popup nổi trên cả form đang mở, nên lỗi lưu ca vẫn thấy được trong khi form còn mở để sửa.
 
@@ -690,7 +805,7 @@ Phím: **→** hoặc **Enter** tiếp, **←** lùi, **Esc** dừng. Trong lúc
 
 Lần đăng nhập đầu tiên, góc dưới trái hiện lời mời **Mới dùng Thinkmay Team Board?** — bấm **Bắt đầu** để xem bài Làm quen giao diện, hoặc **Để sau**. Mỗi tài khoản chỉ được hỏi một lần (nhớ trên trình duyệt đó).
 
-Các bài cũng gọi được từ **Quick Search** (Ctrl + K): gõ *hướng dẫn* hoặc tên bài, mục nằm trong nhóm **Hướng dẫn** ở cuối danh sách — gõ *điểm danh* là ra chỗ điểm danh trước, bài hướng dẫn về nó đứng sau. Chữ gõ vào ô tìm của trang Hướng dẫn nằm trên đường dẫn (`/help?q=…`) như bộ lọc các trang khác: F5 hay gửi link vẫn ra đúng các mục đang lọc.
+Các bài cũng gọi được từ **Quick Search** (Ctrl + K): gõ *hướng dẫn* hoặc tên bài, mục nằm trong nhóm **Hướng dẫn** ở cuối danh sách — gõ *điểm danh* là ra chỗ điểm danh trước, bài hướng dẫn về nó đứng sau. Chữ gõ vào ô tìm của trang Hướng dẫn nằm trên đường dẫn (`/help?q=…`) như bộ lọc các trang khác: F5 hay gửi link vẫn ra đúng các mục đang lọc. Bấm một mục trong mục lục (kể cả mục lục đã lọc bằng ô tìm) thì mục đó cũng lên link (`/help?section=<id mục>`): mở link là trang tự cuộn tới đúng mục, gửi cho đồng nghiệp để chỉ thẳng vào một đoạn hướng dẫn. Mục không có (id sai, mục *Dành cho admin* với người thường, hay mục đang bị ô tìm lọc mất) thì tham số bị gỡ.
 
 Với người sửa mã: mỗi bước của bài trỏ vào phần tử có thuộc tính `data-tour="…"`. Đổi tên, xoá hay chuyển chỗ một phần tử như vậy thì sửa kịch bản `src/help/tours.ts` cùng lúc rồi chạy lại bài đó; đổi hành vi mà hướng dẫn mô tả thì sửa cả `src/help/content.ts` và README này.
 
@@ -709,7 +824,7 @@ Thẻ Supabase tự kiểm tra lại **mỗi 30 giây** (chạy ngầm; tab đan
 | **Supabase** | **Project host**; **Authentication** (hỏi thẳng máy chủ Auth, xác thực luôn token hiện tại) và **Database (REST API)** (một truy vấn nhỏ nhất qua RLS), mỗi dòng ghi thời gian khứ hồi bằng ms; **Realtime** (*Connected · n of m channels joined* / *Disconnected*); **Last checked**. Nhãn thẻ: *Operational*, *Degraded*, *Down* |
 | **Session** | **Account** (tên, email); **Access token expires** — lúc nào và còn bao lâu (tự refresh trước khi hết hạn); **Last signed in**; **User identifier** — các dòng này chọn và chép được để gửi cho admin |
 | **Application** | **Display mode**: *PWA App* (mở như app đã cài, kể cả khi bấm F11) hay *Browser* (mở trên tab trình duyệt); **Service worker**: *Activated* / *Waiting, new version ready*; **Precached files**: số tệp và dung lượng app shell được lưu sẵn để mở khi offline; **Installation** — nút **Install app** (Chrome, Edge, Android) hoặc **How to install** (iPhone / iPad), đã cài thì *Installed*; Chrome / Edge chưa mời cài (thường vì app đã cài trên máy, đang mở bằng tab thường) thì *Not offered*, trình duyệt không hỗ trợ cài thì *Not supported*. Chân thẻ: **Build time** và nút **Check for updates** (không có bản mới thì báo *Up to date*; có thì thành **Update now**). Nhãn thẻ *Ready*, *Update available* (vàng); chạy `npm run dev` thì *Disabled in development* và thẻ chỉ ghi cách thử bản build ([mục 9g](#9g-cài-ứng-dụng-và-dùng-khi-mất-mạng)) |
-| **Offline cache** | **Network** online / offline, kèm độ trễ và tốc độ khi trình duyệt cho biết (Chrome, Edge, Android); bốn ô số **Since this tab was opened**: *Reads from server*, *Reads from cache* (bao nhiêu lần do máy chủ chậm quá hạn — *server timeouts*), *Times offline* (tổng bao lâu), *Writes blocked offline*; **IndexedDB cache**: số mục, dung lượng, gồm những gì (shifts, date ranges, action logs, staff profiles, shift templates), *last saved* — chỉ tính mục còn trong hạn 48 giờ. Chân thẻ: **Browser storage** đã dùng / trần, và **Clear cache** (bấm hai lần). Nhãn thẻ: *Online* (xanh), *Serving cached data* (vàng), *Offline* (đỏ) |
+| **Offline cache** | **Network** online / offline, kèm độ trễ và tốc độ khi trình duyệt cho biết (Chrome, Edge, Android); bốn ô số **Since this tab was opened**: *Reads from server*, *Reads from cache* (bao nhiêu lần do máy chủ chậm quá hạn — *server timeouts*), *Times offline* (tổng bao lâu), *Writes blocked offline*; **IndexedDB cache**: số mục, dung lượng, gồm những gì (shifts, date ranges, action logs, staff profiles, shift templates, locations, accounts), *last saved* — chỉ tính mục còn trong hạn 48 giờ. Chân thẻ: **Browser storage** đã dùng / trần, và **Clear cache** (bấm hai lần). Nhãn thẻ: *Online* (xanh), *Serving cached data* (vàng), *Offline* (đỏ) |
 | **Cloudflare** | Chỉ có số liệu khi trang **thực sự đi qua Cloudflare**: **Edge location** (ví dụ `HKG · VN`), **Edge response time**, **Connection protocol** HTTP / TLS. Kèm trạng thái chung (**Cloudflare global status**) và **Open incidents** lấy từ cloudflarestatus.com |
 | **Netlify** | Tương tự, cho Netlify: edge, độ trễ, **Edge cache status**; trạng thái chung từ netlifystatus.com |
 
@@ -801,12 +916,13 @@ Với người sửa mã:
 
 | URL | Màn hình |
 | --- | --- |
-| `/` | Lịch, chế độ Ngày, hôm nay |
-| `/?view=week` | Lịch, chế độ Tuần |
+| `/` | Lịch, chế độ Ngày, hôm nay (mở ra là tự thêm `?date=<hôm nay>`) |
+| `/?view=week&date=2026-09-08` | Lịch, chế độ Tuần, tuần chứa 08/09/2026 |
 | `/?view=month&date=2026-09-08` | Lịch tháng 9/2026 |
 | `/?date=2026-09-08` | Timeline ngày 08/09/2026 |
+| `/?date=2026-09-08&shift=<id>` | Timeline ngày đó, form sửa ca `<id>` đang mở |
 | `/shifts` | Tất cả ca |
-| `/summary` | Tổng kết, chế độ Tuần, tuần này |
+| `/summary` | Tổng kết, chế độ Tuần, tuần này (tự thêm `?date=<hôm nay>`) |
 | `/summary?view=month&date=2026-09-08` | Tổng kết tháng 9/2026 |
 | `/my-shifts` | Ca của tôi |
 | `/pending` | Chờ xác nhận |
@@ -815,20 +931,59 @@ Với người sửa mã:
 | `/help` | Hướng dẫn và các bài từng bước |
 | `/accounts` | Tài khoản (chỉ admin; người khác bị đưa về `/`) |
 | `/login` | Đăng nhập |
+| `/login?forgot=1` | Đăng nhập, hộp *Quên mật khẩu* đang mở |
 
-Ngày, chế độ xem **và mọi bộ lọc** nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình, đúng bộ lọc bạn đang để**. Đổi bộ lọc không tạo thêm bước trong lịch sử trình duyệt — bấm Back là về trang trước, không lùi qua từng lần tích.
+Ngày, chế độ xem, **mọi bộ lọc và hộp thoại đang mở** (form ca, nhận ca mẫu, quản lý ca mẫu / nơi trực) nằm trong URL nên **gửi link cho đồng nghiệp là họ mở đúng màn hình bạn đang thấy**. Đổi bộ lọc không tạo thêm bước trong lịch sử trình duyệt — bấm Back là về trang trước, không lùi qua từng lần tích. Riêng **mở hộp thoại thì có thêm một bước**, nên Back (hay vuốt lùi trên điện thoại) đóng hộp thoại đang mở thay vì rời trang.
+
+Chưa đăng nhập mà mở link thì sau khi đăng nhập được đưa về **nguyên link đó** — trang, tham số và hộp thoại ([mục 2](#2-đăng-nhập-và-đăng-xuất)).
+
+**Tham số theo trang**
 
 | Trang | Tham số |
 | --- | --- |
-| Lịch | `date`, `view` (`week` / `month`; Ngày là mặc định), `scale` (thang giờ: `work` / `business` / `full`), `working=1` (Chỉ nhân viên có ca) |
-| Tổng kết | `date`, `view` (`day` / `month`; Tuần là mặc định), `all=1` (hiện cả người không có ca) |
-| Tất cả ca | `q` (chữ tìm), `tab` (`past` / `all`), `from`, `to`, `staff` (lặp lại được), `order=desc` |
+| Lịch | `date` (**luôn có**, xem dưới), `view` (`week` / `month`; Ngày là mặc định), `scale` (thang giờ của chế độ Ngày và lịch Tuần trên máy tính: `work` / `business` / `full`; *Vừa* là mặc định), `working=1` (Chỉ nhân viên có ca — chế độ Ngày, và Tuần trên điện thoại) |
+| Tổng kết | `date` (**luôn có**), `view` (`month`; Tuần là mặc định), `all=1` (hiện cả người không có ca) |
+| Tất cả ca | `q` (chữ tìm), `tab` (`past` / `all`; Sắp tới là mặc định), `from`, `to`, `staff` (lặp lại được), `order=desc` |
 | Chờ xác nhận | `all=1` (bỏ tích Chỉ ca của tôi) |
-| Nhật ký | `from`, `to`, `staff` (lặp lại được), `action`, `entity`, `q`, `page` |
-| Hướng dẫn | `q` (chữ tìm) |
-| Trạng thái, Tài khoản | Không có tham số |
+| Nhật ký | `from`, `to`, `staff` (lặp lại được), `action`, `entity`, `q`, `page` (từ 2), `log` (id dòng đang mở Chi tiết, lặp lại được), `detail=advanced` (kiểu xem Nâng cao của Chi tiết; chỉ có khi đang mở ít nhất một dòng) |
+| Hướng dẫn | `q` (chữ tìm), `section` (id mục vừa nhảy tới qua mục lục — mở link là cuộn tới đó) |
+| Đăng nhập | `forgot=1` (hộp Quên mật khẩu) |
+| Ca của tôi, Trạng thái, Tài khoản | Không có tham số riêng |
 
-Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫn gọn như cũ. Ô tìm kiếm (`q` ở Tất cả ca, Nhật ký, Hướng dẫn) lọc ngay theo từng phím nhưng chỉ ghi lên URL khi đã ngừng gõ khoảng 0,3 giây — để bộ gõ tiếng Việt như EVKey / Unikey không bị lộn chữ. Ví dụ `/shifts?tab=past&staff=<id>&order=desc` mở Tất cả ca, tab Đã qua, chỉ ca có người đó, mới nhất lên đầu.
+**Tham số hộp thoại** — dùng được ở mọi trang (trừ Đăng nhập), nằm cạnh tham số của trang:
+
+| Tham số | Hộp thoại |
+| --- | --- |
+| `shift=<id>` | Form sửa ca ([mục 6](#form-ca-nằm-trên-đường-dẫn)) |
+| `shift=new` | Form tạo ca, kèm `shiftDate=yyyy-MM-dd` (ngày của ca mới; thiếu / sai thì hôm nay). `shiftDate` chỉ đi với `shift=new` |
+| `assignment=<id>` | Chỉ đi với `shift=<id>`: lượt phân công được tô sáng trong form |
+| `shiftView=advanced` | Chỉ đi với `shift=<id>`: form ở chế độ Nâng cao (Đơn giản là mặc định) |
+| `claim=<id ca mẫu>` | Hộp nhận ca mẫu ([mục 7](#nhận-ca)); ngày và nơi trực đang chọn không nằm trên link |
+| `manage=templates` / `manage=locations` | Hộp Quản lý ca mẫu / Quản lý nơi trực, đang ở danh sách — **chỉ admin** |
+| `item=<id>` / `item=new` | Chỉ đi với `manage`: đang sửa mục đó / đang tạo mục mới trong hộp quản lý |
+
+- **Mỗi lúc chỉ một hộp thoại** nằm trên link: mở hộp này là gỡ tham số của hộp kia. Link (cũ, gõ tay) mang nhiều hộp cùng lúc thì chỉ mở một theo thứ ưu tiên form ca (`shift`) > nhận ca mẫu (`claim`) > hộp quản lý (`manage` / `item`); tham số của hộp còn lại bị gỡ.
+- Đóng hộp thoại (✕, Esc, bấm nền, Back) là gỡ tham số của nó; tham số của trang phía sau giữ nguyên.
+- Link tới ca / ca mẫu không còn thì hiện thông báo lỗi rồi gỡ tham số. Người không phải admin mở link `manage=…` thì không thấy gì, tham số bị gỡ.
+- Hộp chọn của nút tròn (điện thoại), Quick Search (Ctrl + K), ngăn thông báo, bảng avatar / menu nút lưới, đổi mật khẩu và hướng dẫn cài ứng dụng **không** nằm trên link.
+
+**Ngày luôn có trên Lịch và Tổng kết.** Mở `/` hay `/summary` không kèm ngày thì app tự ghi ngày hôm nay lên link (thay chứ không thêm bước lịch sử), nút **Hôm nay / Tuần này / Tháng này** cũng ghi ngày cụ thể. Nhờ vậy link copy hôm nay mà mai mới mở vẫn ra đúng ngày người gửi đã xem — đây là ngoại lệ duy nhất của quy tắc "giá trị mặc định không ghi" bên dưới.
+
+**Link luôn khớp màn hình.** Giá trị sai trên link (gõ tay, link cũ, id đã bị xoá) được tự sửa lại — thay chứ không thêm bước lịch sử — đúng theo thứ đang hiện, để copy lại link lúc nào cũng ra đúng màn hình:
+
+| Giá trị | Được sửa thành |
+| --- | --- |
+| Ngày không hợp lệ (`date`, `from`, `to`; kể cả ngày không có thật như `2026-02-30`) | `date` thành hôm nay; `from` / `to` bị bỏ |
+| `from` sau `to` | **Đảo lại** cho đúng chiều (giữ cả hai ngày người gửi đã chọn) |
+| `view`, `scale`, `tab`, `order`, `action`, `entity` lạ; `working` / `all` / `forgot` khác `1`; `view=day` cũ của Tổng kết | Bỏ (về mặc định) |
+| `staff` lặp, hoặc là người không có trong danh sách chọn | Bỏ người đó (chỉ xét sau khi danh sách nhân viên đã tải xong) |
+| `page` không phải số nguyên ≥ 1, hoặc là `1` | Bỏ |
+| `page` quá số trang | Chế độ dữ liệu mẫu: về trang cuối; Supabase: về trang 1 |
+| `log` lặp, không thuộc trang đang xem, hay dòng không có chi tiết | Bỏ id đó |
+| `section` không có / bị ẩn | Bỏ |
+| Tham số hộp thoại sai (xem bảng trên) | Bỏ |
+
+Giá trị mặc định không ghi lên URL (trừ `date` ở Lịch / Tổng kết), nên link khi chưa lọc gì vẫn gọn. Ô tìm kiếm (`q` ở Tất cả ca, Nhật ký, Hướng dẫn) lọc ngay theo từng phím nhưng chỉ ghi lên URL khi đã ngừng gõ khoảng 0,3 giây — để bộ gõ tiếng Việt như EVKey / Unikey không bị lộn chữ. Ví dụ `/shifts?tab=past&staff=<id>&order=desc` mở Tất cả ca, tab Đã qua, chỉ ca có người đó, mới nhất lên đầu.
 
 ### Quy ước hiển thị
 
@@ -838,7 +993,8 @@ Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫ
 | Viền liền | Đã xác nhận |
 | Nền indigo nhạt + nhãn "Bạn" | Hàng / dòng của chính bạn |
 | Viền indigo (chế độ Tháng) | Ca bạn có tham gia |
-| Vạch đỏ dọc | Thời điểm hiện tại |
+| Vạch đỏ dọc (Ngày) / ngang trên cột hôm nay (lịch Tuần) | Thời điểm hiện tại |
+| Màu khối ở lịch Tuần (máy tính) | Người làm — trùng màu avatar. Ở chế độ Ngày màu khối là màu của ca |
 | Dải vàng dưới timeline | Có phân công ngoài khung giờ đang xem |
 | Số vàng cạnh "Chờ xác nhận" | Số lượt chờ xác nhận của riêng bạn |
 
@@ -846,8 +1002,9 @@ Giá trị mặc định không ghi lên URL, nên link khi chưa lọc gì vẫ
 
 | Thao tác | Kết quả |
 | --- | --- |
-| `Esc` | Đóng form, ngăn thông báo, Quick Search hay bài hướng dẫn đang mở |
+| `Esc` | Đóng form, ngăn thông báo, Quick Search hay bài hướng dẫn đang mở (nhiều hộp chồng nhau thì chỉ hộp trên cùng) |
 | Bấm nền tối ngoài form | Đóng form |
+| Back của trình duyệt / vuốt lùi | Đóng form ca, hộp nhận ca mẫu, hộp quản lý ca mẫu / nơi trực đang mở; không có thì về trang trước |
 | Bấm khối / chip ca | Mở form sửa ca đó |
 | Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |
 | `Ctrl + K` (Mac: `⌘K`) | Mở / đóng **Quick Search** (xem bên dưới) |
@@ -952,6 +1109,9 @@ Database chặn thật: chỉ admin sửa được tên hiển thị và hiện 
 | Điểm danh, sửa giờ / ghi chú phần của mình, rời ca, xoá ca trống / ca chỉ có mình | Nhân viên, **trong các giới hạn** ở [mục 8b](#8b-chấm-công-và-luật-điểm-danh) | 005, 006, 010 |
 | Thêm / sửa / gỡ lượt của **người khác**, bỏ điểm danh, điểm danh hộ, sửa tên – ngày – giờ của ca có người khác, xoá ca có người khác | Chỉ **admin** | 005, 006 |
 | Tạo / sửa / bật-tắt / xoá ca mẫu | Chỉ **admin** (nhân viên chỉ nhận) | 008 |
+| Thêm / sửa / ẩn-hiện / xoá nơi trực | Chỉ **admin** (nhân viên chỉ chọn nơi đang bật). Xoá nơi đang được dùng: **không ai**, kể cả admin — ẩn thay vì xoá | 012 |
+| Đổi nơi trực của lượt | Nhân viên: lượt của mình, chưa điểm danh; trên ca mẫu phải còn ít nhất một nơi. Admin: mọi lượt | 012, 015 |
+| Nhận ca mẫu không kèm nơi trực | **Không ai**, kể cả admin (thêm hộ người khác thì không bị) | 015 |
 | Đổi tên hiển thị, hiện / ẩn người trên bảng | Chỉ **admin**, của bất kỳ ai | 007 |
 | Xem email, vai trò của người khác (trang Tài khoản) | Chỉ **admin** — máy chủ kiểm tra trước khi trả | 011 |
 | Phong admin | Chỉ làm tay trong SQL Editor ([mục 11](#phong-admin)) | 005 |
@@ -967,7 +1127,7 @@ Chưa chạy 005 thì cột `profiles.role` chưa có và **không áp luật n�
 src/
 ├── auth/           # Xác thực: interface + bản mock + bản Supabase
 ├── data/           # Truy cập dữ liệu: interface, hai backend, bộ bọc offline + bản lưu IndexedDB, bộ đệm ca (shiftStore), ScheduleContext (hook đọc / ghi)
-├── components/     # Timeline, WeekGrid, MonthGrid, SummaryGrid, form ca, Modal, Select, Checkbox, DateInput, header, menu…
+├── components/     # Timeline, WeekCalendar (lịch tuần máy tính), WeekGrid, MonthGrid, SummaryGrid, form ca, Modal, Select, Checkbox, DateInput, header, menu…
 ├── pages/          # Login, Lịch, Tất cả ca, Tổng kết, Ca của tôi, Chờ xác nhận, Nhật ký, Trạng thái, Tài khoản, Hướng dẫn
 ├── help/           # Nội dung trang Hướng dẫn (content.ts), kịch bản wizard (tours.ts), TourProvider
 ├── notifications/  # Thông báo: popup + ngăn thông báo, lưu ở localStorage
@@ -976,7 +1136,7 @@ src/
 ├── i18n/           # Từ điển vi/en và provider
 ├── lib/            # Hàm thuần: thời gian, màu, tổng kết, luật điểm danh phía client, lọc, URL, các probe của trang Trạng thái…
 └── types.ts        # Kiểu dữ liệu, khớp 1:1 với cột trong Supabase
-supabase/           # schema.sql rồi 002…009, chạy tay theo thứ tự trong SQL Editor
+supabase/           # schema.sql rồi 002…015, chạy tay theo thứ tự trong SQL Editor
 ```
 
 Thứ tự bọc của ứng dụng: `ThemeProvider → I18nProvider → AuthProvider → BrowserRouter`; các trang cần đăng nhập nằm trong `ProtectedRoute`, bên trong là `NotificationProvider → ScheduleProvider → ShiftEditorProvider → TourProvider → AppLayout`.
@@ -990,13 +1150,13 @@ Cả hai tự động dựa vào việc `.env` có được cấu hình hay khô
 
 ### Luật chấm công nằm ở ba nơi
 
-Luật điểm danh ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)) tồn tại ở **ba chỗ phải giữ khớp nhau**: trigger trong SQL (`005_attendance.sql`, bản mới nhất của hai hàm trigger ở `006_shift_rules.sql` — sửa luật thì viết migration mới ghi đè hàm, không sửa file đã chạy), `src/lib/attendance.ts` (bản sao phía client để khoá nút và giải thích vì sao), và `mockBackend.ts` (để chế độ dữ liệu mẫu cư xử giống). Ca mẫu chỉ admin: trigger trong `008_template_admin.sql` và `canManageTemplates` phía client.
+Luật điểm danh ([mục 8b](#8b-chấm-công-và-luật-điểm-danh)) tồn tại ở **ba chỗ phải giữ khớp nhau**: trigger trong SQL (`005_attendance.sql`, bản mới nhất của `enforce_attendance_rules` ở `015_claim_requires_location.sql`, của `record_action_log` ở `012_locations.sql` — sửa luật thì viết migration mới ghi đè hàm, không sửa file đã chạy), `src/lib/attendance.ts` (bản sao phía client để khoá nút và giải thích vì sao), và `mockBackend.ts` (để chế độ dữ liệu mẫu cư xử giống). Ca mẫu chỉ admin: trigger trong `008_template_admin.sql` và `canManageTemplates` phía client. Nơi trực chỉ admin: trigger `enforce_location_admin` (bản mới nhất trong `014_location_short_name.sql`); luật nơi trực của từng lượt (`locationsLocked`, `mustKeepLocation`) cũng nằm trong `attendance.ts`.
 
 ### Thêm ngôn ngữ, chuỗi, màu
 
 - Mọi chuỗi người dùng thấy đi qua `t()` — trừ tên sản phẩm (`src/lib/brand.ts`) và nội dung trang Hướng dẫn (`src/help/`, viết thẳng dạng `Record<Lang, …>`). Thêm khoá vào bản `en` trước (nguồn của kiểu `TranslationKey`) rồi `vi`; thiếu ở `vi` là lỗi biên dịch. Số nhiều: `foo_one` / `foo_other` + `t('foo', { count })`; chèn giá trị: `{{name}}`.
 - Class Tailwind phải viết nguyên chuỗi, không ghép từ mảnh lúc chạy (`bg-${x}-50` sẽ không được sinh) — xem `PALETTE` trong `src/lib/colors.ts`.
-- Bộ lọc của trang nằm trên URL qua `useUrlParams()` (`src/lib/urlParams.ts`); thêm tham số mới thì thêm vào bảng ở [mục 10](#đường-dẫn).
+- Bộ lọc của trang nằm trên URL qua `useUrlParams()` (`src/lib/urlParams.ts`); trang ghi lại giá trị đã chuẩn hoá bằng `useCanonicalParams()` (`src/lib/canonicalParams.ts`). Hộp thoại có địa chỉ mở / đóng qua `useOverlayParams()` và tên tham số nằm trong `OVERLAY_PARAMS`. Thêm tham số mới thì thêm vào bảng ở [mục 10](#đường-dẫn).
 - Giờ là chuỗi `HH:mm`, ngày là chuỗi `yyyy-MM-dd` theo **giờ máy** — dùng `toDateKey` / `fromDateKey` trong `src/lib/time.ts`, không dùng `toISOString()` (lệch ngày vì UTC). Giờ Postgres trả về (`HH:mm:ss`) qua `normalizeTime`.
 - Quy ước chi tiết cho người (và công cụ) sửa mã nằm ở [CLAUDE.md](../CLAUDE.md) ở gốc repo.
 

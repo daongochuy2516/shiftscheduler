@@ -4,8 +4,9 @@ import type { ActionLog, UUID } from '../types'
  * Ca mà một dòng nhật ký nói tới, để mở form của ca đó. `assignmentId` là
  * lượt cần tô sáng trong form (dòng nói về một người).
  *
- * `null` khi dòng không gắn với ca nào (ca mẫu), hoặc chính dòng đó là xoá
- * ca. Ca bị xoá ở một lần sau thì ở đây không biết được — phải hỏi máy chủ.
+ * `null` khi dòng không gắn với ca nào (ca mẫu, nơi trực), hoặc chính dòng đó là xoá
+ * ca. Ca bị xoá ở một lần sau (kể cả ca bị 013_merge_location_templates.sql
+ * gộp vào ca khác) thì ở đây không biết được — phải hỏi máy chủ.
  */
 export function shiftTarget(
   row: ActionLog,

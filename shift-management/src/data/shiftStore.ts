@@ -194,6 +194,21 @@ export function createShiftStore(
       }
     },
 
+    /**
+     * Một ca theo id trong các lát cắt đang giữ — ưu tiên lát có người xem
+     * (được làm tươi khi dữ liệu đổi). Không có thì `null`; không hỏi mạng.
+     */
+    findShift(id: string): ShiftWithAssignments | null {
+      let fallback: ShiftWithAssignments | null = null
+      for (const entry of entries.values()) {
+        const found = entry.state.shifts.find((s) => s.id === id)
+        if (!found) continue
+        if (entry.listeners.size > 0) return found
+        fallback ??= found
+      }
+      return fallback
+    },
+
     /** Tải trước một lát cắt chưa ai xem, ví dụ tuần kế tiếp. */
     prefetch(key: string) {
       const entry = ensure(key)

@@ -12,6 +12,8 @@ import {
 import type {
   AssignmentInput,
   AssignmentStatus,
+  Location,
+  LocationInput,
   Profile,
   ProfileInput,
   ShiftDateBounds,
@@ -22,7 +24,8 @@ import type {
   TemplateInput,
   UUID,
 } from '../types'
-import { backend } from './index'
+import { backend, isRecordId } from './index'
+import { sortLocations } from '../lib/locations'
 import { isListed } from '../lib/profiles'
 import {
   createShiftStore,
@@ -44,6 +47,19 @@ interface ScheduleContextValue {
   templates: ShiftTemplate[]
   /** False when the templates migration has not been run yet. */
   templatesAvailable: boolean
+  /**
+   * Mọi nơi trực, kể cả đang ẩn (để tra tên cho lượt cũ), theo `sort_order`
+   * rồi tên. Chỉ nơi chọn được: `activeLocations` trong lib/locations.ts.
+   */
+  locations: Location[]
+  /** False khi migration 012 chưa chạy: ẩn mọi thứ về nơi trực. */
+  locationsAvailable: boolean
+  /**
+   * Đã tải được danh sách nơi trực ít nhất một lần chưa. False khi lần tải
+   * lỗi (vd offline mà bản lưu chưa có): lúc đó `locations` rỗng không có
+   * nghĩa là "chưa có nơi trực nào", đừng bảo người dùng đi nhờ admin.
+   */
+  locationsLoaded: boolean
   /** Chỉ phản ánh nhân viên + ca mẫu. Ca có trạng thái tải riêng theo lát cắt. */
   loading: boolean
   error: string | null
@@ -56,6 +72,12 @@ interface ScheduleContextValue {
    * ký), và form cần đúng danh sách người hiện tại chứ không phải bản cũ.
    */
   fetchShift: (id: UUID) => Promise<ShiftWithAssignments | null>
+  /**
+   * Ca theo id nếu đã nằm sẵn trong bộ đệm (một màn hình nào đó vừa tải),
+   * không hỏi mạng. Mở form từ link: có sẵn thì hiện ngay, không thì
+   * `fetchShift`.
+   */
+  cachedShift: (id: UUID) => ShiftWithAssignments | null
   /**
    * Tăng mỗi lần dữ liệu đổi (mình lưu, hoặc Realtime báo người khác vừa
    * sửa). Thứ gì tự hỏi backend ngoài bộ đệm ca thì dựa vào số này để biết
@@ -81,11 +103,20 @@ interface ScheduleContextValue {
   createTemplate: (input: TemplateInput) => Promise<void>
   updateTemplate: (id: UUID, input: TemplateInput) => Promise<void>
   deleteTemplate: (id: UUID) => Promise<void>
-  /** Claims one template across several days in one go. */
+  /** Chỉ admin (012). */
+  createLocation: (input: LocationInput) => Promise<void>
+  updateLocation: (id: UUID, input: LocationInput) => Promise<void>
+  /** Bị từ chối khi còn lượt nào dùng nơi này — khi đó ẩn thay vì xoá. */
+  deleteLocation: (id: UUID) => Promise<void>
+  /**
+   * Claims one template across several days in one go, at `locationIds`
+   * (`[]` = none). A day already claimed gets any new locations added.
+   */
   claimTemplate: (
     templateId: UUID,
     dates: string[],
     userId: UUID,
+    locationIds: UUID[],
   ) => Promise<void>
 }
 
@@ -100,6 +131,9 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [templates, setTemplates] = useState<ShiftTemplate[]>([])
   const [templatesAvailable, setTemplatesAvailable] = useState(true)
+  const [locations, setLocations] = useState<Location[]>([])
+  const [locationsAvailable, setLocationsAvailable] = useState(true)
+  const [locationsLoaded, setLocationsLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [dataVersion, setDataVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -114,15 +148,24 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [nextProfiles, nextTemplates] = await Promise.all([
-        backend.listProfiles(),
-        backend.listTemplates(),
+      const [[nextProfiles, nextTemplates], nextLocations] = await Promise.all([
+        Promise.all([backend.listProfiles(), backend.listTemplates()]),
+        // Nơi trực tải riêng: lỗi ở đây không được kéo hỏng cả nhân viên lẫn ca
+        // mẫu. Ví dụ vừa lên bản mới mà đang offline — bộ đệm IndexedDB có
+        // sẵn 'profiles' / 'templates' của bản cũ nhưng chưa có 'locations'.
+        backend.listLocations().catch(() => undefined),
       ])
       if (!mounted.current) return
       setProfiles(nextProfiles)
       // null means the templates migration hasn't been run.
       setTemplatesAvailable(nextTemplates !== null)
       setTemplates(nextTemplates ?? [])
+      // null: 012 chưa chạy. undefined: tải lỗi — giữ danh sách đang có.
+      if (nextLocations !== undefined) {
+        setLocationsAvailable(nextLocations !== null)
+        setLocations(sortLocations(nextLocations ?? []))
+        setLocationsLoaded(true)
+      }
       setError(null)
     } catch (err) {
       if (!mounted.current) return
@@ -211,14 +254,43 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
     [refresh],
   )
 
+  const createLocation = useCallback(
+    async (input: LocationInput) => {
+      await backend.createLocation(input)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  const updateLocation = useCallback(
+    async (id: UUID, input: LocationInput) => {
+      await backend.updateLocation(id, input)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  const deleteLocation = useCallback(
+    async (id: UUID) => {
+      await backend.deleteLocation(id)
+      await refresh()
+    },
+    [refresh],
+  )
+
   const claimTemplate = useCallback(
-    async (templateId: UUID, dates: string[], userId: UUID) => {
+    async (
+      templateId: UUID,
+      dates: string[],
+      userId: UUID,
+      locationIds: UUID[],
+    ) => {
       // Sequential rather than parallel: each day may have to create the
       // shift first, and the unique index would reject a burst of inserts.
       // One refresh at the end instead of one per day.
       try {
         for (const date of dates) {
-          await backend.claimTemplate(templateId, date, userId)
+          await backend.claimTemplate(templateId, date, userId, locationIds)
         }
       } finally {
         await refresh()
@@ -233,9 +305,14 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   )
   const fetchShift = useCallback(
     async (id: UUID) =>
-      (await backend.listShifts({ kind: 'shift', shiftId: id }))[0] ?? null,
+      // Id sai dạng (link gõ tay) thì coi như không có ca, đừng để Supabase
+      // trả lỗi cú pháp uuid.
+      isRecordId(id)
+        ? ((await backend.listShifts({ kind: 'shift', shiftId: id }))[0] ?? null)
+        : null,
     [],
   )
+  const cachedShift = useCallback((id: UUID) => store.findShift(id), [store])
 
   const profilesById = useMemo(
     () => new Map(profiles.map((p) => [p.id, p])),
@@ -255,11 +332,15 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       accountsAvailable,
       templates,
       templatesAvailable,
+      locations,
+      locationsAvailable,
+      locationsLoaded,
       loading,
       error,
       refresh,
       shiftDateBounds,
       fetchShift,
+      cachedShift,
       dataVersion,
       createShift,
       updateShift,
@@ -269,6 +350,9 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       createTemplate,
       updateTemplate,
       deleteTemplate,
+      createLocation,
+      updateLocation,
+      deleteLocation,
       claimTemplate,
     }),
     [
@@ -279,11 +363,15 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       accountsAvailable,
       templates,
       templatesAvailable,
+      locations,
+      locationsAvailable,
+      locationsLoaded,
       loading,
       error,
       refresh,
       shiftDateBounds,
       fetchShift,
+      cachedShift,
       dataVersion,
       createShift,
       updateShift,
@@ -293,6 +381,9 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       createTemplate,
       updateTemplate,
       deleteTemplate,
+      createLocation,
+      updateLocation,
+      deleteLocation,
       claimTemplate,
     ],
   )

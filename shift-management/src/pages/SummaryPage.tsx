@@ -6,7 +6,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isValid,
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
@@ -26,16 +25,29 @@ import { useI18n } from '../i18n/I18nContext'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { Checkbox } from '../components/Checkbox'
 import { useUrlParams } from '../lib/urlParams'
+import { useCanonicalParams, validDateParam } from '../lib/canonicalParams'
 import { SummaryGrid } from '../components/SummaryGrid'
+import { SummaryPersonTotals } from '../components/SummaryPersonTotals'
+import { WeekCalendar, type WeekCalendarItem } from '../components/WeekCalendar'
 import { buildSummary } from '../lib/summary'
+import { fitHourRange } from '../lib/weekLayout'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
 import { LoadError } from '../components/LoadError'
+import { useShiftEditor } from '../components/ShiftEditorProvider'
+import type { UUID } from '../types'
 
-type ViewMode = 'day' | 'week' | 'month'
+/** Khối lịch tuần mang theo id để bấm vào mở đúng ca, đúng người. */
+interface SummaryWeekItem extends WeekCalendarItem {
+  shiftId: UUID
+  assignmentId: UUID
+}
+
+// Không có chế độ Ngày: tổng kết một ngày đã thấy đủ trong cột ngày đó của
+// lịch tuần. Link cũ `?view=day` rơi về Tuần chứa ngày đó.
+type ViewMode = 'week' | 'month'
 
 const VIEWS: { id: ViewMode; label: TranslationKey }[] = [
-  { id: 'day', label: 'view.day' },
   { id: 'week', label: 'view.week' },
   { id: 'month', label: 'view.month' },
 ]
@@ -45,7 +57,6 @@ const VIEWS: { id: ViewMode; label: TranslationKey }[] = [
  * lưới tháng bên Lịch: bảng tổng kết tháng 9 không nên cộng cả ngày 31/8.
  */
 function daysFor(view: ViewMode, d: Date): Date[] {
-  if (view === 'day') return [d]
   if (view === 'week') {
     const start = startOfWeek(d, { weekStartsOn: 1 })
     return eachDayOfInterval({ start, end: addDays(start, 6) })
@@ -54,7 +65,6 @@ function daysFor(view: ViewMode, d: Date): Date[] {
 }
 
 function stepDate(view: ViewMode, d: Date, direction: 1 | -1): Date {
-  if (view === 'day') return addDays(d, direction)
   if (view === 'week') return addDays(d, direction * 7)
   return addMonths(d, direction)
 }
@@ -90,22 +100,27 @@ export function SummaryPage() {
 
   const view = ((): ViewMode => {
     const raw = params.get('view')
-    return raw === 'day' || raw === 'month' ? raw : 'week'
+    return raw === 'month' ? 'month' : 'week'
   })()
 
-  const date = useMemo(() => {
-    const raw = params.get('date')
-    if (raw) {
-      const parsed = fromDateKey(raw)
-      if (isValid(parsed)) return parsed
-    }
-    return new Date()
-  }, [params])
+  const dateRaw = validDateParam(params.get('date'))
+  const date = useMemo(
+    () => (dateRaw ? fromDateKey(dateRaw) : new Date()),
+    [dateRaw],
+  )
+
+  // Như trang Lịch: ngày luôn nằm trên URL (kể cả hôm nay) để link gửi đi
+  // không trôi theo ngày mở; `view=day` của link cũ và giá trị lạ bị gỡ.
+  useCanonicalParams({
+    date: toDateKey(date),
+    view: view === 'week' ? null : view,
+    all: includeEmptyStaff ? '1' : null,
+  })
 
   /** Giữ ngày + chế độ xem trong URL để gửi link được, như trang Lịch. */
   function navigate(next: Date, nextView: ViewMode = view) {
     updateParams({
-      date: toDateKey(next) !== toDateKey(new Date()) ? toDateKey(next) : null,
+      date: toDateKey(next),
       view: nextView !== 'week' ? nextView : null,
     })
   }
@@ -136,40 +151,59 @@ export function SummaryPage() {
     [visibleShifts, profiles, now, user?.id, includeEmptyStaff],
   )
 
+  // Lịch tuần (desktop): mỗi lượt đã ghi nhận là một khối, màu theo người.
+  // Chỉ lượt đã ghi nhận — đúng những gì bảng công đếm, không có lượt chờ.
+  const weekItems = useMemo<SummaryWeekItem[]>(() => {
+    if (view !== 'week') return []
+    return rows.flatMap((row) =>
+      [...row.byDate.values()].flat().map((entry) => ({
+        shiftId: entry.shiftId,
+        assignmentId: entry.assignmentId,
+        key: entry.assignmentId,
+        date: entry.date,
+        start: entry.start,
+        end: entry.end,
+        personId: row.profile.id,
+        personName: row.profile.display_name,
+        title: entry.title,
+        locationIds: entry.locationIds,
+      })),
+    )
+  }, [view, rows])
+  // Bấm một ca mở form sửa như trang Lịch (sửa xong, tổng kết tự tính lại).
+  // Có sẵn ca trong lát đang xem thì đưa luôn cho form; không thì để
+  // provider tự tìm theo id (và tự báo nếu ca đã bị xoá).
+  const { openEdit, openEditById } = useShiftEditor()
+  const shiftsById = useMemo(
+    () => new Map(visibleShifts.map((s) => [s.id, s])),
+    [visibleShifts],
+  )
+  function openEntry(shiftId: UUID, assignmentId: UUID) {
+    const shift = shiftsById.get(shiftId)
+    if (shift) openEdit(shift, assignmentId)
+    else openEditById(shiftId, assignmentId)
+  }
+
+  // Tổng kết không có ô "Khung giờ": luôn vừa theo các lượt của tuần, nên
+  // không khối nào bị cắt.
+  const weekRange = useMemo(() => fitHourRange(weekItems), [weekItems])
+
   // ---- nhãn điều hướng ----------------------------------------------------
   const step = (direction: 1 | -1) => navigate(stepDate(view, date, direction))
 
   const weekStart = startOfWeek(date, { weekStartsOn: 1 })
   const headingText =
-    view === 'day'
-      ? format(date, 'EEEE, d MMMM yyyy', { locale: dateLocale })
-      : view === 'week'
-        ? `${format(weekStart, 'd MMM', { locale: dateLocale })} – ${format(
-            endOfWeek(date, { weekStartsOn: 1 }),
-            'd MMM yyyy',
-            { locale: dateLocale },
-          )}`
-        : format(date, 'MMMM yyyy', { locale: dateLocale })
+    view === 'week'
+      ? `${format(weekStart, 'd MMM', { locale: dateLocale })} – ${format(
+          endOfWeek(date, { weekStartsOn: 1 }),
+          'd MMM yyyy',
+          { locale: dateLocale },
+        )}`
+      : format(date, 'MMMM yyyy', { locale: dateLocale })
 
-  const jumpLabel =
-    view === 'day'
-      ? t('view.today')
-      : view === 'week'
-        ? t('view.thisWeek')
-        : t('view.thisMonth')
-
-  const prevLabel =
-    view === 'day'
-      ? t('view.prevDay')
-      : view === 'week'
-        ? t('view.prevWeek')
-        : t('view.prevMonth')
-  const nextLabel =
-    view === 'day'
-      ? t('view.nextDay')
-      : view === 'week'
-        ? t('view.nextWeek')
-        : t('view.nextMonth')
+  const jumpLabel = view === 'week' ? t('view.thisWeek') : t('view.thisMonth')
+  const prevLabel = view === 'week' ? t('view.prevWeek') : t('view.prevMonth')
+  const nextLabel = view === 'week' ? t('view.nextWeek') : t('view.nextMonth')
 
   if (loading) return <PageSkeleton />
 
@@ -279,15 +313,44 @@ export function SummaryPage() {
             {t('summary.rule')}
           </p>
 
-          <SummaryGrid
-            days={days}
-            rows={rows}
-            minutesByDate={minutesByDate}
-            totalMinutes={totals.minutes}
-            profileCount={rosterProfiles.length}
-            currentUserId={user?.id ?? null}
-            dense={view === 'month'}
-          />
+          {/* Tuần trên desktop là lịch dạng cột; điện thoại giữ bảng công cũ. */}
+          <div className={view === 'week' ? 'sm:hidden' : undefined}>
+            <SummaryGrid
+              days={days}
+              rows={rows}
+              minutesByDate={minutesByDate}
+              totalMinutes={totals.minutes}
+              profileCount={rosterProfiles.length}
+              currentUserId={user?.id ?? null}
+              dense={view === 'month'}
+              onSelectEntry={openEntry}
+            />
+          </div>
+
+          {view === 'week' && (
+            <div className="hidden space-y-4 sm:block">
+              <WeekCalendar
+                days={days}
+                items={weekItems}
+                range={weekRange}
+                onSelectItem={(item) => openEntry(item.shiftId, item.assignmentId)}
+                dayCaption={(day) => {
+                  const minutes = minutesByDate.get(toDateKey(day)) ?? 0
+                  return minutes > 0 ? formatMinutesDuration(minutes) : '—'
+                }}
+                emptyMessage={t('summary.empty')}
+                showClippedNote={false}
+              />
+              <SummaryPersonTotals
+                title={t('summary.weekTotals')}
+                rows={rows}
+                totalCount={totals.count}
+                totalMinutes={totals.minutes}
+                profileCount={rosterProfiles.length}
+                currentUserId={user?.id ?? null}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
