@@ -290,6 +290,25 @@ body {
   background-color: #181818;
 }
 
+/*
+ * Tối OLED (`data-oled`, đặt kèm `data-theme='dark'`): chỉ đè các bề mặt —
+ * nền trang, thẻ / header / hộp thoại (`--color-white`) đen tuyền để điểm ảnh
+ * tắt hẳn; các bậc nổi (slate-50…300: ô nhập, hover, viền) hạ thấp theo để
+ * vẫn tách lớp trên nền đen. Chữ và màu khối ca giữ như chế độ tối.
+ * `THEME_COLOR.oled` (ThemeContext.tsx) và script trong index.html dùng #000.
+ */
+[data-theme='dark'][data-oled] {
+  --color-white: #000000;
+  --color-slate-50: #0d0d0d;
+  --color-slate-100: #161616;
+  --color-slate-200: #232323;
+  --color-slate-300: #2f2f2f;
+}
+
+[data-theme='dark'][data-oled] body {
+  background-color: #000000;
+}
+
 [data-theme='dark'] .text-white {
   color: #fff;
 }

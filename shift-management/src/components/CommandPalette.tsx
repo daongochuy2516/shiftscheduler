@@ -17,6 +17,7 @@ import {
   MapPin,
   Monitor,
   Moon,
+  MoonStar,
   Plus,
   ScrollText,
   Search,
@@ -195,6 +196,7 @@ export function CommandPalette({
     const themes: { id: ThemePref; icon: typeof Sun; label: TranslationKey; kw: string }[] = [
       { id: 'light', icon: Sun, label: 'theme.light', kw: 'giao dien sang theme light' },
       { id: 'dark', icon: Moon, label: 'theme.dark', kw: 'giao dien toi theme dark' },
+      { id: 'oled', icon: MoonStar, label: 'theme.oled', kw: 'giao dien toi oled den tuyen amoled black theme dark' },
       { id: 'system', icon: Monitor, label: 'theme.systemShort', kw: 'giao dien he thong theme system auto' },
     ]
     const list: Command[] = [

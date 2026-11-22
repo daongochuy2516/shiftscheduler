@@ -6,12 +6,13 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <!-- Màu thanh trạng thái / thanh tiêu đề khi cài như app, theo giao diện
-       sáng / tối của máy ngay từ HTML tĩnh: Android (app đã cài) không chắc
-       nhận màu do JS đổi sau, còn icon trạng thái thì luôn theo giao diện máy
-       — để thanh trắng mà máy đang tối là mất icon. Chỉ khi người dùng chọn
-       hẳn Sáng / Tối, và đang trên máy tính, thì script dưới và ThemeContext
-       mới ghi đè cả hai (cho thanh tiêu đề cửa sổ trên máy tính khớp header). -->
+  <!-- Status bar / title bar color for the installed app, following the
+       device's light / dark mode straight from static HTML: an installed
+       Android app may ignore a color changed later by JS, while the status
+       bar icons always follow the device theme — a white bar on a dark device
+       hides the icons. Only when the user explicitly picks Light / Dark /
+       OLED dark, and only on desktop, do the script below and ThemeContext
+       override both tags (so the window title bar matches the header). -->
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f1f1f" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -19,28 +20,33 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Team Board" />
   <title>Thinkmay Team Board</title>
-  <!-- dark theme flash fix src/theme/ThemeContext.tsx. -->
+  <!-- Applies the saved theme before first paint so dark / OLED dark don't
+       flash white. Mirrors src/theme/ThemeContext.tsx (storage key, colors,
+       device detection) — change one, change both. -->
   <script>
     (function () {
       var pref = null
       try {
         pref = localStorage.getItem('scheduler.theme')
       } catch (e) { }
+      var oled = pref === 'oled'
       var dark =
         pref === 'dark' ||
+        oled ||
         (pref !== 'light' &&
           window.matchMedia('(prefers-color-scheme: dark)').matches)
       document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      // Theo máy, hoặc điện thoại / máy tính bảng (Android, iOS, iPadOS), thì
-      // hai thẻ theme-color ở trên đã đúng, không đụng tới. Cùng màu và cùng
-      // cách nhận máy với ThemeContext.tsx.
+      if (oled) document.documentElement.dataset.oled = ''
+      // When following the device, or on a phone / tablet (Android, iOS,
+      // iPadOS), the two theme-color tags above are already right — leave
+      // them alone. Same colors and device detection as ThemeContext.tsx.
       var ua = navigator.userAgent
       var mobile =
         /Android|iPhone|iPad|iPod/.test(ua) ||
         (ua.indexOf('Macintosh') !== -1 && navigator.maxTouchPoints > 1)
-      if ((pref === 'light' || pref === 'dark') && !mobile) {
+      if ((pref === 'light' || pref === 'dark' || oled) && !mobile) {
         document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
-          m.setAttribute('content', dark ? '#1f1f1f' : '#ffffff')
+          m.setAttribute('content', oled ? '#000000' : dark ? '#1f1f1f' : '#ffffff')
         })
       }
     })()

@@ -66,6 +66,8 @@ export const en = {
   'theme.systemShort': 'System',
   'theme.light': 'Light',
   'theme.dark': 'Dark',
+  /** Tối với nền đen tuyền cho màn OLED. */
+  'theme.oled': 'OLED dark',
   'nav.account': 'Account',
   'nav.filters': 'Filters',
 
@@ -862,6 +864,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'theme.systemShort': 'Hệ thống',
   'theme.light': 'Sáng',
   'theme.dark': 'Tối',
+  'theme.oled': 'Tối OLED',
   'nav.account': 'Tài khoản',
   'nav.filters': 'Bộ lọc',
 

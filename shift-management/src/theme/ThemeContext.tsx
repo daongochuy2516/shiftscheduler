@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from 'react'
 
-export type ThemePref = 'system' | 'light' | 'dark'
+/**
+ * `oled`: tối với nền đen tuyền (#000) cho màn OLED — điểm ảnh đen tắt hẳn,
+ * đỡ chói ban đêm. Vẫn đặt `data-theme="dark"` để mọi luật của chế độ tối áp
+ * dụng, thêm `data-oled` để index.css đè riêng các bề mặt thành đen.
+ */
+export type ThemePref = 'system' | 'light' | 'dark' | 'oled'
 
 // Trùng với script chống nháy trong index.html — đổi một chỗ phải đổi cả hai.
 const STORAGE_KEY = 'scheduler.theme'
@@ -18,7 +23,7 @@ const DARK_QUERY = '(prefers-color-scheme: dark)'
  * (`bg-white`, bản tối là `--color-white` trong index.css). Script chống
  * nháy trong index.html lặp lại hai màu này.
  */
-const THEME_COLOR = { light: '#ffffff', dark: '#1f1f1f' } as const
+const THEME_COLOR = { light: '#ffffff', dark: '#1f1f1f', oled: '#000000' } as const
 /**
  * Điện thoại / máy tính bảng: icon thanh trạng thái theo giao diện máy, nên
  * thanh cũng phải theo máy. iPadOS báo mình là Mac; phân biệt bằng màn cảm ứng
@@ -38,7 +43,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 function readStoredPref(): ThemePref {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'light' || stored === 'dark') return stored
+    if (stored === 'light' || stored === 'dark' || stored === 'oled') return stored
   } catch {
     // Storage unavailable — follow the device.
   }
@@ -46,10 +51,15 @@ function readStoredPref(): ThemePref {
 }
 
 function applyTheme(pref: ThemePref) {
+  const oled = pref === 'oled'
   const dark =
     pref === 'dark' ||
+    oled ||
     (pref === 'system' && window.matchMedia(DARK_QUERY).matches)
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+  const root = document.documentElement
+  root.dataset.theme = dark ? 'dark' : 'light'
+  if (oled) root.dataset.oled = ''
+  else delete root.dataset.oled
   // index.html có hai thẻ theme-color theo `media` sáng / tối của máy. Theo
   // máy: trả mỗi thẻ về màu của nó, trình duyệt tự chọn — không đổi màu bằng
   // JS, vì app đã cài trên Android có thể bỏ qua màu đổi sau khi tải trang
@@ -62,7 +72,13 @@ function applyTheme(pref: ThemePref) {
     const forDark = followDevice
       ? (meta.getAttribute('media')?.includes('dark') ?? dark)
       : dark
-    const color = forDark ? THEME_COLOR.dark : THEME_COLOR.light
+    // Máy tính chọn hẳn OLED: thanh tiêu đề đen như header. Điện thoại vẫn
+    // theo máy (màu tối thường) — xem trên.
+    const color = forDark
+      ? oled && !followDevice
+        ? THEME_COLOR.oled
+        : THEME_COLOR.dark
+      : THEME_COLOR.light
     if (meta.getAttribute('content') !== color) meta.setAttribute('content', color)
   })
 }
