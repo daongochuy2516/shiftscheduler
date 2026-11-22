@@ -253,7 +253,7 @@ Tuần bắt đầu từ Thứ Hai. Máy tính và điện thoại hiện khác 
 11:00 ┃           ┃ └───────┘ ┃ └───┘└──┘ ┃
 ```
 
-- **Mỗi ngày một cột** (Thứ Hai → Chủ Nhật), **trục giờ dọc** bên trái ghi `HH:00`. Mỗi giờ cao cố định, lịch dài theo trang (cuộn cùng trang, không có thanh cuộn riêng); hàng tiêu đề ngày dính ở đầu khi cuộn.
+- **Mỗi ngày một cột** (Thứ Hai → Chủ Nhật), **trục giờ dọc** bên trái ghi `HH:00`. Chiều cao mỗi giờ **tự co cho cả tuần vừa cửa sổ** (màn 1080p chưa phóng to cửa sổ vẫn thấy hết khung giờ mà không cuộn); cửa sổ quá thấp thì giữ mức tối thiểu và lịch dài theo trang (cuộn cùng trang, không có thanh cuộn riêng); hàng tiêu đề ngày dính ở đầu khi cuộn.
 - **Mỗi khối là một lượt phân công**, đặt theo **giờ riêng của người đó** (không phải giờ chung của ca). Trong khối, từ trên xuống: **tên người**, giờ `HH:mm–HH:mm`, nhãn **nơi trực**, và tên ca (chỉ khi khối đủ cao — lượt dài hơn 1 tiếng, khoảng từ 1 tiếng 15 phút trở lên). Khối quá ngắn thì tên và giờ chung một dòng. Rê chuột vào khối luôn thấy đủ: tên ca · người · giờ · nơi trực · chờ xác nhận.
 - **Màu khối theo người**, trùng màu avatar của người đó — nhìn màu là biết ai. (Dòng thời gian của chế độ Ngày vẫn tô màu **theo ca**.)
 - **Nhiều người trùng giờ** (ví dụ hai người cùng một ca) thì các khối **đứng cạnh nhau**, chia đôi / chia ba bề rộng cột; khối nào bên phải còn trống thì giãn ra chiếm chỗ.
