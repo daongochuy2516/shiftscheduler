@@ -148,7 +148,14 @@ function TourStepView({
   const { t, lang } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
-  const [box, setBox] = useState<Box | null>(null)
+  // Phần tử đã có sẵn trên trang (thường gặp khi bấm Tiếp) thì đo ngay lúc
+  // dựng bước: khỏi một khung hình phủ kín màn hình trước khi khung sáng hiện.
+  const [box, setBox] = useState<Box | null>(() => {
+    const el = step.targets?.length ? findVisible(step.targets) : null
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    return { top: r.top, left: r.left, width: r.width, height: r.height }
+  })
   const [missing, setMissing] = useState(false)
   const text = step.text[lang]
   const last = index === count - 1
@@ -281,7 +288,7 @@ function TourStepView({
           }}
         />
       ) : (
-        <div aria-hidden="true" className="absolute inset-0 bg-slate-950/60" />
+        <div aria-hidden="true" className="tour-dim absolute inset-0" />
       )}
 
       <div
