@@ -347,6 +347,8 @@ export const en = {
   'loc.shortNameHint':
     'Shown on short shift blocks where the full name does not fit. Leave empty to use the first 3 letters.',
   'loc.namePlaceholder': 'e.g. Fanpage',
+  /** Tên ví dụ cho nhãn xem trước khi ô Tên còn trống — không kèm 'e.g.', vì tên tắt lấy 3 chữ đầu của nó. */
+  'loc.nameExample': 'Fanpage',
   'loc.color': 'Colour',
   'loc.colorHint': 'Colour of the chip shown next to staff on duty here.',
   'loc.noColor': 'No colour',
@@ -1137,6 +1139,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'loc.shortNameHint':
     'Hiện trên khối ca ngắn khi không đủ chỗ cho tên đầy đủ. Để trống thì lấy 3 chữ đầu của tên.',
   'loc.namePlaceholder': 'ví dụ: Fanpage',
+  'loc.nameExample': 'Fanpage',
   'loc.color': 'Màu',
   'loc.colorHint': 'Màu của nhãn hiện cạnh tên người trực ở đây.',
   'loc.noColor': 'Không màu',

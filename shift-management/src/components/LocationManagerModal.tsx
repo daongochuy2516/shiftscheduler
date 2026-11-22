@@ -263,7 +263,9 @@ export function LocationManagerModal({
   const preview: Location | null = draft
     ? {
         id: draft.id ?? 'preview',
-        name: name || t('loc.namePlaceholder'),
+        // Tên trống: xem trước bằng tên ví dụ, không phải chữ mẫu của ô
+        // ("ví dụ: Fanpage" thì tên tắt thành "ví").
+        name: name || t('loc.nameExample'),
         short_name: shortName || null,
         color: draft.color,
         sort_order: order ?? 0,
