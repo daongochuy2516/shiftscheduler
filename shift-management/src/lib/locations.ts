@@ -28,6 +28,22 @@ export function locationShortName(location: Location): string {
   return Array.from(location.name.trim()).slice(0, 3).join('')
 }
 
+/**
+ * Tên đủ và tên tắt của các nơi trực (theo đúng thứ tự `ids`) — đầu vào của
+ * `pickLocationFit`. Id lạ (nơi đã xoá): `unknown` / "?", như LocationChip.
+ */
+export function locationLabels(
+  ids: readonly UUID[],
+  byId: ReadonlyMap<UUID, Location>,
+  unknown: string,
+): { full: string[]; short: string[] } {
+  const found = ids.map((id) => byId.get(id))
+  return {
+    full: found.map((l) => l?.name ?? unknown),
+    short: found.map((l) => (l ? locationShortName(l) : '?')),
+  }
+}
+
 export function locationsById(list: readonly Location[]): Map<UUID, Location> {
   return new Map(list.map((l) => [l.id, l]))
 }

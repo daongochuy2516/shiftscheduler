@@ -432,6 +432,7 @@ Bấm **Tạo ca → Quản lý nơi trực**. **Chỉ admin** thấy lựa ch�
 
 - **Thêm nơi trực**: tên (bắt buộc, tối đa 50 ký tự, không trùng tên nơi khác — không phân biệt hoa thường), **màu** (màu chip cạnh tên người trong ca; *Không màu* là chip xám), **thứ tự** (số nhỏ đứng trước — thứ tự chip ở mọi nơi), **tên tắt** (tuỳ chọn, tối đa 10 ký tự, cần `014_location_short_name.sql`; để trống thì lấy 3 chữ đầu của tên).
 - **Trên dòng thời gian** (chế độ Ngày), nhãn nơi trực tự co theo độ rộng khối ca: **tên đầy đủ** → **tên tắt** → **chấm màu**, đặt ở dòng giờ, không đủ chỗ thì lên dòng tên ca. Chỉ khi đến chấm màu cũng không vừa thì mới ẩn; rê chuột vào khối luôn thấy đủ tên.
+- **Chế độ Tuần**: cùng cách co như dòng thời gian (tên đầy đủ → tên tắt → chấm màu, theo bề rộng cột ngày lúc đó — màn hình rộng thì cột rộng, hiện được nhiều hơn). **Chế độ Tháng** không hiện nơi trực.
 - **Đổi tên / màu**: đổi một lần là **mọi ca đổi theo** — lượt phân công chỉ giữ id của nơi trực, không giữ tên.
 - **Hiện khi nhận ca**: bỏ tích để **ẩn** — ca cũ vẫn giữ chip, nhưng không ai chọn thêm được nơi đó nữa (lượt đang có nó vẫn lưu được bình thường).
 - **Xoá**: chỉ được khi **chưa lượt nào dùng** nơi đó, kể cả admin. Đang dùng thì máy chủ từ chối với *Nơi trực đang được dùng — hãy ẩn thay vì xoá.*

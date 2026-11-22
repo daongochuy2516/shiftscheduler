@@ -3,73 +3,25 @@ import { CalendarOff, Clock3 } from 'lucide-react'
 import type { Profile, ShiftAssignment, ShiftWithAssignments, UUID } from '../types'
 import { formatRange, normalizeTime, toDateKey, toMinutes } from '../lib/time'
 import { showRow } from '../lib/profiles'
-import { locationShortName, locationsById, sortLocationIds } from '../lib/locations'
+import { locationLabels, locationsById, sortLocationIds } from '../lib/locations'
+import { pickLocationFit } from '../lib/locationFit'
 import { textWidth } from '../lib/textWidth'
 import { useSchedule } from '../data/ScheduleContext'
 import { useShiftColor } from '../data/useShiftColor'
 import { useI18n } from '../i18n/I18nContext'
 import { Avatar } from './Avatar'
-import { LocationChip, type ChipVariant } from './LocationChip'
+import { LocationChip } from './LocationChip'
 
 const LEFT_COL = 176 // px — the sticky staff column
 const HOUR_WIDTH = 76 // px per hour
 const LANE_HEIGHT = 40
 const LANE_GAP = 6
 
-// Kích thước dùng để tính chỗ cho nhãn nơi trực — phải khớp class bên dưới
-// và trong LocationChip: khối `px-2` + viền 1px hai bên, `gap-1`, đồng hồ
-// `h-3 w-3`, chip xs `px-1.5` chữ 10px đậm 500, chấm `h-2 w-2`.
+// Để tính chỗ cho nhãn nơi trực (pickLocationFit) — khớp class của khối bên
+// dưới: `px-2` + viền 1px hai bên; đồng hồ `h-3 w-3` + `gap-1`.
 const BLOCK_CHROME_PX = 18
-const GAP_PX = 4
 const CLOCK_PX = 12
-const CHIP_PAD_PX = 12
-const DOT_PX = 8
-/** Đo bằng canvas có thể lệch vài phần px so với DOM. */
-const SAFETY_PX = 2
-
-interface LocationFit {
-  row: 'time' | 'title'
-  variant: ChipVariant
-}
-
-/**
- * Chọn cách hiện nhãn nơi trực vừa khối: tên đủ → tên tắt → chấm màu; mỗi
- * mức thử dòng giờ trước rồi dòng tên ca (tên ca thường ngắn, dòng đó hay
- * còn chỗ). `null` = đến chấm cũng không vừa.
- */
-function pickLocationFit({
-  blockPx,
-  titlePx,
-  timePx,
-  full,
-  short,
-}: {
-  blockPx: number
-  titlePx: number
-  timePx: number
-  full: readonly string[]
-  short: readonly string[]
-}): LocationFit | null {
-  const inner = blockPx - BLOCK_CHROME_PX
-  const free = {
-    time: inner - timePx - GAP_PX - SAFETY_PX,
-    title: inner - titlePx - GAP_PX - SAFETY_PX,
-  }
-  const gaps = GAP_PX * (full.length - 1)
-  const labels = (list: readonly string[]) =>
-    list.reduce((sum, l) => sum + textWidth(l, 10, 500) + CHIP_PAD_PX, 0) + gaps
-  const options: [ChipVariant, number][] = [
-    ['full', labels(full)],
-    ['short', labels(short)],
-    ['dot', DOT_PX * full.length + gaps],
-  ]
-  for (const [variant, need] of options) {
-    for (const row of ['time', 'title'] as const) {
-      if (need <= free[row]) return { row, variant }
-    }
-  }
-  return null
-}
+const GAP_PX = 4
 
 export interface HourRange {
   /** Whole hour, 0–23 */
@@ -347,19 +299,14 @@ export function Timeline({
                         locationIds.length === 0
                           ? null
                           : pickLocationFit({
-                              blockPx: Math.max((width / 100) * trackWidth, 44),
+                              innerPx:
+                                Math.max((width / 100) * trackWidth, 44) -
+                                BLOCK_CHROME_PX,
                               titlePx:
                                 (pending ? CLOCK_PX + GAP_PX : 0) +
                                 textWidth(shift.title, 12, 600),
                               timePx: textWidth(timeText, 11),
-                              full: locationIds.map(
-                                (id) =>
-                                  locationById.get(id)?.name ?? t('loc.unknown'),
-                              ),
-                              short: locationIds.map((id) => {
-                                const loc = locationById.get(id)
-                                return loc ? locationShortName(loc) : '?'
-                              }),
+                              ...locationLabels(locationIds, locationById, t('loc.unknown')),
                             })
                       const chips = fit && (
                         <span className="flex shrink-0 items-center gap-1">

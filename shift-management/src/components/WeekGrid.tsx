@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { addDays, format, isSameDay } from 'date-fns'
 import { CalendarOff, Clock3 } from 'lucide-react'
 import type { Profile, ShiftWithAssignments, UUID } from '../types'
@@ -12,13 +12,23 @@ import {
   toMinutes,
 } from '../lib/time'
 import { showRow } from '../lib/profiles'
-import { locationsById, sortLocationIds } from '../lib/locations'
+import { locationLabels, locationsById, sortLocationIds } from '../lib/locations'
+import { pickLocationFit } from '../lib/locationFit'
+import { textWidth } from '../lib/textWidth'
 import { useSchedule } from '../data/ScheduleContext'
 import { Avatar } from './Avatar'
+import { LocationChip } from './LocationChip'
 
 const LEFT_COL = 176
 const DAY_MIN = 132
 const TOTAL_COL = 76
+
+// Để tính chỗ cho nhãn nơi trực — khớp class của ô bên dưới: viền phải 1px
+// của cột + ô `p-1.5` + khối `px-1.5` + viền khối 1px hai bên; đồng hồ
+// `h-2.5 w-2.5` + `gap-1`.
+const CELL_CHROME_PX = 1 + 12 + 12 + 2
+const CLOCK_PX = 10
+const GAP_PX = 4
 
 interface Cell {
   shift: ShiftWithAssignments
@@ -54,7 +64,21 @@ export function WeekGrid({
   const locationById = useMemo(() => locationsById(locations), [locations])
   const today = toDateKey(new Date())
 
-  /** "Fanpage, Discord" cho tooltip; ô tuần hẹp nên không vẽ nhãn. */
+  // Cột ngày co giãn (`minmax(DAY_MIN, 1fr)`) nên phải đo lúc chạy để biết
+  // nhãn nơi trực vừa tới đâu. Callback ref + ResizeObserver: setState nằm
+  // trong callback của observer, không chạy đồng bộ trong effect.
+  const [dayHeader, setDayHeader] = useState<HTMLElement | null>(null)
+  const [colWidth, setColWidth] = useState(DAY_MIN)
+  useEffect(() => {
+    if (!dayHeader || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      setColWidth(dayHeader.getBoundingClientRect().width)
+    })
+    observer.observe(dayHeader)
+    return () => observer.disconnect()
+  }, [dayHeader])
+
+  /** "Fanpage, Discord" cho tooltip (tên đầy đủ khi nhãn bị thu gọn). */
   function locationText(ids: UUID[]): string {
     return sortLocationIds(ids, locationById)
       .map((id) => locationById.get(id)?.name ?? t('loc.unknown'))
@@ -132,11 +156,13 @@ export function WeekGrid({
             <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
               {t('common.staff')}
             </div>
-            {days.map((day) => {
+            {days.map((day, i) => {
               const isToday = toDateKey(day) === today
               return (
                 <button
                   key={day.toISOString()}
+                  // Bảy cột ngày rộng bằng nhau: đo một cột là đủ.
+                  ref={i === 0 ? setDayHeader : undefined}
                   type="button"
                   onClick={() => onSelectDay(day)}
                   data-tooltip={t('timeline.openDay')}
@@ -231,6 +257,30 @@ export function WeekGrid({
                         {cells.map((cell) => {
                           const color = shiftColor(cell.shift)
                           const where = locationText(cell.locationIds)
+                          const timeText = `${cell.start}–${cell.end}`
+                          const ids = sortLocationIds(cell.locationIds, locationById)
+                          // Như dòng thời gian: tên đủ → tên tắt → chấm màu,
+                          // dòng giờ trước rồi dòng tên ca; tooltip đủ tên.
+                          const fit = pickLocationFit({
+                            innerPx: colWidth - CELL_CHROME_PX,
+                            titlePx:
+                              (cell.pending ? CLOCK_PX + GAP_PX : 0) +
+                              textWidth(cell.shift.title, 11, 600),
+                            timePx: textWidth(timeText, 10),
+                            ...locationLabels(ids, locationById, t('loc.unknown')),
+                          })
+                          const chips = fit && (
+                            <span className="flex shrink-0 items-center gap-1">
+                              {ids.map((id) => (
+                                <LocationChip
+                                  key={id}
+                                  location={locationById.get(id) ?? null}
+                                  size="xs"
+                                  variant={fit.variant}
+                                />
+                              ))}
+                            </span>
+                          )
                           return (
                             <button
                               key={cell.assignmentId}
@@ -245,16 +295,20 @@ export function WeekGrid({
                                 cell.pending ? 'border-dashed' : ''
                               }`}
                             >
-                              <span className="flex items-center gap-1 truncate text-[11px] font-semibold">
+                              <span className="flex min-w-0 items-center gap-1 text-[11px] font-semibold">
                                 {cell.pending && (
                                   <Clock3 className="h-2.5 w-2.5 shrink-0 opacity-70" />
                                 )}
-                                <span className="truncate">
+                                <span className="min-w-0 truncate">
                                   {cell.shift.title}
                                 </span>
+                                {fit?.row === 'title' && chips}
                               </span>
-                              <span className="block truncate text-[10px] opacity-75">
-                                {cell.start}–{cell.end}
+                              <span className="flex min-w-0 items-center gap-1 overflow-hidden">
+                                <span className="shrink-0 text-[10px] opacity-75">
+                                  {timeText}
+                                </span>
+                                {fit?.row === 'time' && chips}
                               </span>
                             </button>
                           )
