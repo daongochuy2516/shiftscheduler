@@ -90,12 +90,45 @@ const PALETTE: Record<ShiftColorKey, ShiftColor> = {
 // Chỉ hash trong 7 màu gốc để ca thường đã có giữ nguyên màu cũ.
 const HASH_KEYS = SHIFT_COLOR_KEYS.slice(0, 7)
 
-function hashKey(id: string): ShiftColorKey {
+/** Hash chuỗi ổn định (dùng chung cho màu ca và màu người). */
+function hashString(id: string): number {
   let hash = 0
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) >>> 0
   }
-  return HASH_KEYS[hash % HASH_KEYS.length]
+  return hash
+}
+
+function hashKey(id: string): ShiftColorKey {
+  return HASH_KEYS[hashString(id) % HASH_KEYS.length]
+}
+
+/**
+ * Sáu tông màu của người (ảnh đại diện, khối lịch tuần), đúng thứ tự cũ của
+ * Avatar — đổi thứ tự hay thêm bớt là đổi màu của mọi người.
+ */
+export const PERSON_COLOR_KEYS = [
+  'indigo',
+  'teal',
+  'amber',
+  'rose',
+  'sky',
+  'violet',
+] as const satisfies readonly ShiftColorKey[]
+
+export type PersonColorKey = (typeof PERSON_COLOR_KEYS)[number]
+
+/**
+ * Màu cố định của một người, hash theo `seed` (id hồ sơ). Avatar lấy tông từ
+ * đây nên khối lịch tuần (`personColor`) luôn cùng màu với ảnh đại diện.
+ */
+export function personColorKey(seed: string): PersonColorKey {
+  return PERSON_COLOR_KEYS[hashString(seed) % PERSON_COLOR_KEYS.length]
+}
+
+/** Bộ lớp `PALETTE` theo màu của người — khối lịch tuần dùng `.block`. */
+export function personColor(seed: string): ShiftColor {
+  return PALETTE[personColorKey(seed)]
 }
 
 function isShiftColorKey(value: unknown): value is ShiftColorKey {

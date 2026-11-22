@@ -4,6 +4,14 @@ import { scrollRoot } from '../lib/scrollRoot'
 import { useExitAnimation } from './useExitAnimation'
 
 /**
+ * Các Modal đang mở, theo thứ tự mở. Esc chỉ đóng cái trên cùng: hộp xác
+ * nhận mở đè lên form ca thì Esc đóng hộp xác nhận, form vẫn còn.
+ */
+const openModals: object[] = []
+/** Giá trị `overflow` trước khi Modal đầu tiên khoá cuộn, trả lại khi cái cuối đóng. */
+let unlocked: { el: HTMLElement; overflow: string }[] = []
+
+/**
  * Hộp thoại chung.
  *
  * Trên mobile nó là bottom sheet: trượt lên từ đáy, bo góc trên, cao tối đa
@@ -36,23 +44,42 @@ export function Modal({
   const rootRef = useRef<HTMLDivElement>(null)
   useExitAnimation(rootRef, 260)
 
+  // `onClose` thường là hàm viết thẳng, đổi mỗi lần vẽ. Giữ bản mới nhất ở
+  // ref để phần đăng ký dưới đây chạy đúng một lần khi mount — đăng ký lại
+  // mỗi lần vẽ sẽ đẩy Modal nằm dưới lên đầu ngăn xếp.
+  const onCloseRef = useRef(onClose)
   useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    const token = {}
+    // Khoá cả trang (mobile) lẫn khung cuộn nội dung (desktop). Khung đó có
+    // `scrollbar-gutter: stable` nên khoá lại không làm nội dung giật. Khoá
+    // một lần cho cả chồng Modal: đóng không theo thứ tự (hộp dưới đóng
+    // trước) vẫn trả đúng giá trị cũ.
+    if (openModals.length === 0) {
+      unlocked = [document.documentElement, scrollRoot()]
+        .filter((el): el is HTMLElement => el !== null)
+        .map((el) => ({ el, overflow: el.style.overflow }))
+      unlocked.forEach(({ el }) => (el.style.overflow = 'hidden'))
+    }
+    openModals.push(token)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape' || openModals[openModals.length - 1] !== token) return
+      onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
-    // Khoá cả trang (mobile) lẫn khung cuộn nội dung (desktop). Khung đó có
-    // `scrollbar-gutter: stable` nên khoá lại không làm nội dung giật.
-    const locked = [document.documentElement, scrollRoot()].filter(
-      (el): el is HTMLElement => el !== null,
-    )
-    const previous = locked.map((el) => el.style.overflow)
-    locked.forEach((el) => (el.style.overflow = 'hidden'))
     return () => {
+      const index = openModals.indexOf(token)
+      if (index >= 0) openModals.splice(index, 1)
       document.removeEventListener('keydown', onKey)
-      locked.forEach((el, i) => (el.style.overflow = previous[i]))
+      if (openModals.length === 0) {
+        unlocked.forEach(({ el, overflow }) => (el.style.overflow = overflow))
+        unlocked = []
+      }
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div

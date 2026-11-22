@@ -104,11 +104,11 @@ export const TOURS: Record<TourId, Tour> = {
         text: {
           vi: {
             title: 'Ngày · Tuần · Tháng',
-            body: 'Ngày: lịch chi tiết theo giờ. Tuần: mỗi người một hàng, cột Tổng là số giờ trong tuần. Tháng: nhìn cả tháng, bấm một ngày để xem chi tiết.',
+            body: 'Ngày: lịch chi tiết theo giờ. Tuần: trên máy tính mỗi ngày một cột, mỗi người một khối theo giờ của họ; trên điện thoại mỗi người một hàng, cột Tổng là số giờ trong tuần. Tháng: nhìn cả tháng, bấm một ngày để xem chi tiết.',
           },
           en: {
             title: 'Day · Week · Month',
-            body: 'Day: an hour-by-hour timeline. Week: one row per person, the Total column is their hours that week. Month: the whole month — tap a day to zoom in.',
+            body: 'Day: an hour-by-hour timeline. Week: on a computer one column per day with a block per person at their hours; on a phone one row per person, the Total column is their hours that week. Month: the whole month — tap a day to zoom in.',
           },
         },
       },

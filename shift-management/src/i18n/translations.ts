@@ -91,6 +91,7 @@ export const en = {
   'timeline.onlyMine': 'Only mine',
   'timeline.hourScale': 'Hour scale',
   'timeline.scale.fit': 'Fit to day',
+  'timeline.scale.fitWeek': 'Fit to week',
   'timeline.scale.work': '06:00 – 22:00',
   'timeline.scale.business': '08:00 – 20:00',
   'timeline.scale.full': 'Full day',
@@ -122,6 +123,7 @@ export const en = {
   'summary.showAllStaff': 'Show staff with no shifts',
   'summary.showAllStaffShort': 'Show everyone',
   'summary.dayTotal': 'Per day',
+  'summary.weekTotals': 'Hours this week',
   'summary.empty': 'Nothing recorded in this range yet.',
   'summary.emptyHint':
     'A shift shows up here once it is confirmed and its end time has passed.',
@@ -129,6 +131,7 @@ export const en = {
   // ---- shift modal ----
   'shift.new': 'New shift',
   'shift.edit': 'Edit shift',
+  'shift.linkGone': 'This shift has been deleted, or the link is wrong.',
   'shift.createSubtitle':
     'Create a shift, then assign staff with their own hours.',
   'shift.assignedCount_one': '{{count}} staff assigned',
@@ -226,6 +229,8 @@ export const en = {
   'notif.claim.done_one': 'Claimed “{{title}}” for {{count}} day',
   'notif.claim.done_other': 'Claimed “{{title}}” for {{count}} days',
   'notif.claim.failed': 'Could not claim “{{title}}”',
+  'notif.claim.missing': 'Could not open the template',
+  'notif.claim.missingBody': 'It no longer exists or has been turned off.',
   'notif.tpl.created': 'Template “{{title}}” created',
   'notif.tpl.saved': 'Template “{{title}}” saved',
   'notif.tpl.saveFailed': 'Could not save template “{{title}}”',
@@ -876,6 +881,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'timeline.onlyMine': 'Chỉ ca của tôi',
   'timeline.hourScale': 'Khung giờ',
   'timeline.scale.fit': 'Vừa theo ngày',
+  'timeline.scale.fitWeek': 'Vừa theo tuần',
   'timeline.scale.work': '06:00 – 22:00',
   'timeline.scale.business': '08:00 – 20:00',
   'timeline.scale.full': 'Cả ngày',
@@ -907,6 +913,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'summary.showAllStaff': 'Hiện cả nhân viên không có ca',
   'summary.showAllStaffShort': 'Hiện tất cả',
   'summary.dayTotal': 'Theo ngày',
+  'summary.weekTotals': 'Số giờ trong tuần',
   'summary.empty': 'Chưa ghi nhận được ca nào trong khoảng này.',
   'summary.emptyHint':
     'Một ca hiện ra ở đây sau khi được xác nhận và đã qua giờ kết thúc.',
@@ -914,6 +921,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   // ---- shift modal ----
   'shift.new': 'Tạo ca mới',
   'shift.edit': 'Sửa ca',
+  'shift.linkGone': 'Ca này đã bị xoá, hoặc đường dẫn không đúng.',
   'shift.createSubtitle':
     'Tạo ca, sau đó phân công nhân viên với giờ riêng của từng người.',
   'shift.assignedCount_one': 'Đã phân công {{count}} nhân viên',
@@ -1011,6 +1019,8 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'notif.claim.done_one': 'Đã nhận ca “{{title}}” cho {{count}} ngày',
   'notif.claim.done_other': 'Đã nhận ca “{{title}}” cho {{count}} ngày',
   'notif.claim.failed': 'Không nhận được ca “{{title}}”',
+  'notif.claim.missing': 'Không mở được ca mẫu',
+  'notif.claim.missingBody': 'Ca mẫu này không còn hoặc đã bị tắt.',
   'notif.tpl.created': 'Đã tạo ca mẫu “{{title}}”',
   'notif.tpl.saved': 'Đã lưu ca mẫu “{{title}}”',
   'notif.tpl.saveFailed': 'Không lưu được ca mẫu “{{title}}”',

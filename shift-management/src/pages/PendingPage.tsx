@@ -7,6 +7,7 @@ import { Checkbox } from '../components/Checkbox'
 import { PageSkeleton } from '../components/PageSkeleton'
 import { LoadError } from '../components/LoadError'
 import { useUrlParams } from '../lib/urlParams'
+import { useCanonicalParams } from '../lib/canonicalParams'
 
 export function PendingPage() {
   const { user } = useAuth()
@@ -21,6 +22,8 @@ export function PendingPage() {
   const [params, updateParams] = useUrlParams()
   const onlyMine = params.get('all') !== '1'
   const setOnlyMine = (on: boolean) => updateParams({ all: on ? null : '1' })
+  // `all` khác `1` (link gõ tay) hiểu là "chỉ của tôi" — bỏ khỏi URL cho khớp.
+  useCanonicalParams({ all: onlyMine ? null : '1' })
 
   const matches = useMemo(() => {
     const keep = (userId: string) => !onlyMine || userId === user?.id

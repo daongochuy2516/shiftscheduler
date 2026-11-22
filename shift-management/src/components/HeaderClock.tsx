@@ -88,7 +88,9 @@ export function HeaderClock() {
           selected={selected}
           onPickDay={(key) => {
             setOpen(false)
-            navigate(key === toDateKey(new Date()) ? '/' : `/?date=${key}`)
+            // Luôn ghi ngày, kể cả hôm nay: link chép ra hôm sau vẫn mở đúng
+            // ngày đã chọn chứ không trôi sang "hôm nay" của người mở.
+            navigate(`/?date=${key}`)
           }}
         />
       )}

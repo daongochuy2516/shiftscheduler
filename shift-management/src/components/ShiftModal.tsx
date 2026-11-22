@@ -54,28 +54,11 @@ import {
 /** `key` is a local-only React key; new rows have no database id yet. */
 type Row = EditorRow
 
-type EditorMode = 'simple' | 'advanced'
-
-const MODE_STORAGE_KEY = 'scheduler.shiftEditorMode'
-
-/** Mỗi người nhớ chế độ mình hay dùng; không đọc được thì mặc định Đơn giản. */
-function readMode(): EditorMode {
-  try {
-    return localStorage.getItem(MODE_STORAGE_KEY) === 'advanced'
-      ? 'advanced'
-      : 'simple'
-  } catch {
-    return 'simple'
-  }
-}
-
-function writeMode(mode: EditorMode) {
-  try {
-    localStorage.setItem(MODE_STORAGE_KEY, mode)
-  } catch {
-    // Trình duyệt chặn lưu trữ: lần sau về mặc định, không sao.
-  }
-}
+/**
+ * Chế độ Đơn giản / Nâng cao do ShiftEditorProvider giữ (nằm trên URL ở
+ * `shiftView`, nhớ thêm ở localStorage), form chỉ nhận và báo đổi.
+ */
+export type EditorMode = 'simple' | 'advanced'
 
 let rowCounter = 0
 function nextKey() {
@@ -131,6 +114,8 @@ export function ShiftModal({
   shift,
   defaultDate,
   highlightAssignmentId,
+  mode,
+  onModeChange,
   onClose,
 }: {
   /** null = create mode */
@@ -138,6 +123,9 @@ export function ShiftModal({
   /** yyyy-MM-dd used when creating */
   defaultDate: string
   highlightAssignmentId?: UUID | null
+  /** Chỉ có nghĩa khi sửa ca đã có. */
+  mode: EditorMode
+  onModeChange: (mode: EditorMode) => void
   onClose: () => void
 }) {
   const {
@@ -157,11 +145,9 @@ export function ShiftModal({
    * Chỉ ca đã có mới có hai chế độ. Đơn giản lo phần của chính mình;
    * Nâng cao là form đầy đủ. Cả hai sửa chung `form` + `rows` bên dưới.
    */
-  const [mode, setModeState] = useState<EditorMode>(readMode)
   const simple = isEdit && mode === 'simple'
   function setMode(next: EditorMode) {
-    setModeState(next)
-    writeMode(next)
+    onModeChange(next)
     setConfirmingDelete(false)
   }
   /**

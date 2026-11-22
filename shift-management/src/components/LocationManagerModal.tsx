@@ -84,8 +84,21 @@ function parseOrder(value: string): number | null {
  * mới là chỗ chặn thật). Mỗi lần bấm Lưu / tích Hiện / Xoá là đúng một lần
  * ghi một nơi trực, để nhật ký ra đúng một dòng mỗi thao tác. Vì vậy thứ tự
  * là ô số chứ không có nút lên / xuống: đổi chỗ hai nơi là hai lần ghi.
+ *
+ * Đang xem danh sách hay form của nơi nào nằm trên URL (`item=<id>` /
+ * `item=new`, AppLayout đọc rồi truyền vào) để copy link là mở đúng chỗ đó;
+ * chữ gõ dở trong form vẫn là state cục bộ.
  */
-export function LocationManagerModal({ onClose }: { onClose: () => void }) {
+export function LocationManagerModal({
+  item,
+  onItemChange,
+  onClose,
+}: {
+  /** `null` = danh sách, `'new'` = form tạo, còn lại là id nơi trực đang sửa. */
+  item: string | null
+  onItemChange: (item: string | null) => void
+  onClose: () => void
+}) {
   const { t } = useI18n()
   const {
     locations,
@@ -95,10 +108,32 @@ export function LocationManagerModal({ onClose }: { onClose: () => void }) {
     deleteLocation,
   } = useSchedule()
   const notify = useNotify()
-  const [draft, setDraft] = useState<Draft | null>(null)
+  const [rawDraft, setDraft] = useState<Draft | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState<UUID | null>(null)
   const [toggling, setToggling] = useState<UUID | null>(null)
+  /** `item` mà `rawDraft` được dựng cho — URL đổi sang mục khác thì dựng lại. */
+  const [draftFor, setDraftFor] = useState<string | null>(null)
+  if (item !== draftFor) {
+    if (item === null) {
+      setDraftFor(null)
+      setDraft(null)
+    } else if (item === 'new') {
+      setDraftFor(item)
+      setConfirmingDelete(null)
+      setDraft(emptyDraft(locations))
+    } else {
+      const source = locations.find((l) => l.id === item)
+      // Chưa thấy id (danh sách còn đang tải): chờ. Id lạ hẳn thì AppLayout
+      // bỏ khỏi URL khi đã tải xong.
+      if (source) {
+        setDraftFor(item)
+        setConfirmingDelete(null)
+        setDraft(toDraft(source))
+      }
+    }
+  }
+  const draft = item !== null && draftFor === item ? rawDraft : null
 
   const takenNames = useMemo(
     () =>
@@ -161,7 +196,7 @@ export function LocationManagerModal({ onClose }: { onClose: () => void }) {
         await createLocation(payload)
         notify.success('notif.loc.created', params)
       }
-      setDraft(null)
+      onItemChange(null)
     } catch (err) {
       notify.error('notif.loc.saveFailed', err, params)
     } finally {
@@ -228,7 +263,7 @@ export function LocationManagerModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               className={`${footerButton} text-slate-700 hover:bg-slate-200`}
-              onClick={() => setDraft(null)}
+              onClick={() => onItemChange(null)}
               disabled={saving}
             >
               {t('common.cancel')}
@@ -248,10 +283,7 @@ export function LocationManagerModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 className={`${footerButton} mr-auto inline-flex items-center gap-1.5 border border-slate-300 bg-white px-2.5 text-slate-700 shadow-xs hover:bg-slate-50`}
-                onClick={() => {
-                  setConfirmingDelete(null)
-                  setDraft(emptyDraft(locations))
-                }}
+                onClick={() => onItemChange('new')}
               >
                 <Plus className="h-4 w-4" />
                 {t('loc.add')}
@@ -408,7 +440,7 @@ export function LocationManagerModal({ onClose }: { onClose: () => void }) {
         // ---- chưa có nơi nào ----
         <button
           type="button"
-          onClick={() => setDraft(emptyDraft(locations))}
+          onClick={() => onItemChange('new')}
           className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 px-4 py-10 text-sm text-slate-500 transition hover:border-indigo-400 hover:bg-indigo-50/40 hover:text-indigo-700"
         >
           <MapPinPlus className="h-5 w-5" />
@@ -466,10 +498,7 @@ export function LocationManagerModal({ onClose }: { onClose: () => void }) {
                       </label>
                       <button
                         type="button"
-                        onClick={() => {
-                          setConfirmingDelete(null)
-                          setDraft(toDraft(location))
-                        }}
+                        onClick={() => onItemChange(location.id)}
                         aria-label={t('common.edit')}
                         data-tooltip={t('common.edit')}
                         className={`${iconButton} hover:bg-slate-100 hover:text-slate-700`}

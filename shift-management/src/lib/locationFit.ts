@@ -17,6 +17,41 @@ const DOT_PX = 8
 /** Đo bằng canvas có thể lệch vài phần px so với DOM. */
 const SAFETY_PX = 2
 
+/** Bề rộng một chip size "xs" có nhãn `label`. */
+export function chipWidth(label: string): number {
+  return textWidth(label, 10, 500) + CHIP_PAD_PX
+}
+
+/** Chip "xs" cao 14px (`py-0.5` + chữ 10px `leading-none`), dòng cách 2px. */
+export const CHIP_LINE_PX = 14
+export const CHIP_ROW_GAP_PX = 2
+
+/**
+ * Số dòng cần để xếp các chip (`flex-wrap`, `gap-x-1`) trong bề rộng
+ * `innerPx`. `null` = có chip rộng hơn cả khối (xuống dòng cũng không vừa).
+ */
+export function chipLines(labels: readonly string[], innerPx: number): number | null {
+  const avail = innerPx - SAFETY_PX
+  let lines = 0
+  let used = 0
+  for (const label of labels) {
+    const w = chipWidth(label)
+    if (w > avail) return null
+    if (lines === 0 || used + GAP_PX + w > avail) {
+      lines += 1
+      used = w
+    } else {
+      used += GAP_PX + w
+    }
+  }
+  return lines
+}
+
+/** Chiều cao của `lines` dòng chip. */
+export function chipBlockHeight(lines: number): number {
+  return lines <= 0 ? 0 : lines * CHIP_LINE_PX + (lines - 1) * CHIP_ROW_GAP_PX
+}
+
 /**
  * Chọn cách hiện nhãn nơi trực vừa một khối ca có hai dòng (tên ca, giờ):
  * tên đủ → tên tắt → chấm màu; mỗi mức thử dòng giờ trước rồi dòng tên ca

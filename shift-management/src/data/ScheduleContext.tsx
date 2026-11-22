@@ -24,7 +24,7 @@ import type {
   TemplateInput,
   UUID,
 } from '../types'
-import { backend } from './index'
+import { backend, isRecordId } from './index'
 import { sortLocations } from '../lib/locations'
 import { isListed } from '../lib/profiles'
 import {
@@ -72,6 +72,12 @@ interface ScheduleContextValue {
    * ký), và form cần đúng danh sách người hiện tại chứ không phải bản cũ.
    */
   fetchShift: (id: UUID) => Promise<ShiftWithAssignments | null>
+  /**
+   * Ca theo id nếu đã nằm sẵn trong bộ đệm (một màn hình nào đó vừa tải),
+   * không hỏi mạng. Mở form từ link: có sẵn thì hiện ngay, không thì
+   * `fetchShift`.
+   */
+  cachedShift: (id: UUID) => ShiftWithAssignments | null
   /**
    * Tăng mỗi lần dữ liệu đổi (mình lưu, hoặc Realtime báo người khác vừa
    * sửa). Thứ gì tự hỏi backend ngoài bộ đệm ca thì dựa vào số này để biết
@@ -299,9 +305,14 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
   )
   const fetchShift = useCallback(
     async (id: UUID) =>
-      (await backend.listShifts({ kind: 'shift', shiftId: id }))[0] ?? null,
+      // Id sai dạng (link gõ tay) thì coi như không có ca, đừng để Supabase
+      // trả lỗi cú pháp uuid.
+      isRecordId(id)
+        ? ((await backend.listShifts({ kind: 'shift', shiftId: id }))[0] ?? null)
+        : null,
     [],
   )
+  const cachedShift = useCallback((id: UUID) => store.findShift(id), [store])
 
   const profilesById = useMemo(
     () => new Map(profiles.map((p) => [p.id, p])),
@@ -329,6 +340,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       refresh,
       shiftDateBounds,
       fetchShift,
+      cachedShift,
       dataVersion,
       createShift,
       updateShift,
@@ -359,6 +371,7 @@ export function ScheduleProvider({ children }: { children: ReactNode }) {
       refresh,
       shiftDateBounds,
       fetchShift,
+      cachedShift,
       dataVersion,
       createShift,
       updateShift,

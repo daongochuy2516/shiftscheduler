@@ -1,4 +1,11 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   BookOpen,
   ChevronDown,
@@ -12,7 +19,8 @@ import { useI18n } from '../i18n/I18nContext'
 import { HELP, type HelpBlock, type HelpSection } from '../help/content'
 import { TOURS, TOUR_ORDER, stepsFor, type TourId } from '../help/tours'
 import { useTour } from '../help/TourProvider'
-import { useUrlText } from '../lib/urlParams'
+import { useUrlParams, useUrlText } from '../lib/urlParams'
+import { useCanonicalParams } from '../lib/canonicalParams'
 import { uiIsAdmin } from '../lib/uiBypass'
 
 /** Bỏ dấu, chữ thường — để tìm không dấu vẫn ra. */
@@ -81,6 +89,7 @@ export function HelpPage() {
   // Chữ tìm nằm trên URL (`?q=`) như bộ lọc các trang khác: F5 hay gửi link
   // vẫn ra đúng các mục đang lọc.
   const [query, setQuery] = useUrlText('q')
+  const [params, updateParams] = useUrlParams()
 
   const visible = useMemo(
     () =>
@@ -98,7 +107,38 @@ export function HelpPage() {
     })
   }, [sections, query])
 
+  // Mục đang đọc nằm trên URL (`?section=<id>`): bấm mục lục (cả khi đang
+  // lọc bằng ô tìm) thì ghi lại, mở link thì cuộn tới đúng mục đó. Mục không
+  // có (id sai, mục của admin với người thường, bị ô tìm lọc mất) thì gỡ.
+  const sectionParam = params.get('section')
+  const section =
+    sectionParam &&
+    (pinned.some((s) => s.id === sectionParam) ||
+      shown.some((s) => s.id === sectionParam))
+      ? sectionParam
+      : null
+  useCanonicalParams({ section })
+
+  // Mục đã cuộn tới gần nhất: URL đổi từ nơi khác (mở link, Back) thì cuộn,
+  // còn URL do chính `jump` ghi thì đã cuộn rồi.
+  const scrolledTo = useRef<string | null>(null)
+  useEffect(() => {
+    if (!section || section === scrolledTo.current) return
+    const first = scrolledTo.current === null
+    // Chờ một khung hình để bố cục xong. Ghi nhớ trong callback chứ không
+    // trước đó: StrictMode chạy effect hai lần, lần đầu bị huỷ ở cleanup.
+    const id = requestAnimationFrame(() => {
+      scrolledTo.current = section
+      document
+        .getElementById(`help-${section}`)
+        ?.scrollIntoView({ behavior: first ? 'auto' : 'smooth', block: 'start' })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [section])
+
   function jump(id: string) {
+    scrolledTo.current = id
+    updateParams({ section: id })
     document
       .getElementById(`help-${id}`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })

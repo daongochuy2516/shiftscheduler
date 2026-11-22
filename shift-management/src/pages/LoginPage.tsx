@@ -10,6 +10,8 @@ import { MOCK_PROFILES } from '../data/mockData'
 import { useI18n } from '../i18n/I18nContext'
 import type { Lang } from '../i18n/translations'
 import { APP_NAME } from '../lib/brand'
+import { useUrlParams } from '../lib/urlParams'
+import { useCanonicalParams } from '../lib/canonicalParams'
 
 const LANGS: { id: Lang; label: string }[] = [
   { id: 'vi', label: 'Tiếng Việt' },
@@ -37,7 +39,15 @@ export function LoginPage() {
   )
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [showForgot, setShowForgot] = useState(false)
+  // Hộp "Quên mật khẩu" nằm trên URL (`?forgot=1`) để gửi link được.
+  // `update` thay lịch sử mà giữ nguyên `location.state`, nên trang cần quay
+  // lại sau khi đăng nhập (nằm trong state đó) không mất.
+  const [params, updateParams] = useUrlParams()
+  const showForgot = params.get('forgot') === '1'
+  const setShowForgot = (open: boolean) =>
+    updateParams({ forgot: open ? '1' : null })
+  // Giá trị lạ (`forgot=0`, `forgot=yes`) thì gỡ cho URL khớp màn hình.
+  useCanonicalParams({ forgot: showForgot ? '1' : null })
 
   if (loading) {
     return (

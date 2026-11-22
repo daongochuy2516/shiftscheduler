@@ -117,8 +117,27 @@ const vi: HelpSection[] = [
           '**Ngày | Tuần | Tháng** để đổi cách xem; ‹ › để lùi / tới.',
           'Khối **viền liền** = đã điểm danh. **Viền nét đứt** = chưa điểm danh.',
           '**Vạch đỏ** là giờ hiện tại.',
-          'Tích **Chỉ nhân viên có ca** để ẩn hàng trống.',
+          'Tích **Chỉ nhân viên có ca** để ẩn hàng trống (chế độ Ngày, và Tuần trên điện thoại).',
         ],
+      },
+      {
+        type: 'p',
+        text: '**Chế độ Tuần trên máy tính** là lịch như Google Calendar:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Mỗi ngày một cột**, giờ chạy dọc bên trái. Mỗi khối là một người, đặt theo **giờ riêng** của người đó.',
+          'Trong khối: **tên người**, giờ, nhãn **nơi trực** (thiếu chỗ thì thu gọn thành tên tắt / chấm màu), tên ca nếu khối đủ cao. Rê chuột để xem đủ.',
+          '**Màu khối = màu avatar** của người đó. Nhiều người trùng giờ thì các khối **đứng cạnh nhau**.',
+          'Bấm **khối** để mở ca; bấm **tiêu đề ngày** để sang chế độ Ngày.',
+          '**Bộ chọn khung giờ** dùng được cả ở đây: *Vừa theo tuần* co theo mọi ca trong tuần; *Cả ngày* để thấy ca nằm ngoài khung.',
+          'Điện thoại vẫn là bảng **người × ngày** như cũ.',
+        ],
+      },
+      {
+        type: 'note',
+        text: '**Tổng kết**, chế độ Tuần trên máy tính cũng là lịch như vậy, nhưng chỉ có các lượt đã điểm danh và đã hết giờ; dưới mỗi ngày là tổng giờ ngày đó, dưới lịch là **bảng tổng giờ từng người** trong tuần. Bấm một khối để mở ca đó, như ở Lịch.',
       },
     ],
   },
@@ -234,6 +253,27 @@ const vi: HelpSection[] = [
           ['Tên một người: `mai`', 'Ca của người đó'],
           ['`08:00 + 4h30m`', '`12:30`'],
           ['`17:30 - 08:15`', '`9h 15m`'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'links',
+    title: 'Gửi link màn hình',
+    summary: 'Copy đường dẫn là người nhận thấy đúng thứ bạn đang xem.',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Đường dẫn trên thanh địa chỉ luôn khớp với màn hình: copy rồi gửi là người nhận mở ra **đúng trang, đúng ngày, đúng bộ lọc**, và cả **form ca đang mở** (đúng ca, đúng người đang tô sáng, đúng Đơn giản / Nâng cao).',
+      },
+      {
+        type: 'list',
+        items: [
+          'Trên **Lịch** và **Tổng kết** link luôn có ngày cụ thể, kể cả hôm nay — mai mới mở vẫn ra đúng ngày bạn đã xem.',
+          'Cũng gửi được: hộp **nhận ca mẫu** (chỉ ca mẫu; ngày và nơi trực người nhận tự chọn), các dòng **Nhật ký** đang mở Chi tiết, một mục của trang **Hướng dẫn** (bấm mục đó trong mục lục rồi copy link), hộp **Quên mật khẩu**.',
+          'Người nhận chưa đăng nhập thì đăng nhập xong được đưa thẳng tới đúng màn hình đó.',
+          'Đang mở form ca hay hộp nhận ca mẫu thì nút **Back** của trình duyệt (vuốt lùi trên điện thoại) là **đóng hộp đó**, không rời trang.',
+          'Link tới ca đã bị xoá: app báo *Không mở được ca* và mở trang như bình thường.',
         ],
       },
     ],
@@ -397,8 +437,27 @@ const en: HelpSection[] = [
           '**Day | Week | Month** to switch views; ‹ › to go back / forward.',
           'A **solid border** = checked in. A **dashed border** = not checked in yet.',
           'The **red line** is the current time.',
-          'Tick **Only staff with shifts** to hide empty rows.',
+          'Tick **Only staff with shifts** to hide empty rows (Day view, and Week on a phone).',
         ],
+      },
+      {
+        type: 'p',
+        text: '**Week view on a computer** is a calendar, like Google Calendar:',
+      },
+      {
+        type: 'list',
+        items: [
+          '**One column per day**, hours running down the left. Each block is one person, placed at **their own hours**.',
+          'Inside a block: the **person’s name**, the hours, **location** chips (shrinking to short names / colour dots when space is tight), and the shift title when the block is tall enough. Hover to see everything.',
+          '**Block colour = that person’s avatar colour**. People working at the same time sit **side by side**.',
+          'Click a **block** to open the shift; click a **day header** to go to the Day view.',
+          'The **hour scale** works here too: *Fit to week* fits every shift in the week; *Full day* shows shifts outside the hours.',
+          'Phones keep the **person × day** table as before.',
+        ],
+      },
+      {
+        type: 'note',
+        text: 'In **Summary**, the Week view on a computer is the same kind of calendar, but with only checked-in, finished assignments; each day’s total hours sit under its header, and a **per-person hours table** for the week is below the calendar. Click a block to open that shift, as on the Schedule.',
       },
     ],
   },
@@ -514,6 +573,27 @@ const en: HelpSection[] = [
           ['A name: `mai`', "That person's shifts"],
           ['`08:00 + 4h30m`', '`12:30`'],
           ['`17:30 - 08:15`', '`9h 15m`'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'links',
+    title: 'Sharing a link',
+    summary: 'Copy the address and the other person sees exactly what you see.',
+    blocks: [
+      {
+        type: 'p',
+        text: 'The address in the address bar always matches the screen: copy it and send it, and the other person opens **the same page, date and filters** — including the **shift form you have open** (same shift, same highlighted person, same Simple / Advanced).',
+      },
+      {
+        type: 'list',
+        items: [
+          'On the **Schedule** and **Summary** the link always carries a specific date, today included — opened tomorrow, it still shows the day you were looking at.',
+          'You can also share: the **claim a template** dialog (the template only; they pick their own days and locations), the **Activity** rows you have expanded, one section of this **Help** page (click it in the contents, then copy the link), and the **Forgot password** box.',
+          'If they are not signed in yet, they land on that exact screen right after signing in.',
+          'With a shift form or the claim dialog open, the browser’s **Back** button (swipe back on a phone) **closes it** instead of leaving the page.',
+          'A link to a deleted shift shows *Could not open the shift* and opens the page as usual.',
         ],
       },
     ],

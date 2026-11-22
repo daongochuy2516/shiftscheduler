@@ -5,7 +5,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isValid,
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
@@ -25,8 +24,19 @@ import {
 } from '../data/ScheduleContext'
 import { useI18n } from '../i18n/I18nContext'
 import { useShiftEditor } from '../components/ShiftEditorProvider'
-import { Timeline, type HourRange } from '../components/Timeline'
+import { Timeline } from '../components/Timeline'
 import { WeekGrid } from '../components/WeekGrid'
+import {
+  WeekCalendar,
+  type WeekCalendarItem,
+} from '../components/WeekCalendar'
+import {
+  hourRangeForScale,
+  type HourRange,
+  type HourScale,
+  type TimeSpan,
+} from '../lib/weekLayout'
+import type { ShiftWithAssignments } from '../types'
 import { MonthGrid } from '../components/MonthGrid'
 import { GridSkeleton, PageSkeleton } from '../components/PageSkeleton'
 import { useShiftColor } from '../data/useShiftColor'
@@ -34,11 +44,17 @@ import { formatRange, fromDateKey, toDateKey, toMinutes } from '../lib/time'
 import type { TranslationKey } from '../i18n/translations'
 import { Select } from '../components/Select'
 import { useUrlParams } from '../lib/urlParams'
+import { useCanonicalParams, validDateParam } from '../lib/canonicalParams'
 import { Checkbox } from '../components/Checkbox'
 import { LoadError } from '../components/LoadError'
 
 type ViewMode = 'day' | 'week' | 'month'
-type ScaleId = 'fit' | 'work' | 'business' | 'full'
+type ScaleId = HourScale
+
+/** Một lượt phân công trên lịch tuần (desktop), kèm ca để mở form sửa. */
+interface WeekItem extends WeekCalendarItem {
+  shift: ShiftWithAssignments
+}
 
 const VIEWS: { id: ViewMode; label: TranslationKey }[] = [
   { id: 'day', label: 'view.day' },
@@ -85,7 +101,7 @@ export function TimelinePage() {
   // Ngày, chế độ xem, thang giờ, "chỉ nhân viên có ca" đều nằm trên URL:
   // gửi link là người khác mở ra đúng như mình đang xem.
   const [params, updateParams] = useUrlParams()
-  const { profiles, loading, error } = useSchedule()
+  const { profiles, profilesById, loading, error } = useSchedule()
   const shiftColor = useShiftColor()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
@@ -105,21 +121,30 @@ export function TimelinePage() {
     return raw === 'week' || raw === 'month' ? raw : 'day'
   })()
 
-  const date = useMemo(() => {
-    const raw = params.get('date')
-    if (raw) {
-      const parsed = fromDateKey(raw)
-      if (isValid(parsed)) return parsed
-    }
-    return new Date()
-  }, [params])
+  // Phụ thuộc vào chuỗi chứ không vào cả `params`: mở form ca hay đổi tham số
+  // khác không được làm ra một Date mới.
+  const dateRaw = validDateParam(params.get('date'))
+  const date = useMemo(
+    () => (dateRaw ? fromDateKey(dateRaw) : new Date()),
+    [dateRaw],
+  )
 
   const dateKey = toDateKey(date)
+
+  // Ngày LUÔN nằm trên URL, kể cả khi là hôm nay (ngoại lệ của luật "mặc định
+  // thì không ghi"): link "hôm nay" gửi đi rồi mở vào hôm sau vẫn phải ra
+  // đúng ngày người gửi đã xem. Giá trị lạ thì ghi lại đúng thứ đang hiện.
+  useCanonicalParams({
+    date: dateKey,
+    view: view === 'day' ? null : view,
+    scale: scale === 'fit' ? null : scale,
+    working: hideEmptyStaff ? '1' : null,
+  })
 
   /** Writes date + view back to the URL, keeping both linkable. */
   function navigate(next: Date, nextView: ViewMode = view) {
     updateParams({
-      date: toDateKey(next) !== toDateKey(new Date()) ? toDateKey(next) : null,
+      date: toDateKey(next),
       view: nextView !== 'day' ? nextView : null,
     })
   }
@@ -165,26 +190,48 @@ export function TimelinePage() {
 
   /** Hour window for the day view's horizontal scale. */
   const range = useMemo<HourRange>(() => {
-    if (scale === 'full') return { startHour: 0, endHour: 24 }
-    if (scale === 'work') return { startHour: 6, endHour: 22 }
-    if (scale === 'business') return { startHour: 8, endHour: 20 }
-
-    const times = dayShifts.flatMap((s) =>
-      s.assignments.flatMap((a) => [
-        toMinutes(a.start_time),
-        toMinutes(a.end_time),
-      ]),
+    const spans: TimeSpan[] = dayShifts.flatMap((s) =>
+      s.assignments.map((a) => ({ start: a.start_time, end: a.end_time })),
     )
-    if (times.length === 0) return { startHour: 8, endHour: 20 }
-
-    let startHour = Math.max(0, Math.floor(Math.min(...times) / 60) - 1)
-    let endHour = Math.min(24, Math.ceil(Math.max(...times) / 60) + 1)
-    if (endHour - startHour < 6) {
-      endHour = Math.min(24, startHour + 6)
-      startHour = Math.max(0, endHour - 6)
-    }
-    return { startHour, endHour }
+    return hourRangeForScale(scale, spans)
   }, [scale, dayShifts])
+
+  // ---- desktop week calendar ---------------------------------------------
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart],
+  )
+
+  /** Mỗi lượt phân công trong tuần là một khối, đặt theo giờ của chính lượt. */
+  const weekItems = useMemo<WeekItem[]>(
+    () =>
+      view !== 'week'
+        ? []
+        : visibleShifts.flatMap((shift) =>
+            shift.assignments.map((a) => ({
+              key: a.id,
+              date: shift.date,
+              start: a.start_time,
+              end: a.end_time,
+              personId: a.user_id,
+              // Người đang ẩn (displayed = false) vẫn có trong profilesById.
+              personName:
+                profilesById.get(a.user_id)?.display_name ?? t('common.unknownStaff'),
+              title: shift.title,
+              locationIds: a.location_ids,
+              pending: a.status === 'pending',
+              shift,
+            })),
+          ),
+    [view, visibleShifts, profilesById, t],
+  )
+
+  // "Vừa theo" ở chế độ Tuần tính trên mọi lượt của cả tuần, để bảy cột
+  // dùng chung một trục giờ.
+  const weekRange = useMemo<HourRange>(
+    () => hourRangeForScale(scale, weekItems),
+    [scale, weekItems],
+  )
 
   // ---- header labels ------------------------------------------------------
   const step = (direction: 1 | -1) => navigate(stepDate(view, date, direction))
@@ -319,7 +366,10 @@ export function TimelinePage() {
             </button>
           )}
 
-          {view !== 'month' && (
+          {/* Desktop chế độ Tuần là lịch cột theo ngày, không có hàng theo
+              người nên ô này chỉ còn ở chế độ Ngày (mobile vẫn có trong sheet
+              Bộ lọc vì mobile vẫn dùng lưới tuần theo người). */}
+          {view === 'day' && (
             <label className="hidden items-center gap-1.5 text-sm text-slate-600 sm:flex">
               <Checkbox
                 className="h-4 w-4"
@@ -330,20 +380,29 @@ export function TimelinePage() {
             </label>
           )}
 
+          {view !== 'month' && (
+            // Bọc ngoài để ẩn trên mobile: ô tự đặt `flex`, gắn `hidden`
+            // thẳng vào ô thì hai lớp display giành nhau.
+            <div className="hidden sm:block">
+              <Select<ScaleId>
+                aria-label={t('timeline.hourScale')}
+                value={scale}
+                onChange={setScale}
+                options={SCALES.map((s) => ({
+                  value: s.id,
+                  label: t(
+                    s.id === 'fit' && view === 'week'
+                      ? 'timeline.scale.fitWeek'
+                      : s.label,
+                  ),
+                }))}
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-xs outline-none transition hover:bg-slate-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+          )}
+
           {view === 'day' && (
             <>
-              {/* Bọc ngoài để ẩn trên mobile: ô tự đặt `flex`, gắn `hidden`
-                  thẳng vào ô thì hai lớp display giành nhau. */}
-              <div className="hidden sm:block">
-                <Select<ScaleId>
-                  aria-label={t('timeline.hourScale')}
-                  value={scale}
-                  onChange={setScale}
-                  options={SCALES.map((s) => ({ value: s.id, label: t(s.label) }))}
-                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-xs outline-none transition hover:bg-slate-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-
               {/* Trên mobile việc này do nút nổi đảm nhiệm, và nút nổi cũng tạo
                   theo đúng ngày đang xem. */}
               <button
@@ -421,17 +480,32 @@ export function TimelinePage() {
       )}
 
       {shiftsState.loaded && view === 'week' && (
-        <WeekGrid
-          weekStart={weekStart}
-          shifts={visibleShifts}
-          profiles={profiles}
-          currentUserId={user?.id ?? null}
-          hideEmptyStaff={hideEmptyStaff}
-          onSelectAssignment={(shift, assignmentId) =>
-            openEdit(shift, assignmentId)
-          }
-          onSelectDay={(day) => navigate(day, 'day')}
-        />
+        <>
+          {/* Mobile giữ lưới theo người; từ `sm` là lịch cột theo ngày. */}
+          <div className="sm:hidden">
+            <WeekGrid
+              weekStart={weekStart}
+              shifts={visibleShifts}
+              profiles={profiles}
+              currentUserId={user?.id ?? null}
+              hideEmptyStaff={hideEmptyStaff}
+              onSelectAssignment={(shift, assignmentId) =>
+                openEdit(shift, assignmentId)
+              }
+              onSelectDay={(day) => navigate(day, 'day')}
+            />
+          </div>
+          <div className="hidden sm:block">
+            <WeekCalendar<WeekItem>
+              days={weekDays}
+              items={weekItems}
+              range={weekRange}
+              onSelectItem={(item) => openEdit(item.shift, item.key)}
+              onSelectDay={(day) => navigate(day, 'day')}
+              emptyMessage={t('timeline.nobodyScheduledWeek')}
+            />
+          </div>
+        </>
       )}
 
       {shiftsState.loaded && view === 'month' && (

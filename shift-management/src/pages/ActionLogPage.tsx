@@ -29,7 +29,12 @@ import { LogSimpleView } from '../components/LogSimpleView'
 import { useNotify } from '../notifications/NotificationContext'
 import { effectiveAction, isCheckInAction, shiftTarget } from '../lib/actionLog'
 import { isNetworkError } from '../lib/network'
-import { dateParam, useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
+import { useUrlParams, useUrlText, type UrlValue } from '../lib/urlParams'
+import {
+  orderedRange,
+  useCanonicalParams,
+  validDateParam,
+} from '../lib/canonicalParams'
 import { LoadError } from '../components/LoadError'
 
 const PAGE_SIZE = 50
@@ -83,9 +88,10 @@ function actionTone(action: string): string {
 }
 
 /**
- * Kiểu xem phần Chi tiết. Là thói quen đọc của từng người (như Đơn giản /
- * Nâng cao của form ca), không phải bộ lọc, nên nhớ trên máy chứ không ghi
- * lên URL. Không đọc được thì mặc định Đơn giản.
+ * Kiểu xem phần Chi tiết. Trên URL là `detail=advanced` (Đơn giản là mặc
+ * định, không ghi) để link gửi đi mở ra đúng kiểu đang xem; máy vẫn nhớ
+ * lựa chọn gần nhất để lần đầu mở một dòng (URL chưa có dòng nào mở) dùng
+ * lại thói quen đó. URL có thì URL thắng. Không đọc được thì Đơn giản.
  */
 type DetailMode = 'simple' | 'advanced'
 const DETAIL_MODE_KEY = 'scheduler.logDetailMode'
@@ -112,36 +118,86 @@ const labelClass = 'block text-xs font-medium text-slate-600 mb-1'
 
 export function ActionLogPage() {
   const { t } = useI18n()
-  const { profiles } = useSchedule()
+  const {
+    profiles,
+    loading: scheduleLoading,
+    error: scheduleError,
+  } = useSchedule()
 
   // Bộ lọc và số trang nằm trên URL — copy link gửi người khác là ra đúng
   // những dòng mình đang xem: `from` `to` `staff` (lặp lại) `action`
-  // `entity` `q` `page` (từ 1, bỏ trống = trang 1).
+  // `entity` `q` `page` (từ 1, bỏ trống = trang 1), cùng các dòng đang mở
+  // Chi tiết `log` (lặp lại) và kiểu xem `detail`.
   const [params, updateParams] = useUrlParams()
+  const { from: fromParam, to: toParam } = orderedRange(
+    validDateParam(params.get('from')),
+    validDateParam(params.get('to')),
+  )
+  const actionRaw = params.get('action')
+  const actionParam =
+    actionRaw && (ACTIONS as readonly string[]).includes(actionRaw) ? actionRaw : null
+  const entityRaw = params.get('entity')
+  const entityParam =
+    entityRaw && (ENTITY_TYPES as readonly string[]).includes(entityRaw)
+      ? entityRaw
+      : null
+  // Danh sách chọn người ở đây là mọi hồ sơ (cả người đang ẩn: nhật ký vẫn
+  // có việc họ làm), nên chỉ bỏ id không có trong `profiles`.
+  const rawStaff = params.getAll('staff')
+  const profilesReady = !scheduleLoading && !scheduleError
+  const staffIds = profilesReady
+    ? [...new Set(rawStaff)].filter((id) => profiles.some((p) => p.id === id))
+    : rawStaff
+  const staffParam = staffIds.join('\n')
+  const searchParam = params.get('q')
+  // Phụ thuộc vào từng giá trị chứ không vào cả `params`: mở một dòng Chi
+  // tiết hay mở form ca cũng đổi URL, và không được làm tải lại nhật ký.
   const filters = useMemo<ActionLogFilters>(
     () => ({
-      from: dateParam(params.get('from')),
-      to: dateParam(params.get('to')),
-      staffIds: params.getAll('staff'),
-      action: params.get('action'),
-      entityType: params.get('entity'),
-      search: params.get('q'),
+      from: fromParam,
+      to: toParam,
+      staffIds: staffParam ? staffParam.split('\n') : [],
+      action: actionParam,
+      entityType: entityParam,
+      search: searchParam,
     }),
-    [params],
+    [fromParam, toParam, staffParam, actionParam, entityParam, searchParam],
   )
-  const pageIndex = Math.max(0, Number(params.get('page') ?? 1) - 1 || 0)
+  // Chỉ số nguyên dương; "1.5", "0", "abc" đều là trang 1.
+  const pageRaw = params.get('page')
+  const pageNumber =
+    pageRaw && /^\d+$/.test(pageRaw) ? Math.max(1, Number(pageRaw)) : 1
+  const pageIndex = pageNumber - 1
   const setPageIndex = (index: number) =>
     updateParams({ page: index > 0 ? String(index + 1) : null })
   // Gõ tới đâu gọi API tới đó thì quá tốn: hook chờ ngừng gõ rồi mới ghi `q`
   // lên URL (và về trang 1).
   const [searchInput, setSearchInput] = useUrlText('q', PAGE_RESET)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  // Giữ ở trang chứ không ở từng dòng: đổi ở một dòng thì mọi dòng đang mở
-  // đổi theo.
-  const [detailMode, setDetailModeState] = useState<DetailMode>(readDetailMode)
+
+  // Các dòng đang mở Chi tiết và kiểu xem nằm trên URL. Kiểu xem giữ ở trang
+  // chứ không ở từng dòng: đổi ở một dòng thì mọi dòng đang mở đổi theo.
+  const openLogIds = params.getAll('log')
+  const detailMode: DetailMode =
+    params.get('detail') === 'advanced' ? 'advanced' : 'simple'
   function setDetailMode(mode: DetailMode) {
-    setDetailModeState(mode)
     writeDetailMode(mode)
+    updateParams({ detail: mode === 'advanced' ? 'advanced' : null })
+  }
+  function toggleLog(id: UUID) {
+    if (openLogIds.includes(id)) {
+      const rest = openLogIds.filter((x) => x !== id)
+      // Không còn dòng nào mở thì kiểu xem cũng không còn gì để chỉ.
+      updateParams(rest.length ? { log: rest } : { log: null, detail: null })
+    } else if (openLogIds.length === 0) {
+      // Dòng đầu tiên được mở: lấy kiểu xem quen dùng trên máy này.
+      updateParams({
+        log: [id],
+        detail: readDetailMode() === 'advanced' ? 'advanced' : null,
+      })
+    } else {
+      updateParams({ log: [...openLogIds, id] })
+    }
   }
 
   // Điểm danh / Gỡ điểm danh không có trong dữ liệu (đều là "Đổi trạng
@@ -159,6 +215,60 @@ export function ActionLogPage() {
   )
 
   const { page, available, loading, error, reload } = useActionLogs(query)
+
+  // `page` / `error` của hook có thể còn là của bộ lọc trước (một nhịp vẽ
+  // ngay sau khi URL đổi, trước khi hook kịp bắt đầu tải). Ghi nhớ bộ lọc
+  // nào vừa tải xong để chỉ sửa URL theo kết quả của đúng bộ lọc đang xem.
+  const [prevLoading, setPrevLoading] = useState(loading)
+  const [settledQuery, setSettledQuery] = useState<ActionLogQuery | null>(null)
+  if (loading !== prevLoading) {
+    setPrevLoading(loading)
+    if (!loading) setSettledQuery(query)
+  }
+  const settled = !loading && settledQuery === query
+
+  const total = page?.total ?? 0
+  const pageRows = page?.rows ?? []
+  const rows = checkInFilter
+    ? pageRows.filter((row) => effectiveAction(row) === checkInFilter)
+    : pageRows
+  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
+
+  // ---- URL khớp với thứ đang hiện ----------------------------------------
+  // Trang vượt quá số trang: Supabase trả lỗi "range not satisfiable" (không
+  // kèm tổng), bản mẫu trả trang rỗng kèm tổng. Cả hai về trang hợp lệ.
+  const outOfRange =
+    settled &&
+    pageIndex > 0 &&
+    ((error !== null && /range not satisfiable/i.test(error)) ||
+      (error === null && page !== null && pageIndex > lastPage))
+  const canonicalPage = outOfRange
+    ? error !== null || lastPage === 0
+      ? null
+      : String(lastPage + 1)
+    : pageIndex > 0
+      ? String(pageNumber)
+      : null
+  // Dòng đang mở mà không còn trên trang (đổi trang, đổi bộ lọc, link cũ)
+  // hay không có gì để xem thì gỡ khỏi URL; chỉ quyết khi trang đã tải xong.
+  const shownLogIds = settled && error === null && page !== null
+    ? openLogIds.filter((id, i) =>
+        openLogIds.indexOf(id) === i &&
+        rows.some(
+          (row) => row.id === id && (row.old_data !== null || row.new_data !== null),
+        ),
+      )
+    : openLogIds
+  useCanonicalParams({
+    from: fromParam,
+    to: toParam,
+    action: actionParam,
+    entity: entityParam,
+    page: canonicalPage,
+    ...(profilesReady ? { staff: staffIds } : {}),
+    log: shownLogIds,
+    detail: shownLogIds.length > 0 && detailMode === 'advanced' ? 'advanced' : null,
+  })
 
   // Đổi bộ lọc mà giữ nguyên số trang sẽ cho ra một trang trống khó hiểu:
   // mọi lần đổi bộ lọc đều về trang 1.
@@ -209,14 +319,8 @@ export function ActionLogPage() {
     )
   }
 
-  const total = page?.total ?? 0
-  const pageRows = page?.rows ?? []
-  const rows = checkInFilter
-    ? pageRows.filter((row) => effectiveAction(row) === checkInFilter)
-    : pageRows
   const first = total === 0 ? 0 : pageIndex * PAGE_SIZE + 1
   const last = Math.min(total, (pageIndex + 1) * PAGE_SIZE)
-  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
 
   return (
     <div className="space-y-4">
@@ -393,6 +497,8 @@ export function ActionLogPage() {
               <LogRow
                 key={row.id}
                 row={row}
+                open={openLogIds.includes(row.id)}
+                onToggle={() => toggleLog(row.id)}
                 detailMode={detailMode}
                 onDetailModeChange={setDetailMode}
               />
@@ -456,15 +562,19 @@ export function ActionLogPage() {
 
 function LogRow({
   row,
+  open,
+  onToggle,
   detailMode,
   onDetailModeChange,
 }: {
   row: ActionLog
+  /** Đang mở Chi tiết — nằm trên URL (`log=<id>`), do trang giữ. */
+  open: boolean
+  onToggle: () => void
   detailMode: DetailMode
   onDetailModeChange: (mode: DetailMode) => void
 }) {
   const { t, dateLocale } = useI18n()
-  const [open, setOpen] = useState(false)
 
   const at = new Date(row.created_at)
   const actorName = row.actor_name ?? (row.actor_id ? t('log.unknownActor') : t('log.system'))
@@ -526,7 +636,7 @@ function LogRow({
             {hasDetails && (
               <button
                 type="button"
-                onClick={() => setOpen((v) => !v)}
+                onClick={onToggle}
                 aria-expanded={open}
                 className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:min-h-0 sm:py-1"
               >
@@ -605,6 +715,11 @@ function LogRow({
  * Mở form sửa của ca mà dòng nhật ký nói tới. Dòng chỉ giữ id, và ca có thể
  * đã đổi ngày hay bị xoá từ đó tới giờ, nên hỏi máy chủ lúc bấm thay vì
  * dựng lại ca từ ảnh chụp trong nhật ký.
+ *
+ * Tự hỏi trước rồi mới mở (thay vì `openEditById` để form tự tìm) để nút
+ * biết ca đã bị xoá mà đổi thành nhãn "Ca đã bị xoá". Bản vừa tải được đưa
+ * thẳng cho form nên không phải hỏi lại lần hai; URL vẫn là `shift=<id>`
+ * như mọi nơi khác.
  */
 function ShiftInfoButton({
   shiftId,
