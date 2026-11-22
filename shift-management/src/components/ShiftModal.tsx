@@ -211,6 +211,8 @@ export function ShiftModal({
   const [rows, setRows] = useState<Row[]>(() => toRows(shift))
   const [pristine] = useState(() => JSON.stringify({ form, rows }))
   const dirty = JSON.stringify({ form, rows }) !== pristine
+  /** Phần nhận ca đang điền dở trong chế độ Đơn giản (ShiftSimpleView giữ). */
+  const [joinDirty, setJoinDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const notify = useNotify()
@@ -506,6 +508,8 @@ export function ShiftModal({
           : t('shift.createSubtitle')
       }
       onClose={onClose}
+      // Đang lưu thì form tự đóng khi xong; đừng hỏi lại vì một bản sắp lưu.
+      dirty={(dirty || joinDirty) && !saving}
       footer={
         simple ? (
           // Hành động chính nằm trong thân form; chân form chỉ còn lưu phần
@@ -647,6 +651,7 @@ export function ShiftModal({
             onJoin={joinShift}
             onLeave={leaveShift}
             onCheckIn={(id) => void checkIn(id)}
+            onJoinDirtyChange={setJoinDirty}
           />
         )}
 

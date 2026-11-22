@@ -194,6 +194,7 @@ export function ShiftSimpleView({
   onJoin,
   onLeave,
   onCheckIn,
+  onJoinDirtyChange,
 }: {
   shift: ShiftWithAssignments
   rows: EditorRow[]
@@ -203,6 +204,11 @@ export function ShiftSimpleView({
   onJoin: (draft: JoinDraft) => void
   onLeave: (key: string) => void
   onCheckIn: (assignmentId: UUID) => void
+  /**
+   * Phần "nhận ca" đang điền dở (giờ / ghi chú / nơi trực khác mặc định) —
+   * nằm ở state riêng của view này nên phải báo lên để form chặn đóng nhầm.
+   */
+  onJoinDirtyChange: (dirty: boolean) => void
 }) {
   const { user } = useAuth()
   const { profilesById, locations, locationsAvailable, locationsLoaded } =
@@ -234,6 +240,17 @@ export function ShiftSimpleView({
     note: null,
     location_ids: [],
   })
+  const joinDirty =
+    !mine &&
+    (draft.start_time !== shiftStart ||
+      draft.end_time !== shiftEnd ||
+      !!draft.note?.trim() ||
+      draft.location_ids.length > 0)
+  useEffect(() => {
+    onJoinDirtyChange(joinDirty)
+    // Rời view (đổi sang Nâng cao) thì phần nháp này mất theo: hạ cờ.
+    return () => onJoinDirtyChange(false)
+  }, [joinDirty, onJoinDirtyChange])
   const [confirmingLeave, setConfirmingLeave] = useState(false)
   const [confirmingEarly, setConfirmingEarly] = useState(false)
 

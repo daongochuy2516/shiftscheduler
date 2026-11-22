@@ -62,6 +62,7 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       title={t('pwd.title')}
       subtitle={t('pwd.subtitle', { email: user?.email ?? '' })}
       onClose={onClose}
+      dirty={(current !== '' || next !== '' || confirm !== '') && !saving}
       width="max-w-md"
       footer={
         <>

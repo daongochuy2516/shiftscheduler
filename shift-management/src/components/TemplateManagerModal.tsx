@@ -72,24 +72,31 @@ export function TemplateManagerModal({
   const [rawDraft, setDraft] = useState<Draft | null>(null)
   /** `item` mà `rawDraft` được dựng cho — URL đổi sang mục khác thì dựng lại. */
   const [draftFor, setDraftFor] = useState<string | null>(null)
+  /** Bản gốc của form (JSON) lúc dựng, để biết có gì chưa lưu. */
+  const [pristine, setPristine] = useState<string | null>(null)
   if (item !== draftFor) {
     if (item === null) {
       setDraftFor(null)
       setDraft(null)
     } else if (item === 'new') {
+      const fresh = emptyDraft(templates)
       setDraftFor(item)
-      setDraft(emptyDraft(templates))
+      setDraft(fresh)
+      setPristine(JSON.stringify(fresh))
     } else {
       const source = templates.find((tpl) => tpl.id === item)
       // Chưa thấy id (danh sách còn đang tải): chờ. Id lạ hẳn thì AppLayout
       // bỏ khỏi URL khi đã tải xong.
       if (source) {
+        const fresh = toDraft(source)
         setDraftFor(item)
-        setDraft(toDraft(source))
+        setDraft(fresh)
+        setPristine(JSON.stringify(fresh))
       }
     }
   }
   const draft = item !== null && draftFor === item ? rawDraft : null
+  const dirty = draft !== null && JSON.stringify(draft) !== pristine
   const [saving, setSaving] = useState(false)
   const notify = useNotify()
   const [confirmingDelete, setConfirmingDelete] = useState<UUID | null>(null)
@@ -180,6 +187,7 @@ export function TemplateManagerModal({
       title={t('tpl.manage')}
       subtitle={t('tpl.sectionHint')}
       onClose={onClose}
+      dirty={dirty && !saving}
       width="max-w-2xl"
       footer={
         draft ? (

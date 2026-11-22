@@ -398,7 +398,9 @@ Nhân viên chỉ xoá được ca **đang trống**, hoặc ca **chỉ có chí
 
 ### Đóng form
 
-Bốn cách: nút **✕**, phím **Esc**, bấm ra vùng nền tối bên ngoài, hoặc nút **Back** của trình duyệt (vuốt lùi trên điện thoại). Thay đổi chưa lưu sẽ bị bỏ. Khi nhiều hộp thoại chồng lên nhau, mỗi lần Esc chỉ đóng hộp trên cùng.
+Bốn cách: nút **✕**, phím **Esc**, bấm ra vùng nền tối bên ngoài, hoặc nút **Back** của trình duyệt (vuốt lùi trên điện thoại). Khi nhiều hộp thoại chồng lên nhau, mỗi lần Esc chỉ đóng hộp trên cùng.
+
+**Có thay đổi chưa lưu** (form ca, nhận ca mẫu, quản lý ca mẫu / nơi trực, đổi mật khẩu): bấm nền tối **không đóng** nữa, chỉ hiện dòng đỏ *Có thay đổi chưa lưu*; **✕** / **Esc** lần đầu cũng chỉ hiện dòng đó (nút ✕ chuyển đỏ), bấm lần nữa trong khoảng 4 giây mới đóng và bỏ thay đổi. Nút **Huỷ** ở chân form và nút **Back** vẫn đóng ngay. App không lưu nháp: đã đóng là mất.
 
 ---
 
@@ -1002,8 +1004,8 @@ Giá trị mặc định không ghi lên URL (trừ `date` ở Lịch / Tổng k
 
 | Thao tác | Kết quả |
 | --- | --- |
-| `Esc` | Đóng form, ngăn thông báo, Quick Search hay bài hướng dẫn đang mở (nhiều hộp chồng nhau thì chỉ hộp trên cùng) |
-| Bấm nền tối ngoài form | Đóng form |
+| `Esc` | Đóng form, ngăn thông báo, Quick Search hay bài hướng dẫn đang mở (nhiều hộp chồng nhau thì chỉ hộp trên cùng). Form có thay đổi chưa lưu thì phải bấm hai lần |
+| Bấm nền tối ngoài form | Đóng form — trừ khi có thay đổi chưa lưu ([Đóng form](#đóng-form)) |
 | Back của trình duyệt / vuốt lùi | Đóng form ca, hộp nhận ca mẫu, hộp quản lý ca mẫu / nơi trực đang mở; không có thì về trang trước |
 | Bấm khối / chip ca | Mở form sửa ca đó |
 | Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |

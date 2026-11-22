@@ -114,26 +114,33 @@ export function LocationManagerModal({
   const [toggling, setToggling] = useState<UUID | null>(null)
   /** `item` mà `rawDraft` được dựng cho — URL đổi sang mục khác thì dựng lại. */
   const [draftFor, setDraftFor] = useState<string | null>(null)
+  /** Bản gốc của form (JSON) lúc dựng, để biết có gì chưa lưu. */
+  const [pristine, setPristine] = useState<string | null>(null)
   if (item !== draftFor) {
     if (item === null) {
       setDraftFor(null)
       setDraft(null)
     } else if (item === 'new') {
+      const fresh = emptyDraft(locations)
       setDraftFor(item)
       setConfirmingDelete(null)
-      setDraft(emptyDraft(locations))
+      setDraft(fresh)
+      setPristine(JSON.stringify(fresh))
     } else {
       const source = locations.find((l) => l.id === item)
       // Chưa thấy id (danh sách còn đang tải): chờ. Id lạ hẳn thì AppLayout
       // bỏ khỏi URL khi đã tải xong.
       if (source) {
+        const fresh = toDraft(source)
         setDraftFor(item)
         setConfirmingDelete(null)
-        setDraft(toDraft(source))
+        setDraft(fresh)
+        setPristine(JSON.stringify(fresh))
       }
     }
   }
   const draft = item !== null && draftFor === item ? rawDraft : null
+  const dirty = draft !== null && JSON.stringify(draft) !== pristine
 
   const takenNames = useMemo(
     () =>
@@ -256,6 +263,7 @@ export function LocationManagerModal({
       title={draft ? (draft.id ? t('loc.edit') : t('loc.add')) : t('loc.manage')}
       subtitle={t('loc.sectionHint')}
       onClose={onClose}
+      dirty={dirty && !saving}
       width="max-w-xl"
       footer={
         draft ? (

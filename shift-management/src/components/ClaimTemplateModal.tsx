@@ -85,6 +85,8 @@ export function ClaimTemplateModal({
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set([toDateKey(viewedDate)]),
   )
+  /** Ngày chọn sẵn lúc mở — khác đi là có thay đổi chưa lưu. */
+  const [initialDay] = useState(() => toDateKey(viewedDate))
   const [saving, setSaving] = useState(false)
   const notify = useNotify()
 
@@ -123,6 +125,11 @@ export function ClaimTemplateModal({
   const [pickedRaw, setPickedRaw] = useState<Set<UUID>>(
     () => new Set(readSavedLocations(user?.id)),
   )
+  const [initialPicked] = useState(() => new Set(pickedRaw))
+  const dirty =
+    !(selected.size === 1 && selected.has(initialDay)) ||
+    pickedRaw.size !== initialPicked.size ||
+    [...pickedRaw].some((id) => !initialPicked.has(id))
   const [locationError, setLocationError] = useState(false)
   /** Nơi trực đang chọn, chỉ những nơi còn chọn được, theo thứ tự hiển thị. */
   const pickedIds = useMemo(
@@ -318,6 +325,7 @@ export function ClaimTemplateModal({
       title={t('claim.title')}
       subtitle={t('claim.subtitle', { title: template.title })}
       onClose={onClose}
+      dirty={dirty && !saving}
       width="max-w-lg"
       footer={
         <>
