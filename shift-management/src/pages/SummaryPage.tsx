@@ -244,7 +244,7 @@ export function SummaryPage() {
         </div>
 
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <h1 className="flex items-center gap-2 text-lg font-medium text-slate-900">
             <ClipboardCheck className="h-5 w-5 shrink-0 text-slate-400" />
             <span className="truncate capitalize">{headingText}</span>
           </h1>
@@ -370,7 +370,7 @@ function Stat({
     <div className="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-900/5">
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
       <dd
-        className={`mt-0.5 text-xl font-semibold tabular-nums ${
+        className={`mt-0.5 text-xl font-medium tabular-nums ${
           muted ? 'text-slate-400' : 'text-slate-900'
         }`}
       >

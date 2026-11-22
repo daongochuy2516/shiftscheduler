@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { addDays, format, startOfWeek } from 'date-fns'
 import { CalendarPlus, Check, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { ShiftTemplate, TemplateInput, UUID } from '../types'
@@ -74,6 +74,9 @@ export function TemplateManagerModal({
   const [draftFor, setDraftFor] = useState<string | null>(null)
   /** Bản gốc của form (JSON) lúc dựng, để biết có gì chưa lưu. */
   const [pristine, setPristine] = useState<string | null>(null)
+  /** Lỗi "chưa nhập tiêu đề" chỉ hiện sau khi bấm lưu, không phải lúc vừa mở form trống. */
+  const [showTitleError, setShowTitleError] = useState(false)
+  const titleRef = useRef<HTMLInputElement | null>(null)
   if (item !== draftFor) {
     if (item === null) {
       setDraftFor(null)
@@ -83,6 +86,7 @@ export function TemplateManagerModal({
       setDraftFor(item)
       setDraft(fresh)
       setPristine(JSON.stringify(fresh))
+      setShowTitleError(false)
     } else {
       const source = templates.find((tpl) => tpl.id === item)
       // Chưa thấy id (danh sách còn đang tải): chờ. Id lạ hẳn thì AppLayout
@@ -92,6 +96,7 @@ export function TemplateManagerModal({
         setDraftFor(item)
         setDraft(fresh)
         setPristine(JSON.stringify(fresh))
+        setShowTitleError(false)
       }
     }
   }
@@ -136,8 +141,15 @@ export function TemplateManagerModal({
   const rangeError =
     draft && isInvalidRange(draft.start_time, draft.end_time)
   const canSave = draft !== null && !titleError && !rangeError && !saving
+  /** Thiếu tiêu đề không khoá nút: bấm lưu mới kiểm tra và báo. */
+  const saveBlocked = draft === null || !!rangeError || saving
 
   async function handleSave() {
+    if (draft && titleError) {
+      setShowTitleError(true)
+      titleRef.current?.focus()
+      return
+    }
     if (!draft || !canSave) return
     setSaving(true)
     const payload: TemplateInput = {
@@ -202,9 +214,9 @@ export function TemplateManagerModal({
             </button>
             <button
               type="button"
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={handleSave}
-              disabled={!canSave}
+              disabled={saveBlocked}
             >
               {saving ? t('common.saving') : t('common.save')}
             </button>
@@ -238,13 +250,15 @@ export function TemplateManagerModal({
               {t('common.title')}
             </label>
             <input
+              ref={titleRef}
               id="tpl-title"
               className={inputClass}
               value={draft.title}
               placeholder={t('tpl.titlePlaceholder')}
+              aria-invalid={showTitleError && !!titleError}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
             />
-            {titleError && (
+            {showTitleError && titleError && (
               <p className="mt-1 text-xs text-rose-600">
                 {t('shift.errTitleRequired')}
               </p>
@@ -329,7 +343,7 @@ export function TemplateManagerModal({
                     } ${
                       selected
                         ? 'ring-2 ring-slate-900 ring-offset-2'
-                        : 'hover:scale-110'
+                        : 'hover:ring-2 hover:ring-slate-300 hover:ring-offset-2'
                     }`}
                   >
                     {selected && <Check className="h-4 w-4 text-white" />}
@@ -464,7 +478,7 @@ export function TemplateManagerModal({
                       type="button"
                       onClick={() => handleDelete(template.id)}
                       disabled={saving}
-                      className="rounded-md bg-rose-600 px-2 py-1 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-60"
+                      className="rounded-md bg-rose-600 px-2 py-1 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60"
                     >
                       {saving ? t('common.deleting') : t('common.delete')}
                     </button>

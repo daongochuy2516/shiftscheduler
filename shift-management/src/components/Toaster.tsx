@@ -71,7 +71,7 @@ function Toast({ item }: { item: AppNotification }) {
         }}
         className="min-w-0 flex-1 text-left"
       >
-        <p className="text-sm font-semibold text-slate-900">
+        <p className="text-sm font-medium text-slate-900">
           {t(item.title, item.params)}
         </p>
         {(item.body || item.bodyKey) && (

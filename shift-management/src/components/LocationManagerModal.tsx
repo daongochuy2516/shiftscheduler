@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Ban, Check, MapPinPlus, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { Ban, Check, Eye, EyeOff, MapPinPlus, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Location, LocationInput, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useSchedule } from '../data/ScheduleContext'
@@ -116,6 +116,9 @@ export function LocationManagerModal({
   const [draftFor, setDraftFor] = useState<string | null>(null)
   /** Bản gốc của form (JSON) lúc dựng, để biết có gì chưa lưu. */
   const [pristine, setPristine] = useState<string | null>(null)
+  /** Lỗi "chưa nhập tên" chỉ hiện sau khi bấm lưu, không phải lúc vừa mở form trống. */
+  const [showNameRequired, setShowNameRequired] = useState(false)
+  const nameRef = useRef<HTMLInputElement | null>(null)
   if (item !== draftFor) {
     if (item === null) {
       setDraftFor(null)
@@ -126,6 +129,7 @@ export function LocationManagerModal({
       setConfirmingDelete(null)
       setDraft(fresh)
       setPristine(JSON.stringify(fresh))
+      setShowNameRequired(false)
     } else {
       const source = locations.find((l) => l.id === item)
       // Chưa thấy id (danh sách còn đang tải): chờ. Id lạ hẳn thì AppLayout
@@ -136,6 +140,7 @@ export function LocationManagerModal({
         setConfirmingDelete(null)
         setDraft(fresh)
         setPristine(JSON.stringify(fresh))
+        setShowNameRequired(false)
       }
     }
   }
@@ -166,8 +171,19 @@ export function LocationManagerModal({
   const order = draft ? parseOrder(draft.order) : null
   const orderError = draft !== null && order === null
   const canSave = draft !== null && !nameError && !orderError && !saving
+  // Tên trống không khoá nút và chưa báo lỗi cho tới khi bấm lưu; tên quá dài
+  // hay trùng thì báo ngay khi gõ vì đó là phản hồi cho chữ vừa nhập.
+  const nameMissing = draft !== null && name === ''
+  const visibleNameError = nameMissing && !showNameRequired ? null : nameError
+  const saveBlocked =
+    draft === null || (!!nameError && !nameMissing) || orderError || saving
 
   async function handleSave() {
+    if (nameMissing) {
+      setShowNameRequired(true)
+      nameRef.current?.focus()
+      return
+    }
     if (!draft || !canSave || order === null) return
     setSaving(true)
     const payload: LocationInput = {
@@ -247,7 +263,9 @@ export function LocationManagerModal({
   const preview: Location | null = draft
     ? {
         id: draft.id ?? 'preview',
-        name: name || t('loc.namePlaceholder'),
+        // Tên trống: xem trước bằng tên ví dụ, không phải chữ mẫu của ô
+        // ("ví dụ: Fanpage" thì tên tắt thành "ví").
+        name: name || t('loc.nameExample'),
         short_name: shortName || null,
         color: draft.color,
         sort_order: order ?? 0,
@@ -278,9 +296,9 @@ export function LocationManagerModal({
             </button>
             <button
               type="button"
-              className={`${footerButton} bg-indigo-600 font-semibold text-white shadow-xs hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60`}
+              className={`${footerButton} bg-indigo-600 font-medium text-white shadow-xs hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60`}
               onClick={handleSave}
-              disabled={!canSave}
+              disabled={saveBlocked}
             >
               {saving ? t('common.saving') : t('common.save')}
             </button>
@@ -320,18 +338,20 @@ export function LocationManagerModal({
               {t('loc.name')}
             </label>
             <input
+              ref={nameRef}
               id="loc-name"
               className={inputClass}
               value={draft.name}
               maxLength={NAME_MAX + 10}
               placeholder={t('loc.namePlaceholder')}
+              aria-invalid={!!visibleNameError}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void handleSave()
               }}
             />
-            {nameError && (
-              <p className="mt-1 text-xs text-rose-600">{nameError}</p>
+            {visibleNameError && (
+              <p className="mt-1 text-xs text-rose-600">{visibleNameError}</p>
             )}
           </div>
 
@@ -371,7 +391,7 @@ export function LocationManagerModal({
                   className={`flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-slate-400 transition ${
                     draft.color === null
                       ? 'ring-2 ring-slate-900 ring-offset-2'
-                      : 'hover:scale-110'
+                      : 'hover:ring-2 hover:ring-slate-300 hover:ring-offset-2'
                   }`}
                 >
                   <Ban className="h-4 w-4" />
@@ -395,7 +415,7 @@ export function LocationManagerModal({
                       } ${
                         selected
                           ? 'ring-2 ring-slate-900 ring-offset-2'
-                          : 'hover:scale-110'
+                          : 'hover:ring-2 hover:ring-slate-300 hover:ring-offset-2'
                       }`}
                     >
                       {selected && <Check className="h-4 w-4 text-white" />}
@@ -459,106 +479,115 @@ export function LocationManagerModal({
         </button>
       ) : (
         // ---- danh sách ----
-        <div className="space-y-3">
-          <ul className="space-y-2">
-            {locations.map((location) => {
-              const isConfirming = confirmingDelete === location.id
-              const busy = toggling === location.id
-              return (
-                <li
-                  key={location.id}
-                  className={`rounded-lg border border-slate-200 p-2 pl-3 sm:p-3 ${
-                    location.is_active ? '' : 'bg-slate-50'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span
-                      className={`flex min-w-0 items-center gap-2 ${
-                        location.is_active ? '' : 'opacity-60'
-                      }`}
-                    >
+        // Chỉ admin mở hộp này. Mỗi dòng: nhãn, một dòng phụ những gì admin
+        // cần mà nhãn không nói (tên tắt, thứ tự, đang ẩn), và ba nút icon —
+        // ô tích "Hiện khi nhận ca" thành nút con mắt thay vì lặp chữ ở mọi
+        // dòng. Gợi ý "đang dùng thì không xoá được" chỉ hiện trong hộp xác
+        // nhận xoá, lúc nó có ích.
+        <ul className="space-y-2">
+          {locations.map((location) => {
+            const isConfirming = confirmingDelete === location.id
+            const busy = toggling === location.id
+            const VisibilityIcon = location.is_active ? Eye : EyeOff
+            return (
+              <li
+                key={location.id}
+                className={`rounded-lg border border-slate-200 py-1 pr-1 pl-3 ${
+                  location.is_active ? '' : 'bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 py-1">
+                    <div className={location.is_active ? '' : 'opacity-60'}>
                       <LocationChip location={location} />
-                      <span
-                        className="text-xs text-slate-400 tabular-nums"
-                        data-tooltip={t('loc.order')}
-                      >
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 tabular-nums">
+                      {/* "aka Page" — tên tắt hiện trên khối ca hẹp. Trùng tên
+                          đầy đủ thì bỏ, khỏi thành "Discord aka Discord". */}
+                      {locationShortName(location).toLowerCase() !==
+                        location.name.trim().toLowerCase() && (
+                        <>
+                          {t('loc.aka', { name: locationShortName(location) })}
+                          {' · '}
+                        </>
+                      )}
+                      <span data-tooltip={t('loc.order')}>
                         #{location.sort_order}
                       </span>
                       {!location.is_active && (
-                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
-                          {t('loc.hidden')}
-                        </span>
+                        <>
+                          {' · '}
+                          <span className="font-medium text-slate-600">
+                            {t('loc.hidden')}
+                          </span>
+                        </>
                       )}
-                    </span>
-
-                    <div className="ml-auto flex items-center gap-1">
-                      <label
-                        className="flex min-h-11 items-center gap-2 rounded-md px-2 text-xs text-slate-600 sm:min-h-0 sm:py-1"
-                        data-tooltip={t('loc.activeHint')}
-                      >
-                        <Checkbox
-                          className="h-4 w-4"
-                          checked={location.is_active}
-                          disabled={busy || saving}
-                          onChange={(value) => void handleToggle(location, value)}
-                        />
-                        {t('loc.active')}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => onItemChange(location.id)}
-                        aria-label={t('common.edit')}
-                        data-tooltip={t('common.edit')}
-                        className={`${iconButton} hover:bg-slate-100 hover:text-slate-700`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDelete(location.id)}
-                        aria-label={t('common.delete')}
-                        data-tooltip={t('common.delete')}
-                        className={`${iconButton} hover:bg-rose-50 hover:text-rose-600`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    </p>
                   </div>
 
-                  {isConfirming && (
-                    <div className="mt-2 rounded-md bg-rose-50 px-3 py-2 ring-1 ring-rose-200">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm text-rose-800">
-                          {t('loc.deleteConfirm', { name: location.name })}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingDelete(null)}
-                          disabled={saving}
-                          className="ml-auto min-h-11 rounded-md px-2 py-1 text-sm font-medium text-slate-700 transition hover:bg-white sm:min-h-0"
-                        >
-                          {t('common.cancel')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(location)}
-                          disabled={saving}
-                          className="min-h-11 rounded-md bg-rose-600 px-2 py-1 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-60 sm:min-h-0"
-                        >
-                          {saving ? t('common.deleting') : t('common.delete')}
-                        </button>
-                      </div>
-                      <p className="mt-1 text-xs text-rose-700">{t('loc.inUseHint')}</p>
+                  <div className="flex shrink-0 items-center">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggle(location, !location.is_active)}
+                      disabled={busy || saving}
+                      aria-label={t('loc.active')}
+                      aria-pressed={location.is_active}
+                      data-tooltip={t('loc.active')}
+                      className={`${iconButton} hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50`}
+                    >
+                      <VisibilityIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onItemChange(location.id)}
+                      aria-label={t('common.edit')}
+                      data-tooltip={t('common.edit')}
+                      className={`${iconButton} hover:bg-slate-100 hover:text-slate-700`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(location.id)}
+                      aria-label={t('common.delete')}
+                      data-tooltip={t('common.delete')}
+                      className={`${iconButton} hover:bg-rose-50 hover:text-rose-600`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {isConfirming && (
+                  <div className="mt-1 mr-2 mb-2 rounded-md bg-rose-50 px-3 py-2 ring-1 ring-rose-200">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm text-rose-800">
+                        {t('loc.deleteConfirm', { name: location.name })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDelete(null)}
+                        disabled={saving}
+                        className="ml-auto min-h-11 rounded-md px-2 py-1 text-sm font-medium text-slate-700 transition hover:bg-white sm:min-h-0"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(location)}
+                        disabled={saving}
+                        className="min-h-11 rounded-md bg-rose-600 px-2 py-1 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-60 sm:min-h-0"
+                      >
+                        {saving ? t('common.deleting') : t('common.delete')}
+                      </button>
                     </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-          {!confirmingDelete && (
-            <p className="text-xs text-slate-500">{t('loc.inUseHint')}</p>
-          )}
-        </div>
+                    <p className="mt-1 text-xs text-rose-700">{t('loc.inUseHint')}</p>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
       )}
     </Modal>
   )

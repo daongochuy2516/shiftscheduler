@@ -27,9 +27,9 @@ export function Avatar({
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold ${tone(
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-medium ${tone(
         seed ?? name,
-      )} ${size === 'sm' ? 'h-6 w-6 text-[10px]' : 'h-8 w-8 text-xs'}`}
+      )} ${size === 'sm' ? 'h-6 w-6 text-[11px]' : 'h-8 w-8 text-xs'}`}
     >
       {initials(name)}
     </span>

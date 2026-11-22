@@ -7,14 +7,14 @@ type ChipSize = 'xs' | 'sm'
 export type ChipVariant = 'full' | 'short' | 'dot'
 
 const SIZE: Record<ChipSize, string> = {
-  xs: 'px-1.5 py-0.5 text-[10px] leading-none',
+  xs: 'px-1.5 py-0.5 text-[11px] leading-none',
   sm: 'px-2 py-0.5 text-xs',
 }
 
 /** Nơi trực chưa chọn màu: nhãn xám trung tính. */
 const NEUTRAL = 'bg-slate-100 text-slate-600 ring-slate-200'
 /** Nơi trực đã bị xoá (id còn trong lượt nhưng không còn trong danh sách). */
-const GONE = 'bg-slate-50 text-slate-400 ring-slate-200 italic'
+const GONE = 'bg-slate-50 text-slate-400 ring-slate-200 line-through'
 
 function isColorKey(value: unknown): value is ShiftColorKey {
   return (SHIFT_COLOR_KEYS as readonly unknown[]).includes(value)

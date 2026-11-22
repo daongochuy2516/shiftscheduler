@@ -500,6 +500,15 @@ export const TOURS: Record<TourId, Tour> = {
         },
       },
       {
+        targets: ['menu-help'],
+        ensure: ['menu'],
+        screen: 'desktop',
+        text: {
+          vi: { title: 'Hướng dẫn', body: 'Mở lại trang hướng dẫn và các bài từng bước bất cứ lúc nào.' },
+          en: { title: 'Help', body: 'Come back to the guide and the step-by-step tours any time.' },
+        },
+      },
+      {
         targets: ['menu-notifications'],
         ensure: ['menu'],
         screen: 'desktop',
@@ -527,21 +536,12 @@ export const TOURS: Record<TourId, Tour> = {
         },
       },
       {
-        targets: ['menu-help'],
-        ensure: ['menu'],
-        screen: 'desktop',
-        text: {
-          vi: { title: 'Hướng dẫn', body: 'Mở lại trang hướng dẫn và các bài từng bước bất cứ lúc nào.' },
-          en: { title: 'Help', body: 'Come back to the guide and the step-by-step tours any time.' },
-        },
-      },
-      {
         targets: ['menu-signout'],
         ensure: ['menu'],
         screen: 'desktop',
         text: {
-          vi: { title: 'Đăng xuất', body: 'Phải bấm hai lần: lần đầu ô chuyển đỏ, bấm tiếp trong 4 giây mới đăng xuất — để không lỡ tay.' },
-          en: { title: 'Sign out', body: 'Press twice: the first press turns the tile red, a second press within 4 seconds signs you out — so it never happens by accident.' },
+          vi: { title: 'Đăng xuất', body: 'Phải bấm hai lần: lần đầu dòng này chuyển đỏ, bấm tiếp trong 4 giây mới đăng xuất — để không lỡ tay.' },
+          en: { title: 'Sign out', body: 'Press twice: the first press turns the row red, a second press within 4 seconds signs you out — so it never happens by accident.' },
         },
       },
       {

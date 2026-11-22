@@ -39,7 +39,7 @@ export const en = {
   'status.confirmed': 'Confirmed',
 
   // ---- auth ----
-  'auth.subtitle': 'Sign in with your staff account to continue.',
+  'auth.subtitle': 'Sign in with your staff account to continue',
   'auth.email': 'Email',
   'auth.password': 'Password',
   'auth.signIn': 'Sign in',
@@ -96,7 +96,6 @@ export const en = {
   'timeline.scale.work': '06:00 – 22:00',
   'timeline.scale.business': '08:00 – 20:00',
   'timeline.scale.full': 'Full day',
-  'timeline.addShiftOnDay': 'Add shift on this day',
   'timeline.nobodyScheduled': 'Nobody is scheduled on this day.',
   'timeline.nobodyScheduledWeek': 'Nobody is scheduled this week.',
   'timeline.noStaffMatch': 'No staff match the current filter.',
@@ -338,14 +337,18 @@ export const en = {
   'loc.manage': 'Manage locations',
   'loc.manageHint': 'Add, rename, recolour, reorder or hide locations',
   'loc.sectionHint':
-    'Where staff are on duty, e.g. Fanpage or Discord. Staff pick them when claiming a shift.',
+    'Staff pick one when claiming a shift, e.g. Fanpage or Discord',
   'loc.add': 'New location',
   'loc.edit': 'Edit location',
   'loc.name': 'Name',
   'loc.shortName': 'Short name',
+  /** Tên tắt trên dòng danh sách nơi trực (Quản lý nơi trực). */
+  'loc.aka': 'aka {{name}}',
   'loc.shortNameHint':
     'Shown on short shift blocks where the full name does not fit. Leave empty to use the first 3 letters.',
   'loc.namePlaceholder': 'e.g. Fanpage',
+  /** Tên ví dụ cho nhãn xem trước khi ô Tên còn trống — không kèm 'e.g.', vì tên tắt lấy 3 chữ đầu của nó. */
+  'loc.nameExample': 'Fanpage',
   'loc.color': 'Colour',
   'loc.colorHint': 'Colour of the chip shown next to staff on duty here.',
   'loc.noColor': 'No colour',
@@ -374,7 +377,7 @@ export const en = {
 
   // ---- claim date picker ----
   'claim.title': 'Claim shift',
-  'claim.subtitle': 'Pick the days you want to work {{title}}.',
+  'claim.subtitle': 'Pick the days you want to work {{title}}',
   'claim.quick': 'Quick pick',
   'claim.today': 'Today',
   'claim.tomorrow': 'Tomorrow',
@@ -436,10 +439,10 @@ export const en = {
   'forgot.ok': 'Got it',
 
   // ---- footer greeting ----
-  'greeting.morning': 'Good morning, {{name}}!',
-  'greeting.noon': 'Good afternoon, {{name}}!',
-  'greeting.afternoon': 'Good afternoon, {{name}}!',
-  'greeting.evening': 'Good evening, {{name}}!',
+  'greeting.morning': 'Good morning, {{name}}',
+  'greeting.noon': 'Good afternoon, {{name}}',
+  'greeting.afternoon': 'Good afternoon, {{name}}',
+  'greeting.evening': 'Good evening, {{name}}',
 
   // ---- action log ----
   'nav.actionLog': 'Activity',
@@ -487,7 +490,6 @@ export const en = {
 
   // ---- command palette (Ctrl + K) ----
   'palette.title': 'Quick Search',
-  'menu.paletteHint': '{{keys}} — Quick Search',
   'palette.placeholder': 'Quick Search',
   'palette.correctedTo': 'Showing results for “{{query}}”',
   'palette.group.result': 'Result',
@@ -542,7 +544,7 @@ export const en = {
   'notif.account.hidden': '“{{name}}” is hidden from the boards',
   'notif.account.saveFailed': 'Could not update “{{name}}”',
   'log.title': 'Action log',
-  'log.subtitle': 'Every change to shifts, assignments, templates and locations.',
+  'log.subtitle': 'Every change to shifts, assignments, templates and locations',
   'log.from': 'From date',
   'log.to': 'To date',
   'log.staff': 'Staff involved',
@@ -667,7 +669,7 @@ export const en = {
   'notif.offline.cleared': 'Saved data cleared from this device',
   // ---- trang Trạng thái ----
   'status.title': 'System status',
-  'status.subtitle': 'Supabase, session, service worker, offline cache and CDN.',
+  'status.subtitle': 'Supabase, session, service worker, offline cache and CDN',
   'status.recheck': 'Recheck',
   'status.checking': 'Checking…',
   'status.ok': 'Operational',
@@ -832,7 +834,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'status.confirmed': 'Đã xác nhận',
 
   // ---- auth ----
-  'auth.subtitle': 'Đăng nhập bằng tài khoản nhân viên để tiếp tục.',
+  'auth.subtitle': 'Đăng nhập bằng tài khoản nhân viên để tiếp tục',
   'auth.email': 'Email',
   'auth.password': 'Mật khẩu',
   'auth.signIn': 'Đăng nhập',
@@ -890,7 +892,6 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'timeline.scale.work': '06:00 – 22:00',
   'timeline.scale.business': '08:00 – 20:00',
   'timeline.scale.full': 'Cả ngày',
-  'timeline.addShiftOnDay': 'Thêm ca vào ngày này',
   'timeline.nobodyScheduled': 'Chưa có ai làm việc trong ngày này.',
   'timeline.nobodyScheduledWeek': 'Chưa có ai làm việc trong tuần này.',
   'timeline.noStaffMatch': 'Không có nhân viên nào khớp bộ lọc.',
@@ -1129,14 +1130,16 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'loc.manage': 'Quản lý nơi trực',
   'loc.manageHint': 'Thêm, đổi tên, đổi màu, sắp xếp hay ẩn nơi trực',
   'loc.sectionHint':
-    'Nơi nhân viên trực trong ca, ví dụ Fanpage hay Discord. Nhân viên chọn khi nhận ca.',
+    'Nhân viên chọn khi nhận ca, ví dụ Fanpage hay Discord',
   'loc.add': 'Thêm nơi trực',
   'loc.edit': 'Sửa nơi trực',
   'loc.name': 'Tên',
   'loc.shortName': 'Tên tắt',
+  'loc.aka': 'aka {{name}}',
   'loc.shortNameHint':
     'Hiện trên khối ca ngắn khi không đủ chỗ cho tên đầy đủ. Để trống thì lấy 3 chữ đầu của tên.',
   'loc.namePlaceholder': 'ví dụ: Fanpage',
+  'loc.nameExample': 'Fanpage',
   'loc.color': 'Màu',
   'loc.colorHint': 'Màu của nhãn hiện cạnh tên người trực ở đây.',
   'loc.noColor': 'Không màu',
@@ -1165,7 +1168,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
 
   // ---- claim date picker ----
   'claim.title': 'Nhận ca',
-  'claim.subtitle': 'Chọn (các) ngày bạn muốn làm ca {{title}}.',
+  'claim.subtitle': 'Chọn (các) ngày bạn muốn làm ca {{title}}',
   'claim.quick': 'Chọn nhanh',
   'claim.today': 'Hôm nay',
   'claim.tomorrow': 'Ngày mai',
@@ -1227,10 +1230,10 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'forgot.ok': 'Đã hiểu',
 
   // ---- footer greeting ----
-  'greeting.morning': 'Chào buổi sáng, {{name}}!',
-  'greeting.noon': 'Chào buổi trưa, {{name}}!',
-  'greeting.afternoon': 'Chào buổi chiều, {{name}}!',
-  'greeting.evening': 'Chào buổi tối, {{name}}!',
+  'greeting.morning': 'Chào buổi sáng, {{name}}',
+  'greeting.noon': 'Chào buổi trưa, {{name}}',
+  'greeting.afternoon': 'Chào buổi chiều, {{name}}',
+  'greeting.evening': 'Chào buổi tối, {{name}}',
 
   // ---- action log ----
   'nav.actionLog': 'Nhật ký',
@@ -1278,7 +1281,6 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
 
   // ---- command palette (Ctrl + K) ----
   'palette.title': 'Quick Search',
-  'menu.paletteHint': '{{keys}} — Quick Search',
   'palette.placeholder': 'Quick Search',
   'palette.correctedTo': 'Kết quả cho “{{query}}”',
   'palette.group.result': 'Kết quả',
@@ -1334,7 +1336,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'notif.account.hidden': 'Đã ẩn “{{name}}” khỏi các bảng',
   'notif.account.saveFailed': 'Không cập nhật được “{{name}}”',
   'log.title': 'Nhật ký thao tác',
-  'log.subtitle': 'Mọi thay đổi trên ca, phân công, ca mẫu và nơi trực.',
+  'log.subtitle': 'Mọi thay đổi trên ca, phân công, ca mẫu và nơi trực',
   'log.from': 'Từ ngày',
   'log.to': 'Đến ngày',
   'log.staff': 'Nhân viên liên quan',
@@ -1459,7 +1461,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'notif.offline.cleared': 'Đã xoá bản lưu trên máy',
   // ---- trang Trạng thái (phần thẻ chỉ có tiếng Anh, xem EnglishOnlyKey) ----
   'status.title': 'Trạng thái hệ thống',
-  'status.subtitle': 'Supabase, session, service worker, cache offline và CDN.',
+  'status.subtitle': 'Supabase, session, service worker, cache offline và CDN',
   'status.recheck': 'Kiểm tra lại',
 }
 

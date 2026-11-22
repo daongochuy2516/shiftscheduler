@@ -292,7 +292,7 @@ function TourStepView({
         style={cardStyle}
       >
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-xs font-semibold text-indigo-600">
+          <span className="text-xs font-medium text-indigo-600">
             {TOURS[tourId].title[lang]} · {index + 1}/{count}
           </span>
           <button
@@ -305,7 +305,7 @@ function TourStepView({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <h3 className="text-base font-semibold text-slate-900">{text.title}</h3>
+        <h3 className="text-base font-medium text-slate-900">{text.title}</h3>
         <p className="mt-1 text-sm text-pretty text-slate-600">
           {missing && text.missing ? text.missing : text.body}
         </p>
@@ -314,7 +314,7 @@ function TourStepView({
           {Array.from({ length: count }, (_, i) => (
             <span
               key={i}
-              className={`h-1.5 rounded-full transition-all ${
+              className={`h-1.5 rounded-full transition-colors ${
                 i === index ? 'w-4 bg-indigo-600' : 'w-1.5 bg-slate-300'
               }`}
             />
@@ -334,7 +334,7 @@ function TourStepView({
               type="button"
               autoFocus
               onClick={onNext}
-              className="inline-flex min-h-10 items-center gap-1 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 sm:min-h-0 sm:py-1.5"
+              className="inline-flex min-h-10 items-center gap-1 rounded-md bg-indigo-600 px-3 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 sm:min-h-0 sm:py-1.5"
             >
               {last ? (
                 <>
@@ -375,7 +375,7 @@ function WelcomeCard({
           <GraduationCap className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">{t('tour.welcomeTitle')}</p>
+          <p className="text-sm font-medium text-slate-900">{t('tour.welcomeTitle')}</p>
           <p className="mt-0.5 text-sm text-slate-600">{t('tour.welcomeBody')}</p>
         </div>
       </div>
@@ -390,7 +390,7 @@ function WelcomeCard({
         <button
           type="button"
           onClick={onStart}
-          className="min-h-10 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 sm:min-h-0 sm:py-1.5"
+          className="min-h-10 rounded-md bg-indigo-600 px-3 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 sm:min-h-0 sm:py-1.5"
         >
           {t('tour.start')}
         </button>

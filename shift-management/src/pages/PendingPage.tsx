@@ -52,7 +52,7 @@ export function PendingPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">
+          <h1 className="text-lg font-medium text-slate-900">
             {t('pending.title')}
           </h1>
           <p className="text-sm text-slate-500">

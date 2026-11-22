@@ -41,7 +41,7 @@ export function AccountsPage() {
     return (
       <div className="mx-auto max-w-3xl rounded-xl bg-white px-4 py-10 text-center shadow-sm ring-1 ring-slate-900/5">
         <ShieldAlert className="mx-auto h-8 w-8 text-slate-400" />
-        <p className="mt-3 font-semibold text-slate-900">
+        <p className="mt-3 font-medium text-slate-900">
           {t('accounts.forbidden')}
         </p>
         <p className="mt-1 text-sm text-slate-500">
@@ -53,7 +53,7 @@ export function AccountsPage() {
 
   const header = (
     <div>
-      <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+      <h1 className="flex items-center gap-2 text-lg font-medium text-slate-900">
         <UserCog className="h-5 w-5 shrink-0 text-slate-400" />
         {t('accounts.title')}
       </h1>

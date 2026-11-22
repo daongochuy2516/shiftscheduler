@@ -77,7 +77,7 @@ export function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           <button
             type="submit"
             form="change-password-form"
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!canSubmit}
           >
             {saving ? t('pwd.saving') : t('pwd.submit')}

@@ -49,7 +49,7 @@ export function MyShiftsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">
+        <h1 className="text-lg font-medium text-slate-900">
           {t('myShifts.title')}
         </h1>
         <p className="text-sm text-slate-500">
@@ -82,7 +82,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-900/5">
       <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-xl font-semibold text-slate-900 tabular-nums">
+      <dd className="mt-0.5 text-xl font-medium text-slate-900 tabular-nums">
         {value}
       </dd>
     </div>

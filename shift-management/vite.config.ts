@@ -41,8 +41,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        // Khớp nền trang (slate-100) và header (trắng) ở giao diện sáng.
-        background_color: '#f1f5f9',
+        // Khớp nền trang (slate-100, xem index.css) và header (trắng) ở giao diện sáng.
+        background_color: '#f5f4f2',
         theme_color: '#ffffff',
         ...DARK_MANIFEST,
         icons: [

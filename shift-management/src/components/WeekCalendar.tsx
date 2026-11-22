@@ -9,6 +9,7 @@ import { formatRange, normalizeTime, toDateKey } from '../lib/time'
 import { locationLabels, locationsById, sortLocationIds } from '../lib/locations'
 import { chipBlockHeight, chipLines, pickLocationFit } from '../lib/locationFit'
 import { textWidth } from '../lib/textWidth'
+import { scrollRoot } from '../lib/scrollRoot'
 import {
   countOutsideRange,
   layoutDay,
@@ -60,7 +61,17 @@ export interface WeekCalendarProps<T extends WeekCalendarItem> {
   showClippedNote?: boolean
 }
 
-const HOUR_PX = 48
+/**
+ * Cao mỗi giờ co theo chỗ trống của cửa sổ (xem `hourPx` bên dưới): cả tuần
+ * phải vừa một màn hình 1080p chưa phóng to cửa sổ mà không cuộn. Trần 36 ≈
+ * đúng mức có được ở cỡ đó, nên bật toàn màn hình (F11, để chụp) lịch không
+ * dãn thêm — phần thừa để trống bên dưới. 30 là mức thấp nhất mà khối 1 giờ
+ * vẫn đủ một dòng chữ — thấp hơn nữa thì để trang cuộn.
+ */
+const MAX_HOUR_PX = 36
+const MIN_HOUR_PX = 30
+/** Khoảng đệm dưới cùng của trang trên desktop (`.pb-mobile-nav`, index.css). */
+const PAGE_BOTTOM_PX = 20
 const AXIS_W = 56
 /** Khoảng trống trên / dưới vùng giờ để nhãn giờ ở hai mép không bị cắt. */
 const PAD_Y = 8
@@ -75,7 +86,6 @@ const BLOCK_VGAP = 1
  * = 16px = `leading-4` của dòng đơn.
  */
 const MIN_BLOCK_PX = 22
-const MIN_BLOCK_MINUTES = (MIN_BLOCK_PX / HOUR_PX) * 60
 
 // Khớp class của khối bên dưới: `px-1.5` + viền 1px hai bên; `py-0.5` +
 // viền 1px trên dưới; đồng hồ `h-2.5 w-2.5` + `gap-1`.
@@ -100,7 +110,7 @@ function hourLabel(hour: number): string {
  * Lịch tuần kiểu Google Calendar (chỉ desktop): mỗi ngày một cột, trục giờ
  * dọc bên trái, mỗi lượt là một khối đặt theo giờ của chính nó, màu theo
  * người. Khối chồng giờ trong một ngày nằm cạnh nhau (`layoutDay`).
- * Cao cố định `HOUR_PX` mỗi giờ, cuộn theo trang — không cuộn riêng.
+ * Cao mỗi giờ co giãn cho vừa cửa sổ, cuộn theo trang — không cuộn riêng.
  */
 export function WeekCalendar<T extends WeekCalendarItem>({
   days,
@@ -118,7 +128,39 @@ export function WeekCalendar<T extends WeekCalendarItem>({
 
   const rangeStart = range.startHour * 60
   const hours = Math.max(1, range.endHour - range.startHour)
-  const bodyHeight = hours * HOUR_PX + PAD_Y * 2
+
+  // Cao mỗi giờ = phần cửa sổ còn lại dưới đầu vùng giờ, chia đều cho số giờ.
+  // Đo theo vị trí trong khung cuộn (cộng scrollTop) nên cuộn trang không làm
+  // đổi; nội dung phía trên đổi cao (thẻ thống kê tải xong, dòng nhắc hiện ra)
+  // thì `main` đổi cao và đo lại. setState nằm trong callback của observer,
+  // không chạy đồng bộ trong effect.
+  const [body, setBody] = useState<HTMLElement | null>(null)
+  const [hourPx, setHourPx] = useState(MAX_HOUR_PX)
+  useEffect(() => {
+    if (!body || typeof ResizeObserver === 'undefined') return
+    const root = scrollRoot()
+    const measure = () => {
+      const viewportH = root ? root.clientHeight : window.innerHeight
+      const rootTop = root ? root.getBoundingClientRect().top : 0
+      const scrolled = root ? root.scrollTop : window.scrollY
+      const top = body.getBoundingClientRect().top - rootTop + scrolled
+      // +1: viền dưới của khung lịch.
+      const room = viewportH - top - PAGE_BOTTOM_PX - PAD_Y * 2 - 1
+      const next = Math.min(
+        MAX_HOUR_PX,
+        Math.max(MIN_HOUR_PX, Math.floor(room / hours)),
+      )
+      setHourPx((prev) => (prev === next ? prev : next))
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(root ?? document.documentElement)
+    const page = body.closest('main')
+    if (page) observer.observe(page)
+    return () => observer.disconnect()
+  }, [body, hours])
+
+  const bodyHeight = hours * hourPx + PAD_Y * 2
+  const minBlockMinutes = (MIN_BLOCK_PX / hourPx) * 60
   const gridTemplate = `${AXIS_W}px repeat(${days.length}, minmax(0, 1fr))`
 
   // Cột ngày co giãn nên phải đo lúc chạy để biết nhãn nơi trực vừa tới đâu.
@@ -158,10 +200,10 @@ export function WeekCalendar<T extends WeekCalendarItem>({
     for (const item of items) byDay.get(item.date)?.push(item)
     const result = new Map<string, LaidOutItem<T>[]>()
     for (const [key, list] of byDay) {
-      result.set(key, layoutDay(list, range, MIN_BLOCK_MINUTES))
+      result.set(key, layoutDay(list, range, minBlockMinutes))
     }
     return result
-  }, [dayKeys, items, range])
+  }, [dayKeys, items, range, minBlockMinutes])
 
   const clippedCount = useMemo(() => {
     const shown = new Set(dayKeys)
@@ -197,10 +239,10 @@ export function WeekCalendar<T extends WeekCalendarItem>({
       }${pending ? ` · ${t('status.pending')}` : ''}`
 
     // ---- vị trí ----
-    const top = PAD_Y + ((startMin - rangeStart) / 60) * HOUR_PX
+    const top = PAD_Y + ((startMin - rangeStart) / 60) * hourPx
     const height = Math.max(
       MIN_BLOCK_PX,
-      ((endMin - startMin) / 60) * HOUR_PX - BLOCK_VGAP,
+      ((endMin - startMin) / 60) * hourPx - BLOCK_VGAP,
     )
     const reachesRight = lane + span >= lanes
     const gap = reachesRight ? 0 : LANE_GAP
@@ -279,19 +321,19 @@ export function WeekCalendar<T extends WeekCalendarItem>({
       <>
         {/* shrink-0: lỡ đo canvas lệch so với DOM thì phần dưới cùng bị cắt
             (overflow-hidden), không bóp dẹt các dòng chữ phía trên. */}
-        <span className="flex min-w-0 shrink-0 items-center gap-1 text-[11px] leading-4 font-semibold">
+        <span className="flex min-w-0 shrink-0 items-center gap-1 text-[11px] leading-4 font-medium">
           {pending && <Clock3 className="h-2.5 w-2.5 shrink-0 opacity-70" />}
           <span className="min-w-0 truncate">{item.personName}</span>
           {fit?.row === 'title' && chips}
         </span>
         <span className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden">
-          <span className="shrink-0 text-[10px] leading-[14px] opacity-75">
+          <span className="shrink-0 text-[11px] leading-[14px] opacity-75">
             {timeText}
           </span>
           {fit?.row === 'time' && chips}
         </span>
         {titleFits && (
-          <span className="block shrink-0 truncate text-[10px] leading-[14px] opacity-75">
+          <span className="block shrink-0 truncate text-[11px] leading-[14px] opacity-75">
             {item.title}
           </span>
         )}
@@ -305,8 +347,8 @@ export function WeekCalendar<T extends WeekCalendarItem>({
       <span className="flex min-w-0 items-center gap-1">
         {pending && <Clock3 className="h-2.5 w-2.5 shrink-0 opacity-70" />}
         <span className="min-w-0 truncate text-[11px] leading-4">
-          <span className="font-semibold">{item.personName}</span>{' '}
-          <span className="text-[10px] opacity-75">{timeText}</span>
+          <span className="font-medium">{item.personName}</span>{' '}
+          <span className="text-[11px] opacity-75">{timeText}</span>
         </span>
         {chips}
       </span>
@@ -352,32 +394,35 @@ export function WeekCalendar<T extends WeekCalendarItem>({
           const isToday = dayKeys[i] === todayKey
           const inner = (
             <>
-              <span
-                className={`block text-[11px] font-medium capitalize ${
-                  isToday ? 'text-indigo-600' : 'text-slate-500'
-                }`}
-              >
-                {format(day, 'EEE', { locale: dateLocale })}
-              </span>
-              <span
-                className={`mx-auto mt-0.5 flex h-9 w-9 items-center justify-center rounded-full text-lg font-semibold tabular-nums transition ${
-                  isToday
-                    ? 'bg-indigo-600 text-white'
-                    : onSelectDay
-                      ? 'text-slate-800 group-hover:bg-slate-100'
-                      : 'text-slate-800'
-                }`}
-              >
-                {format(day, 'd')}
+              {/* Thứ và ngày chung một dòng: tiêu đề thấp, nhường chỗ cho giờ. */}
+              <span className="flex items-center justify-center gap-1.5">
+                <span
+                  className={`text-xs font-medium capitalize ${
+                    isToday ? 'text-indigo-600' : 'text-slate-500'
+                  }`}
+                >
+                  {format(day, 'EEE', { locale: dateLocale })}
+                </span>
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-base font-medium tabular-nums transition ${
+                    isToday
+                      ? 'bg-indigo-600 text-white'
+                      : onSelectDay
+                        ? 'text-slate-800 group-hover:bg-slate-100'
+                        : 'text-slate-800'
+                  }`}
+                >
+                  {format(day, 'd')}
+                </span>
               </span>
               {dayCaption && (
-                <span className="mt-0.5 block truncate text-[11px] text-slate-500 tabular-nums">
+                <span className="block truncate text-[11px] leading-4 text-slate-500 tabular-nums">
                   {dayCaption(day)}
                 </span>
               )}
             </>
           )
-          const cellClass = 'min-w-0 border-l border-slate-100 px-1 py-2 text-center'
+          const cellClass = 'min-w-0 border-l border-slate-100 px-1 py-1.5 text-center'
           return onSelectDay ? (
             <button
               key={dayKeys[i]}
@@ -407,13 +452,13 @@ export function WeekCalendar<T extends WeekCalendarItem>({
       )}
 
       {/* ---- trục giờ + cột ngày ---- */}
-      <div className="grid" style={{ gridTemplateColumns: gridTemplate }}>
+      <div ref={setBody} className="grid" style={{ gridTemplateColumns: gridTemplate }}>
         <div className="relative" style={{ height: bodyHeight }}>
           {Array.from({ length: hours + 1 }, (_, i) => (
             <span
               key={i}
-              className="absolute right-2 -translate-y-1/2 text-[10px] font-medium text-slate-500 tabular-nums"
-              style={{ top: PAD_Y + i * HOUR_PX }}
+              className="absolute right-2 -translate-y-1/2 text-[11px] text-slate-500 tabular-nums"
+              style={{ top: PAD_Y + i * hourPx }}
             >
               {hourLabel(range.startHour + i)}
             </span>
@@ -437,7 +482,7 @@ export function WeekCalendar<T extends WeekCalendarItem>({
                 <div
                   key={h}
                   className="pointer-events-none absolute inset-x-0 border-t border-slate-100"
-                  style={{ top: PAD_Y + h * HOUR_PX }}
+                  style={{ top: PAD_Y + h * hourPx }}
                 />
               ))}
 
@@ -447,7 +492,7 @@ export function WeekCalendar<T extends WeekCalendarItem>({
                 <div
                   className="pointer-events-none absolute inset-x-0 z-20"
                   style={{
-                    top: PAD_Y + ((nowMinutes - rangeStart) / 60) * HOUR_PX,
+                    top: PAD_Y + ((nowMinutes - rangeStart) / 60) * hourPx,
                   }}
                 >
                   <div className="h-0.5 -translate-y-1/2 bg-rose-500" />

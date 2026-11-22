@@ -11,10 +11,12 @@ export function RoleBadge({ role }: { role: Account['role'] }) {
   if (role === null) return null
   return (
     <span
-      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold ring-1 ring-inset ${
+      // Nhãn chữ trầm, không tô màu: vai trò là thông tin phụ cạnh tên, màu
+      // nhấn để dành cho thao tác chính và lựa chọn. Admin đậm chữ hơn một bậc.
+      className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] leading-none font-medium ring-1 ring-inset ${
         role === 'admin'
-          ? 'bg-violet-50 text-violet-700 ring-violet-200'
-          : 'bg-slate-100 text-slate-600 ring-slate-200'
+          ? 'bg-slate-100 text-slate-700 ring-slate-200'
+          : 'text-slate-500 ring-slate-200'
       }`}
     >
       {role === 'admin' ? t('accounts.roleAdmin') : t('accounts.roleStaff')}

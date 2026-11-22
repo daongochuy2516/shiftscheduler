@@ -60,7 +60,7 @@ export interface JoinDraft {
 /** Nơi trực chưa chọn màu: xám trung tính, như `LocationChip`. */
 const NEUTRAL_TONE = 'bg-slate-100 text-slate-600 ring-slate-200'
 /** Id nơi trực đã bị xoá (mảng không có khoá ngoại nên id vẫn nằm lại). */
-const GONE_TONE = 'bg-slate-50 text-slate-400 ring-slate-200 italic'
+const GONE_TONE = 'bg-slate-50 text-slate-400 ring-slate-200 line-through'
 /** Hằng để `useMemo` của bộ chọn không tính lại mỗi lần vẽ. */
 const NO_IDS: readonly UUID[] = []
 
@@ -364,7 +364,7 @@ export function ShiftSimpleView({
       <section className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color.dot}`} />
-          <h3 className="truncate font-semibold text-slate-900">{shift.title}</h3>
+          <h3 className="truncate font-medium text-slate-900">{shift.title}</h3>
         </div>
         <p className="mt-0.5 text-sm text-slate-600">
           <span className="capitalize">
@@ -385,7 +385,7 @@ export function ShiftSimpleView({
       {/* ---- phần của bạn ---- */}
       <section data-tour="simple-mine">
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-medium text-slate-900">
             {t('shiftSimple.yourPart')}
           </h3>
           {saved && <StatusBadge status={saved.status} size="sm" />}
@@ -513,7 +513,7 @@ export function ShiftSimpleView({
                     type="button"
                     onClick={() => onJoin(draft)}
                     disabled={!user || rangeError || saving || !!joinLocationError}
-                    className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-4 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
                   >
                     <Plus className="h-4 w-4" />
                     {saving ? t('shiftSimple.joining') : t('shiftSimple.join')}
@@ -547,7 +547,7 @@ export function ShiftSimpleView({
                     type="button"
                     onClick={() => onLeave(mine.key)}
                     disabled={saving}
-                    className="min-h-11 rounded-md bg-rose-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-rose-500 disabled:opacity-60 sm:min-h-0 sm:py-1.5"
+                    className="min-h-11 rounded-md bg-rose-600 px-3 text-sm font-medium text-white shadow-xs transition hover:bg-rose-500 disabled:opacity-60 sm:min-h-0 sm:py-1.5"
                   >
                     {saving ? t('common.saving') : t('shiftSimple.leave')}
                   </button>
@@ -571,7 +571,7 @@ export function ShiftSimpleView({
                     type="button"
                     onClick={() => onCheckIn(saved.id)}
                     disabled={saving}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:min-h-0 sm:py-1.5"
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-sm font-medium text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:min-h-0 sm:py-1.5"
                   >
                     <Check className="h-4 w-4" />
                     {saving ? t('common.saving') : t('shiftSimple.checkIn')}
@@ -590,7 +590,7 @@ export function ShiftSimpleView({
                         else setConfirmingEarly(true)
                       }}
                       disabled={draftDirty || saving}
-                      className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-4 text-sm font-medium text-white shadow-xs transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
                     >
                       <Check className="h-4 w-4" />
                       {t('shiftSimple.checkIn')}
@@ -650,7 +650,7 @@ export function ShiftSimpleView({
 
       {/* ---- người khác, chỉ xem ---- */}
       <section data-tour="simple-others">
-        <h3 className="mb-2 text-sm font-semibold text-slate-900">
+        <h3 className="mb-2 text-sm font-medium text-slate-900">
           {t('shiftSimple.others')}{' '}
           <span className="font-normal text-slate-400">({others.length})</span>
         </h3>

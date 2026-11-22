@@ -465,7 +465,7 @@ export function CommandPalette({
             aria-label={t('palette.title')}
             className="min-h-13 w-full bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
           />
-          <kbd className="hidden shrink-0 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 sm:block">
+          <kbd className="hidden shrink-0 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] font-medium text-slate-400 sm:block">
             Esc
           </kbd>
         </div>
@@ -494,7 +494,7 @@ export function CommandPalette({
               return (
                 <div key={cmd.id}>
                   {newGroup && (
-                    <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400">
+                    <p className="px-3 pt-2 pb-1 text-xs font-medium text-slate-400">
                       {t(GROUP_LABEL[cmd.group])}
                     </p>
                   )}
@@ -518,7 +518,7 @@ export function CommandPalette({
                     />
                     <span
                       className={`min-w-0 flex-1 truncate ${
-                        cmd.group === 'result' ? 'font-semibold tabular-nums' : ''
+                        cmd.group === 'result' ? 'font-medium tabular-nums' : ''
                       }`}
                     >
                       {cmd.label}
@@ -537,13 +537,13 @@ export function CommandPalette({
 
         <div className="hidden items-center gap-4 border-t border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500 sm:flex">
           <span>
-            <kbd className="font-semibold">↑↓</kbd> {t('palette.hintMove')}
+            <kbd className="font-medium">↑↓</kbd> {t('palette.hintMove')}
           </span>
           <span>
-            <kbd className="font-semibold">Enter</kbd> {t('palette.hintRun')}
+            <kbd className="font-medium">Enter</kbd> {t('palette.hintRun')}
           </span>
           <span className="ml-auto">
-            <kbd className="font-semibold">{mac ? '⌘K' : 'Ctrl K'}</kbd>
+            <kbd className="font-medium">{mac ? '⌘K' : 'Ctrl K'}</kbd>
           </span>
         </div>
       </div>

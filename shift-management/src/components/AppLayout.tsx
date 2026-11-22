@@ -392,7 +392,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white">
               <CalendarClock className="h-4.5 w-4.5" />
             </span>
-            <span className="truncate text-sm font-semibold text-slate-900">
+            <span className="truncate text-sm font-medium text-slate-900">
               {APP_NAME}
             </span>
           </div>
@@ -423,7 +423,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <Icon className="h-4 w-4" />
                 {t(label)}
                 {to === '/pending' && pendingCount > 0 && (
-                  <span className="ml-0.5 rounded-full bg-amber-100 px-1.5 text-[11px] font-semibold text-amber-700">
+                  <span className="ml-0.5 rounded-full bg-amber-100 px-1.5 text-[11px] font-medium text-amber-700">
                     {pendingCount}
                   </span>
                 )}
@@ -566,7 +566,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={ClipboardCheck} tone="bg-orange-50 text-orange-600" />
+              <SheetIcon icon={ClipboardCheck} tone="bg-slate-100 text-slate-600" />
               {t('nav.summary')}
             </NavLink>
 
@@ -575,7 +575,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={ScrollText} tone="bg-fuchsia-50 text-fuchsia-600" />
+              <SheetIcon icon={ScrollText} tone="bg-slate-100 text-slate-600" />
               {t('nav.actionLog')}
             </NavLink>
 
@@ -584,7 +584,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={Network} tone="bg-emerald-50 text-emerald-600" />
+              <SheetIcon icon={Network} tone="bg-slate-100 text-slate-600" />
               {t('nav.status')}
             </NavLink>
 
@@ -593,7 +593,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setAccountOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={BookOpen} tone="bg-cyan-50 text-cyan-600" />
+              <SheetIcon icon={BookOpen} tone="bg-slate-100 text-slate-600" />
               {t('nav.help')}
             </NavLink>
 
@@ -603,7 +603,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 onClick={() => setAccountOpen(false)}
                 className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
               >
-                <SheetIcon icon={UserCog} tone="bg-teal-50 text-teal-600" />
+                <SheetIcon icon={UserCog} tone="bg-slate-100 text-slate-600" />
                 {t('nav.accounts')}
               </NavLink>
             )}
@@ -629,7 +629,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 }}
                 className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
               >
-                <SheetIcon icon={Download} tone="bg-lime-50 text-lime-700" />
+                <SheetIcon icon={Download} tone="bg-slate-100 text-slate-600" />
                 {t('pwa.install')}
               </button>
             )}
@@ -654,7 +654,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               }}
               className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={KeyRound} tone="bg-amber-50 text-amber-600" />
+              <SheetIcon icon={KeyRound} tone="bg-slate-100 text-slate-600" />
               {t('pwd.title')}
             </button>
 
@@ -666,7 +666,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               aria-label={`${t('nav.language')}: ${t('menu.langName')} · ${t('menu.langNext')}`}
               className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={Languages} tone="bg-indigo-50 text-indigo-600" />
+              <SheetIcon icon={Languages} tone="bg-slate-100 text-slate-600" />
               {t('nav.language')}
               <span className="ml-auto text-sm font-normal text-slate-500">
                 {t('menu.langName')}
@@ -679,25 +679,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
               aria-label={`${t('theme.label')}: ${t(THEME_LABEL[themePref])} · ${t('menu.themeNext', { theme: t(THEME_LABEL[THEME_NEXT[themePref]]) })}`}
               className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
             >
-              <SheetIcon icon={THEME_ICON[themePref]} tone="bg-violet-50 text-violet-600" />
+              <SheetIcon icon={THEME_ICON[themePref]} tone="bg-slate-100 text-slate-600" />
               {t('theme.label')}
               <span className="ml-auto text-sm font-normal text-slate-500">
                 {t(THEME_LABEL[themePref])}
               </span>
             </button>
 
-            {/* Đăng xuất tách khỏi nhóm trên và dùng màu cảnh báo: nó đưa người
-                dùng ra khỏi ứng dụng, không nên nằm lẫn với các mục thường. */}
+            {/* Đăng xuất tách khỏi nhóm trên bằng đường kẻ, nhưng cùng tông xám
+                với các mục khác: đỏ sẵn thì lại hút mắt vào đúng nút không nên
+                bấm nhầm. Chỉ đỏ lúc đang chạm / rê chuột, và khi chờ bấm lần hai. */}
             <div className="border-t border-slate-100 pt-1">
               {/* Bấm hai lần mới đăng xuất, giống ô Đăng xuất trên PC. */}
               <button
                 type="button"
                 onClick={signOutStep.press}
                 disabled={signingOut}
-                className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm text-rose-600 transition disabled:opacity-50 ${
+                className={`group flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition disabled:opacity-50 ${
                   signOutStep.armed
-                    ? 'bg-rose-50 font-semibold ring-1 ring-rose-200'
-                    : 'font-medium active:bg-rose-50'
+                    ? 'bg-rose-50 text-rose-600 ring-1 ring-rose-200'
+                    : 'text-slate-700 hover:bg-rose-50 hover:text-rose-600 active:bg-rose-50 active:text-rose-600'
                 }`}
               >
                 <SheetIcon
@@ -705,7 +706,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   tone={
                     signOutStep.armed
                       ? 'bg-rose-600 text-white'
-                      : 'bg-rose-50 text-rose-600'
+                      : 'bg-slate-100 text-slate-600 group-hover:bg-rose-100 group-hover:text-rose-600 group-active:bg-rose-100 group-active:text-rose-600'
                   }
                 />
                 {signOutStep.armed

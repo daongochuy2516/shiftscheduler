@@ -19,7 +19,7 @@ export function StatusBadge({
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full font-medium ring-1 ring-inset ${STYLES[status]} ${
-        size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs'
+        size === 'sm' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-xs'
       }`}
     >
       <Icon className={size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3'} />

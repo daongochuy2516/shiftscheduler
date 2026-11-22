@@ -192,7 +192,7 @@ export function StatusPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <h1 className="flex items-center gap-2 text-lg font-medium text-slate-900">
             <Network className="h-5 w-5 shrink-0 text-slate-400" />
             {t('status.title')}
           </h1>
@@ -761,7 +761,7 @@ function Stat({
 }) {
   return (
     <div className="min-w-0 px-4 py-2.5">
-      <p className={`text-lg leading-6 font-semibold tabular-nums ${warn ? 'text-amber-600' : 'text-slate-900'}`}>
+      <p className={`text-lg leading-6 font-medium tabular-nums ${warn ? 'text-amber-600' : 'text-slate-900'}`}>
         {value}
       </p>
       <p className="truncate text-xs text-slate-500">{label}</p>
@@ -986,9 +986,9 @@ function Card({
     <section className="flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
       <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
         <Icon className="h-4 w-4 text-slate-400" />
-        <h2 className="font-semibold text-slate-900">{title}</h2>
+        <h2 className="font-medium text-slate-900">{title}</h2>
         <span
-          className={`ml-auto inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${PILL[tone]}`}
+          className={`ml-auto inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${PILL[tone]}`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${DOT[tone]}`} />
           {label}
