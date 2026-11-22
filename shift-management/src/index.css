@@ -496,9 +496,19 @@ body {
    phần còn lại của màn hình, viền indigo đứng yên (lớp phủ tối đã đủ để mắt
    tìm ra, không cần nhấp nháy). Khung trượt mượt khi chuyển bước hay khi
    trang cuộn. */
+/* Màu phủ tối của wizard: cố định, không lấy từ slate — chế độ tối đảo slate
+   (slate-950 thành xám gần trắng), phủ bằng slate là cả màn hình chớp sáng
+   mỗi lần chuyển bước. Khung sáng và lớp phủ khi chưa thấy phần tử dùng
+   chung một màu nên đổi qua lại không thấy. */
+:root {
+  --tour-dim: rgb(12 11 10 / 0.6);
+}
+.tour-dim {
+  background-color: var(--tour-dim);
+}
 .tour-spotlight {
   box-shadow:
-    0 0 0 9999px rgb(12 11 10 / 0.6),
+    0 0 0 9999px var(--tour-dim),
     0 0 0 2px var(--color-indigo-500);
   transition:
     top 220ms var(--ease-app),
