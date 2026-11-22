@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Bell,
@@ -11,6 +11,7 @@ import {
   KeyRound,
   Languages,
   LayoutList,
+  Link,
   LogOut,
   Monitor,
   Moon,
@@ -51,6 +52,7 @@ import { useTwoStep } from './useTwoStep'
 import { RoleBadge } from './RoleBadge'
 import { APP_NAME } from '../lib/brand'
 import { promptInstall, useInstallState } from '../pwa/install'
+import { copyText } from '../lib/clipboard'
 import { OfflineBanner } from './OfflineBanner'
 import { InstallHelpModal } from './InstallHelpModal'
 
@@ -295,6 +297,36 @@ export function AppLayout({ children }: { children: ReactNode }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  /**
+   * Copy link trang đang xem. Bản PWA đã cài không có thanh địa chỉ, nên đây
+   * là cách duy nhất để lấy link gửi cho người khác. URL luôn khớp màn hình
+   * (kể cả hộp thoại có địa chỉ), nên copy nguyên `location.href` là đủ.
+   * Link nằm luôn trong thân thông báo để người dùng thấy mình vừa copy gì.
+   */
+  const copyLink = useCallback(async () => {
+    const href = window.location.href
+    if (await copyText(href)) notify.success('notif.link.copied', undefined, href)
+    else notify.notify({ kind: 'error', title: 'notif.link.copyFailed', body: href })
+  }, [notify])
+
+  // Ctrl + Shift + L (⌘⇧L trên Mac): copy link — chạy cả khi đang gõ trong ô
+  // nhập, tổ hợp này không gõ ra chữ.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === 'l'
+      ) {
+        e.preventDefault()
+        void copyLink()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [copyLink])
   const [accountOpen, setAccountOpen] = useState(false)
   const signOutStep = useTwoStep(handleSignOut)
   const [greeting, setGreeting] = useState<TranslationKey>(greetingKey)
@@ -456,6 +488,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   <HeaderMenu
                     isAdmin={isAdmin}
                     onInstall={onInstall}
+                    onCopyLink={() => void copyLink()}
                     onChangePassword={() => setChangingPassword(true)}
                     onSignOut={handleSignOut}
                     signingOut={signingOut}
@@ -600,6 +633,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {t('pwa.install')}
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setAccountOpen(false)
+                void copyLink()
+              }}
+              className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <SheetIcon icon={Link} tone="bg-slate-100 text-slate-600" />
+              {t('menu.copyLink')}
+            </button>
 
             <button
               type="button"

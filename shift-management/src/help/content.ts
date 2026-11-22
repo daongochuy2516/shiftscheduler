@@ -269,6 +269,7 @@ const vi: HelpSection[] = [
       {
         type: 'list',
         items: [
+          'Không thấy thanh địa chỉ (app đã cài ra màn hình chính)? Bấm **Ctrl + Shift + L** (Mac: ⌘⇧L), hoặc nút lưới → **Copy link** (điện thoại: avatar → **Copy link**).',
           'Trên **Lịch** và **Tổng kết** link luôn có ngày cụ thể, kể cả hôm nay — mai mới mở vẫn ra đúng ngày bạn đã xem.',
           'Cũng gửi được: hộp **nhận ca mẫu** (chỉ ca mẫu; ngày và nơi trực người nhận tự chọn), các dòng **Nhật ký** đang mở Chi tiết, một mục của trang **Hướng dẫn** (bấm mục đó trong mục lục rồi copy link), hộp **Quên mật khẩu**.',
           'Người nhận chưa đăng nhập thì đăng nhập xong được đưa thẳng tới đúng màn hình đó.',
@@ -589,6 +590,7 @@ const en: HelpSection[] = [
       {
         type: 'list',
         items: [
+          'No address bar (app installed to the home screen)? Press **Ctrl + Shift + L** (Mac: ⌘⇧L), or the grid button → **Copy link** (phone: avatar → **Copy link**).',
           'On the **Schedule** and **Summary** the link always carries a specific date, today included — opened tomorrow, it still shows the day you were looking at.',
           'You can also share: the **claim a template** dialog (the template only; they pick their own days and locations), the **Activity** rows you have expanded, one section of this **Help** page (click it in the contents, then copy the link), and the **Forgot password** box.',
           'If they are not signed in yet, they land on that exact screen right after signing in.',

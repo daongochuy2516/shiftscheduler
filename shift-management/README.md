@@ -872,7 +872,7 @@ Với người sửa mã: gắn `data-tooltip="…"` lên phần tử, **không 
 
 ## 9g. Cài ứng dụng và dùng khi mất mạng
 
-Ứng dụng là một **PWA**: cài được ra màn hình chính / menu Start như app thật, mở trong cửa sổ riêng không có thanh địa chỉ, và **mất mạng vẫn mở được để xem** lịch đã xem lần cuối.
+Ứng dụng là một **PWA**: cài được ra màn hình chính / menu Start như app thật, mở trong cửa sổ riêng không có thanh địa chỉ (lấy link màn hình bằng nút lưới / avatar → **Copy link**, hay `Ctrl + Shift + L`), và **mất mạng vẫn mở được để xem** lịch đã xem lần cuối.
 
 ### Cài ứng dụng
 
@@ -1008,6 +1008,7 @@ Giá trị mặc định không ghi lên URL (trừ `date` ở Lịch / Tổng k
 | Bấm khối / chip ca | Mở form sửa ca đó |
 | Bấm tiêu đề cột ngày (Tuần) | Sang chế độ Ngày |
 | `Ctrl + K` (Mac: `⌘K`) | Mở / đóng **Quick Search** (xem bên dưới) |
+| `Ctrl + Shift + L` (Mac: `⌘⇧L`) | Copy link màn hình đang xem — cũng có ở nút lưới → **Copy link** (điện thoại: avatar → **Copy link**). Dành cho app đã cài, không có thanh địa chỉ. Thông báo *Đã copy link* ghi kèm link vừa copy |
 | Bấm số ngày (Tháng) | Sang chế độ Ngày |
 
 ### Quick Search (Ctrl + K)

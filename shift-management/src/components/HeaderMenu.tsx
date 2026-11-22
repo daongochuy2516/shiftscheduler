@@ -7,6 +7,7 @@ import {
   Grip,
   KeyRound,
   Languages,
+  Link,
   LogOut,
   Monitor,
   Moon,
@@ -20,6 +21,10 @@ import { useNotifications } from '../notifications/NotificationContext'
 import { useTheme, type ThemePref } from '../theme/ThemeContext'
 import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
+
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.userAgent)
+/** Phím tắt copy link (bắt ở AppLayout), ghi trong tooltip của ô. */
+const COPY_LINK_KEYS = IS_MAC ? '⌘⇧L' : 'Ctrl + Shift + L'
 
 const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
   { id: 'system', icon: Monitor, label: 'theme.systemShort' },
@@ -38,6 +43,7 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
 export function HeaderMenu({
   isAdmin,
   onInstall,
+  onCopyLink,
   onChangePassword,
   onSignOut,
   signingOut,
@@ -45,6 +51,7 @@ export function HeaderMenu({
   isAdmin: boolean
   /** Có khi trình duyệt cài được app (pwa/install.ts); không thì ẩn ô. */
   onInstall?: () => void
+  onCopyLink: () => void
   onChangePassword: () => void
   onSignOut: () => void
   signingOut: boolean
@@ -112,7 +119,7 @@ export function HeaderMenu({
 
       {open && (
         <MenuPanel label={t('menu.label')}>
-          {/* Nhân viên 7 ô, admin thêm ô Tài khoản, trình duyệt cài được app
+          {/* Nhân viên 8 ô, admin thêm ô Tài khoản, trình duyệt cài được app
               thì thêm ô Cài ứng dụng; lưới 3 cột. */}
           <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-2">
             {isAdmin && (
@@ -172,6 +179,13 @@ export function HeaderMenu({
               />
             )}
             <Tile
+              icon={Link}
+              tone="bg-slate-100 text-slate-600"
+              label={t('menu.copyLink')}
+              tooltip={COPY_LINK_KEYS}
+              onClick={() => run(onCopyLink)}
+            />
+            <Tile
               icon={KeyRound}
               tone="bg-amber-50 text-amber-600"
               tour="menu-password"
@@ -192,7 +206,7 @@ export function HeaderMenu({
           {/* Cho người chưa biết có bảng lệnh nhanh. */}
           <p className="px-3 pt-2 pb-1 text-center text-xs text-slate-500">
             {t('menu.paletteHint', {
-              keys: /Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘K' : 'Ctrl + K',
+              keys: IS_MAC ? '⌘K' : 'Ctrl + K',
             })}
           </p>
         </MenuPanel>
