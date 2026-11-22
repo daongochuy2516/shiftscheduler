@@ -30,7 +30,7 @@ export function UpdatePrompt() {
           <RefreshCw className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p id="update-prompt-title" className="text-sm font-semibold text-slate-900">
+          <p id="update-prompt-title" className="text-sm font-medium text-slate-900">
             {t('pwa.updateTitle')}
           </p>
           <p className="mt-0.5 text-sm text-slate-600">{t('pwa.updateBody')}</p>
@@ -45,7 +45,7 @@ export function UpdatePrompt() {
             <button
               type="button"
               onClick={applyUpdate}
-              className="min-h-11 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 sm:min-h-9"
+              className="min-h-11 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition hover:bg-indigo-700 sm:min-h-9"
             >
               {t('pwa.reload')}
             </button>

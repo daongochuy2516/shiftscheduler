@@ -125,7 +125,7 @@ export function HeaderMenu({
             {isAdmin && (
               <Tile
                 icon={UserCog}
-                tone="bg-teal-50 text-teal-600"
+                tone="bg-slate-100 text-slate-600"
                 tour="menu-accounts"
                 label={t('nav.accounts')}
                 onClick={() => run(() => navigate('/accounts'))}
@@ -133,14 +133,14 @@ export function HeaderMenu({
             )}
             <Tile
               icon={Bell}
-              tone="bg-sky-50 text-sky-600"
+              tone="bg-slate-100 text-slate-600"
               tour="menu-notifications"
               label={t('notif.title')}
               onClick={() => run(() => setCenterOpen(true))}
             />
             <Tile
               icon={theme.icon}
-              tone="bg-violet-50 text-violet-600"
+              tone="bg-slate-100 text-slate-600"
               tour="menu-theme"
               label={t('theme.label')}
               sub={t(theme.label)}
@@ -149,7 +149,7 @@ export function HeaderMenu({
             />
             <Tile
               icon={Languages}
-              tone="bg-indigo-50 text-indigo-600"
+              tone="bg-slate-100 text-slate-600"
               tour="menu-language"
               label={t('nav.language')}
               sub={t('menu.langName')}
@@ -158,14 +158,14 @@ export function HeaderMenu({
             />
             <Tile
               icon={Network}
-              tone="bg-emerald-50 text-emerald-600"
+              tone="bg-slate-100 text-slate-600"
               tour="menu-status"
               label={t('nav.status')}
               onClick={() => run(() => navigate('/status'))}
             />
             <Tile
               icon={BookOpen}
-              tone="bg-cyan-50 text-cyan-600"
+              tone="bg-slate-100 text-slate-600"
               tour="menu-help"
               label={t('nav.help')}
               onClick={() => run(() => navigate('/help'))}
@@ -173,7 +173,7 @@ export function HeaderMenu({
             {onInstall && (
               <Tile
                 icon={Download}
-                tone="bg-lime-50 text-lime-700"
+                tone="bg-slate-100 text-slate-600"
                 label={t('pwa.install')}
                 onClick={() => run(onInstall)}
               />
@@ -187,14 +187,17 @@ export function HeaderMenu({
             />
             <Tile
               icon={KeyRound}
-              tone="bg-amber-50 text-amber-600"
+              tone="bg-slate-100 text-slate-600"
               tour="menu-password"
               label={t('pwd.title')}
               onClick={() => run(onChangePassword)}
             />
             <Tile
               icon={LogOut}
-              tone="bg-rose-50 text-rose-600"
+              // Cùng tông với các ô khác; chỉ đỏ khi rê chuột vào (và khi đang
+              // chờ bấm lần hai — `alert`). Đỏ sẵn thì lại hút mắt vào đúng nút
+              // không nên bấm nhầm.
+              tone="bg-slate-100 text-slate-600 group-hover:bg-rose-50 group-hover:text-rose-600"
               tour="menu-signout"
               label={t('auth.signOut')}
               sub={signOut.armed ? t('auth.signOutAgain') : undefined}
@@ -249,7 +252,7 @@ function Tile({
   onClick,
 }: {
   icon: typeof Sun
-  /** Màu nền + màu icon của vòng tròn, viết nguyên chuỗi để Tailwind sinh. */
+  /** Màu nền + màu icon của vòng tròn, viết nguyên chuỗi để Tailwind sinh. Mọi ô cùng một tông trung tính, kể cả đăng xuất (nó chỉ đỏ khi rê chuột). */
   tone: string
   label: string
   sub?: string
@@ -271,18 +274,18 @@ function Tile({
       data-tooltip={tooltip}
       disabled={disabled}
       onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition disabled:opacity-50 ${
-        alert ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-slate-100'
+      className={`group flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition disabled:opacity-50 ${
+        alert ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-slate-50'
       }`}
     >
       <span
-        className={`relative flex h-11 w-11 items-center justify-center rounded-full ${
+        className={`relative flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
           alert ? 'bg-rose-600 text-white' : tone
         }`}
       >
         <Icon className="h-5 w-5" />
         {badge && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] leading-none font-semibold text-white">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] leading-none font-medium text-white">
             {badge}
           </span>
         )}

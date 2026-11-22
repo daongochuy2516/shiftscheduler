@@ -236,7 +236,7 @@ Dòng dưới tiêu đề luôn cho biết phạm vi đang xem có bao nhiêu ca
 Timeline chi tiết theo giờ ([mục 5](#5-đọc-timeline-ngày)). Chế độ này có:
 
 - **Bộ chọn khung giờ**: *Vừa theo ngày* (tự co giãn theo dữ liệu thực tế), *06:00–22:00*, *08:00–20:00*, *Cả ngày*. Trên máy tính bộ chọn này cũng dùng cho chế độ **Tuần** (xem dưới).
-- Nút **Thêm ca vào ngày này** — mở form ca mới với ngày đang xem (nút **Tạo ca → Tạo ca thủ công** ở thanh trên cũng lấy ngày đang xem khi bạn ở trang Lịch / Tổng kết).
+- Tạo ca cho ngày đang xem: **Tạo ca → Tạo ca thủ công** ở thanh trên (nút tròn trên điện thoại) — form ca mới tự lấy ngày đang xem khi bạn ở trang Lịch / Tổng kết.
 - Dải chip liệt kê các ca trong ngày ở cuối trang; bấm chip là mở ca đó ra sửa.
 
 ### Chế độ **Tuần**
@@ -323,7 +323,6 @@ Timeline cuộn ngang được khi khung giờ rộng; cột tên nhân viên lu
 | --- | --- |
 | Nút **Tạo ca** trên thanh điều hướng → **Tạo ca thủ công** (hay *tạo ca* trong Ctrl + K) | Ca mới, ngày = ngày đang xem ở trang Lịch / Tổng kết; ở các trang khác là hôm nay |
 | Nút tròn (điện thoại) → **Tạo ca thủ công** | Như trên |
-| Nút **Thêm ca vào ngày này** (chế độ Ngày) | Ca mới, ngày = ngày đang xem |
 | Bấm một khối trên timeline / khối hoặc chip tuần / chip tháng | Sửa ca đã có |
 | Nút **Sửa** trên thẻ ca ở các trang danh sách | Sửa ca đã có |
 | Mở một link có `shift=…` | Đúng form đó, trên đúng trang người gửi đang xem |
@@ -479,7 +478,7 @@ Bấm **Tạo ca → Quản lý nơi trực**. **Chỉ admin** thấy lựa ch�
 - **Trên dòng thời gian** (chế độ Ngày), nhãn nơi trực tự co theo độ rộng khối ca: **tên đầy đủ** → **tên tắt** → **chấm màu**, đặt ở dòng giờ, không đủ chỗ thì lên dòng tên ca. Chỉ khi đến chấm màu cũng không vừa thì mới ẩn; rê chuột vào khối luôn thấy đủ tên.
 - **Chế độ Tuần**: cùng cách co như dòng thời gian (tên đầy đủ → tên tắt → chấm màu), tính theo bề rộng **khối** lúc đó. Trên máy tính (lịch tuần của trang Lịch và trang Tổng kết) nhãn đặt ở dòng giờ, không đủ chỗ thì lên dòng tên người; khối càng hẹp khi nhiều người trùng giờ đứng cạnh nhau. Trên điện thoại (lưới nhân viên × ngày) theo bề rộng cột ngày. Màn hình rộng thì khối rộng, hiện được nhiều hơn. **Chế độ Tháng** không hiện nơi trực.
 - **Đổi tên / màu**: đổi một lần là **mọi ca đổi theo** — lượt phân công chỉ giữ id của nơi trực, không giữ tên.
-- **Hiện khi nhận ca**: bỏ tích để **ẩn** — ca cũ vẫn giữ chip, nhưng không ai chọn thêm được nơi đó nữa (lượt đang có nó vẫn lưu được bình thường).
+- **Hiện khi nhận ca**: bấm nút **con mắt** trên dòng để **ẩn** (mắt gạch chéo, dòng mờ đi kèm chữ *Đang ẩn*); bấm lần nữa để hiện lại. Trong form sửa vẫn là ô tích *Hiện khi nhận ca*. Ca cũ vẫn giữ chip, nhưng không ai chọn thêm được nơi đó nữa (lượt đang có nó vẫn lưu được bình thường).
 - **Xoá**: chỉ được khi **chưa lượt nào dùng** nơi đó, kể cả admin. Đang dùng thì máy chủ từ chối với *Nơi trực đang được dùng — hãy ẩn thay vì xoá.*
 
 Mỗi lần lưu một nơi trực là một dòng nhật ký ([mục 9b](#9b-nhật-ký-thao-tác)).
@@ -850,7 +849,7 @@ Ba lựa chọn: **Hệ thống** (theo cài đặt của thiết bị, đổi t
 
 Lựa chọn nhớ trên trình duyệt đó (khoá `scheduler.theme`; chọn **Hệ thống** thì không lưu gì, để thiết bị quyết định). Một đoạn script nhỏ trong `index.html` áp giao diện trước khi trang vẽ nên mở ứng dụng ở chế độ tối không bị nháy trắng.
 
-Với người sửa mã: chế độ tối làm bằng cách **định nghĩa lại biến màu Tailwind** dưới `[data-theme='dark']` trong `src/index.css`, không rải `dark:` trong từng component — viết class sáng như bình thường là đủ. Dùng họ màu mới ngoài những họ đã có bản tối (slate, indigo, rose, amber, emerald, sky, violet, teal, orange, lime, fuchsia, cyan) thì phải thêm khối biến tương ứng.
+Với người sửa mã: chế độ tối làm bằng cách **định nghĩa lại biến màu Tailwind** dưới `[data-theme='dark']` trong `src/index.css`, không rải `dark:` trong từng component — viết class sáng như bình thường là đủ. Dùng họ màu mới ngoài những họ đã có bản tối (slate, indigo, rose, amber, emerald, sky, violet, teal, orange, lime, fuchsia, cyan) thì phải thêm khối biến tương ứng. Ở giao diện sáng, `slate` cũng được định nghĩa lại (khối `@theme` cùng file) thành xám trung tính hơi ấm, cùng độ sáng từng bậc với slate gốc — viết `slate-*` như thường. Font là font hệ thống (`--font-sans` trong `@theme`) cho mọi chỗ, kể cả đồng hồ — không tải font nào.
 
 ### Chữ không bôi đen được
 

@@ -279,19 +279,19 @@ export function WeekCalendar<T extends WeekCalendarItem>({
       <>
         {/* shrink-0: lỡ đo canvas lệch so với DOM thì phần dưới cùng bị cắt
             (overflow-hidden), không bóp dẹt các dòng chữ phía trên. */}
-        <span className="flex min-w-0 shrink-0 items-center gap-1 text-[11px] leading-4 font-semibold">
+        <span className="flex min-w-0 shrink-0 items-center gap-1 text-[11px] leading-4 font-medium">
           {pending && <Clock3 className="h-2.5 w-2.5 shrink-0 opacity-70" />}
           <span className="min-w-0 truncate">{item.personName}</span>
           {fit?.row === 'title' && chips}
         </span>
         <span className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden">
-          <span className="shrink-0 text-[10px] leading-[14px] opacity-75">
+          <span className="shrink-0 text-[11px] leading-[14px] opacity-75">
             {timeText}
           </span>
           {fit?.row === 'time' && chips}
         </span>
         {titleFits && (
-          <span className="block shrink-0 truncate text-[10px] leading-[14px] opacity-75">
+          <span className="block shrink-0 truncate text-[11px] leading-[14px] opacity-75">
             {item.title}
           </span>
         )}
@@ -305,8 +305,8 @@ export function WeekCalendar<T extends WeekCalendarItem>({
       <span className="flex min-w-0 items-center gap-1">
         {pending && <Clock3 className="h-2.5 w-2.5 shrink-0 opacity-70" />}
         <span className="min-w-0 truncate text-[11px] leading-4">
-          <span className="font-semibold">{item.personName}</span>{' '}
-          <span className="text-[10px] opacity-75">{timeText}</span>
+          <span className="font-medium">{item.personName}</span>{' '}
+          <span className="text-[11px] opacity-75">{timeText}</span>
         </span>
         {chips}
       </span>
@@ -360,7 +360,7 @@ export function WeekCalendar<T extends WeekCalendarItem>({
                 {format(day, 'EEE', { locale: dateLocale })}
               </span>
               <span
-                className={`mx-auto mt-0.5 flex h-9 w-9 items-center justify-center rounded-full text-lg font-semibold tabular-nums transition ${
+                className={`mx-auto mt-0.5 flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium tabular-nums transition ${
                   isToday
                     ? 'bg-indigo-600 text-white'
                     : onSelectDay
@@ -412,7 +412,7 @@ export function WeekCalendar<T extends WeekCalendarItem>({
           {Array.from({ length: hours + 1 }, (_, i) => (
             <span
               key={i}
-              className="absolute right-2 -translate-y-1/2 text-[10px] font-medium text-slate-500 tabular-nums"
+              className="absolute right-2 -translate-y-1/2 text-[11px] text-slate-500 tabular-nums"
               style={{ top: PAD_Y + i * HOUR_PX }}
             >
               {hourLabel(range.startHour + i)}

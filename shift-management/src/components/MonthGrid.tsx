@@ -83,7 +83,7 @@ export function MonthGrid({
         {weekdayLabels.map((label) => (
           <div
             key={label}
-            className="px-2 py-2 text-center text-xs font-semibold text-slate-500 capitalize"
+            className="px-2 py-2 text-center text-xs font-medium text-slate-500 capitalize"
           >
             {label}
           </div>
@@ -109,7 +109,7 @@ export function MonthGrid({
                 type="button"
                 onClick={() => onSelectDay(day)}
                 data-tooltip={t('timeline.openDay')}
-                className={`mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold transition ${
+                className={`mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-medium transition ${
                   isToday
                     ? 'bg-indigo-600 text-white'
                     : inMonth
@@ -142,10 +142,10 @@ export function MonthGrid({
                         pending ? 'border-dashed' : ''
                       } ${mine ? 'ring-1 ring-indigo-400' : ''}`}
                     >
-                      <span className="block truncate text-[11px] font-semibold">
+                      <span className="block truncate text-[11px] font-medium">
                         {shift.title}
                       </span>
-                      <span className="block truncate text-[10px] opacity-75">
+                      <span className="block truncate text-[11px] opacity-75">
                         {normalizeTime(shift.start_time)} ·{' '}
                         {t('timeline.staffCount', {
                           count: shift.assignments.length,

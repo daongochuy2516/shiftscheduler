@@ -137,7 +137,7 @@ function ClockPanel({
       // offsetWidth (làm tròn xuống) — hụt một phần pixel là dòng ngày xuống hàng.
       className="tooltip-panel absolute top-full right-0 z-50 mt-2 w-max cursor-default rounded-xl bg-white px-3.5 py-2.5 text-left whitespace-nowrap shadow-lg ring-1 ring-slate-900/10"
     >
-      <p className="text-xl font-semibold text-slate-900 tabular-nums">
+      <p className="text-xl font-medium text-slate-900 tabular-nums">
         {format(now, 'HH:mm:ss')}
       </p>
       <p className="text-sm text-slate-600 first-letter:uppercase">{label}</p>

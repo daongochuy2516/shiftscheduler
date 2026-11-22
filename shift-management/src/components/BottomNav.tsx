@@ -59,14 +59,14 @@ export function BottomNav({ pendingCount }: { pendingCount: number }) {
                   <span className="relative">
                     <Icon className="h-5 w-5" />
                     {to === '/pending' && pendingCount > 0 && (
-                      <span className="absolute -top-1 -right-2 min-w-4 rounded-full bg-amber-500 px-1 text-center text-[10px] leading-4 font-semibold text-white">
+                      <span className="absolute -top-1 -right-2 min-w-4 rounded-full bg-amber-500 px-1 text-center text-[11px] leading-4 font-medium text-white">
                         {pendingCount > 9 ? '9+' : pendingCount}
                       </span>
                     )}
                   </span>
                   <span
                     className={`text-[11px] leading-tight ${
-                      isActive ? 'font-semibold' : 'font-medium'
+                      isActive ? 'font-medium' : 'font-normal'
                     }`}
                   >
                     {t(label)}

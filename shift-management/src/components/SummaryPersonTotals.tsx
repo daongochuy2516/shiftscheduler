@@ -33,7 +33,7 @@ export function SummaryPersonTotals({
 
   return (
     <section className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
-      <h2 className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+      <h2 className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-500">
         {title}
       </h2>
 
@@ -74,7 +74,7 @@ export function SummaryPersonTotals({
                       {row.profile.display_name}
                     </span>
                     {isMe && (
-                      <span className="block text-[10px] font-medium text-indigo-600">
+                      <span className="block text-[11px] font-medium text-indigo-600">
                         {t('common.you')}
                       </span>
                     )}
@@ -85,7 +85,7 @@ export function SummaryPersonTotals({
                       : ''}
                   </span>
                   <span
-                    className={`w-16 shrink-0 text-right text-sm font-semibold tabular-nums ${
+                    className={`w-16 shrink-0 text-right text-sm font-medium tabular-nums ${
                       row.minutes > 0 ? 'text-slate-800' : 'text-slate-300'
                     }`}
                   >
@@ -97,13 +97,13 @@ export function SummaryPersonTotals({
           </ul>
 
           <div className="flex items-center gap-2 bg-slate-50 px-4 py-2">
-            <span className="flex-1 text-xs font-semibold text-slate-600">
+            <span className="flex-1 text-xs font-medium text-slate-600">
               {t('timeline.weekTotal')}
             </span>
             <span className="shrink-0 text-xs text-slate-500 tabular-nums">
               {t('timeline.assignmentCount', { count: totalCount })}
             </span>
-            <span className="w-16 shrink-0 text-right text-sm font-semibold text-slate-900 tabular-nums">
+            <span className="w-16 shrink-0 text-right text-sm font-medium text-slate-900 tabular-nums">
               {totalMinutes > 0 ? formatMinutesDuration(totalMinutes) : '—'}
             </span>
           </div>

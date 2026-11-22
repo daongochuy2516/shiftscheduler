@@ -12,7 +12,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Plus,
   SlidersHorizontal,
 } from 'lucide-react'
 import { Modal } from '../components/Modal'
@@ -105,7 +104,7 @@ export function TimelinePage() {
   const shiftColor = useShiftColor()
   const { user } = useAuth()
   const { t, dateLocale } = useI18n()
-  const { openCreate, openEdit } = useShiftEditor()
+  const { openEdit } = useShiftEditor()
   const scaleParam = params.get('scale')
   const scale: ScaleId =
     SCALES.find((s) => s.id === scaleParam)?.id ?? 'fit'
@@ -315,7 +314,7 @@ export function TimelinePage() {
         </div>
 
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+          <h1 className="flex items-center gap-2 text-lg font-medium text-slate-900">
             <CalendarDays className="h-5 w-5 shrink-0 text-slate-400" />
             <span className="truncate capitalize">{headingText}</span>
           </h1>
@@ -400,21 +399,8 @@ export function TimelinePage() {
               />
             </div>
           )}
-
-          {view === 'day' && (
-            <>
-              {/* Trên mobile việc này do nút nổi đảm nhiệm, và nút nổi cũng tạo
-                  theo đúng ngày đang xem. */}
-              <button
-                type="button"
-                onClick={() => openCreate(dateKey)}
-                className="hidden items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 sm:inline-flex"
-              >
-                <Plus className="h-4 w-4" />
-                {t('timeline.addShiftOnDay')}
-              </button>
-            </>
-          )}
+          {/* Không có nút "Thêm ca vào ngày này" riêng: Tạo ca → Tạo ca thủ
+              công trên header (nút nổi trên mobile) đã tạo theo ngày đang xem. */}
         </div>
       </div>
 

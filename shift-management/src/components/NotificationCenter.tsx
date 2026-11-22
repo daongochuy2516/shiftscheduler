@@ -139,7 +139,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
           style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
         >
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2 className="text-base font-medium text-slate-900">
               {t('notif.title')}
             </h2>
             {READ_STATE && (
@@ -213,7 +213,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
               {groups.map(([day, list]) => (
                 <section key={day}>
                   {/* Chỉ viết hoa chữ đầu: "capitalize" sẽ ra "Hôm Nay". */}
-                  <h3 className="mb-1.5 px-1 text-xs font-semibold text-slate-500 first-letter:uppercase">
+                  <h3 className="mb-1.5 px-1 text-xs font-medium text-slate-500 first-letter:uppercase">
                     {dayHeading(list[0].createdAt)}
                   </h3>
                   <ul className="space-y-2">
@@ -234,7 +234,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                         >
                           <p
                             className={`text-sm text-slate-900 ${
-                              item.read || !READ_STATE ? 'font-medium' : 'font-semibold'
+                              item.read || !READ_STATE ? 'font-normal' : 'font-medium'
                             }`}
                           >
                             {t(item.title, item.params)}

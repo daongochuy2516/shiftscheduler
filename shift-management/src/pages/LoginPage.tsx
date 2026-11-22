@@ -82,7 +82,7 @@ export function LoginPage() {
           <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
             <CalendarClock className="h-6 w-6" />
           </span>
-          <h1 className="text-lg font-semibold text-slate-900">
+          <h1 className="text-lg font-medium text-slate-900">
             {APP_NAME}
           </h1>
           <p className="mt-1 text-sm text-slate-500">{t('auth.subtitle')}</p>
@@ -170,7 +170,7 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:opacity-60"
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:opacity-60"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {submitting ? t('auth.signingIn') : t('auth.signIn')}
@@ -179,7 +179,7 @@ export function LoginPage() {
 
         {IS_MOCK_BACKEND && (
           <div className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-200">
-            <p className="font-semibold">{t('auth.mockMode')}</p>
+            <p className="font-medium">{t('auth.mockMode')}</p>
             <p className="mt-1">
               {t('auth.mockHint', { password: MOCK_PASSWORD })}
             </p>
@@ -211,7 +211,7 @@ export function LoginPage() {
           footer={
             <button
               type="button"
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500"
               onClick={() => setShowForgot(false)}
             >
               {t('forgot.ok')}

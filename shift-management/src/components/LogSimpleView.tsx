@@ -422,7 +422,7 @@ export function LogSimpleView({ row }: { row: ActionLog }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+      <p className="mb-1 text-xs font-medium text-slate-500">
         {title}
       </p>
       <dl className="divide-y divide-slate-100 rounded-md bg-white text-sm ring-1 ring-slate-200">

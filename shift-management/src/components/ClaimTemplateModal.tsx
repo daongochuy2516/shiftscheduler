@@ -345,7 +345,7 @@ export function ClaimTemplateModal({
           <button
             type="button"
             data-tour="claim-submit"
-            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={handleClaim}
             disabled={saving || effectiveSelected.length === 0 || noLocations}
           >
@@ -362,7 +362,7 @@ export function ClaimTemplateModal({
           className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 ${color.block}`}
         >
           <span className={`h-2.5 w-2.5 rounded-full ${color.dot}`} />
-          <span className="text-sm font-semibold">{template.title}</span>
+          <span className="text-sm font-medium">{template.title}</span>
           <span className="text-xs opacity-75">
             {formatRange(template.start_time, template.end_time)}
           </span>
@@ -384,7 +384,7 @@ export function ClaimTemplateModal({
                 type="button"
                 onClick={() => void retryLocations()}
                 disabled={retrying}
-                className="-my-1 min-h-11 shrink-0 rounded-md px-2 text-sm font-semibold text-amber-900 underline-offset-2 hover:underline disabled:opacity-60 sm:min-h-0 sm:py-1"
+                className="-my-1 min-h-11 shrink-0 rounded-md px-2 text-sm font-medium text-amber-900 underline-offset-2 hover:underline disabled:opacity-60 sm:min-h-0 sm:py-1"
               >
                 {t('claim.retryLocations')}
               </button>
@@ -574,7 +574,7 @@ export function ClaimTemplateModal({
                     isClaimed
                       ? 'cursor-default border-emerald-200 bg-emerald-50 text-emerald-700'
                       : isSelected
-                        ? 'border-indigo-600 bg-indigo-600 font-semibold text-white'
+                        ? 'border-indigo-600 bg-indigo-600 font-medium text-white'
                         : canAdd
                           ? 'border-dashed border-emerald-400 bg-emerald-50 text-emerald-700 hover:border-indigo-400 hover:bg-indigo-50'
                           : 'border-transparent hover:border-indigo-300 hover:bg-indigo-50'

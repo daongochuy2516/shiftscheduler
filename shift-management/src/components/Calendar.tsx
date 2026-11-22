@@ -146,7 +146,7 @@ export function Calendar({
           onClick={() => setView(view === 'days' ? 'months' : 'years')}
           disabled={view === 'years'}
           aria-live="polite"
-          className="rounded-md px-2 py-1 text-sm font-semibold text-slate-900 transition first-letter:uppercase hover:bg-slate-100 disabled:hover:bg-transparent"
+          className="rounded-md px-2 py-1 text-sm font-medium text-slate-900 transition first-letter:uppercase hover:bg-slate-100 disabled:hover:bg-transparent"
         >
           {view === 'days'
             ? format(month, 'LLLL yyyy', { locale: dateLocale })
@@ -186,7 +186,7 @@ export function Calendar({
                 }}
                 className={`h-14 rounded-md text-sm transition first-letter:uppercase disabled:cursor-not-allowed disabled:opacity-30 ${
                   current
-                    ? 'bg-indigo-600 font-semibold text-white hover:bg-indigo-500'
+                    ? 'bg-indigo-600 font-medium text-white hover:bg-indigo-500'
                     : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -212,9 +212,9 @@ export function Calendar({
                 }}
                 className={`h-14 rounded-md text-sm tabular-nums transition disabled:cursor-not-allowed disabled:opacity-30 ${
                   y === year
-                    ? 'bg-indigo-600 font-semibold text-white hover:bg-indigo-500'
+                    ? 'bg-indigo-600 font-medium text-white hover:bg-indigo-500'
                     : y === new Date().getFullYear()
-                      ? 'font-semibold text-indigo-700 ring-1 ring-indigo-300 ring-inset hover:bg-indigo-50'
+                      ? 'font-medium text-indigo-700 ring-1 ring-indigo-300 ring-inset hover:bg-indigo-50'
                       : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
@@ -263,9 +263,9 @@ export function Calendar({
               onClick={() => onChange(key)}
               className={`flex h-10 items-center justify-center rounded-md text-sm tabular-nums transition outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 disabled:cursor-not-allowed disabled:opacity-30 sm:h-8 ${
                 selected
-                  ? 'bg-indigo-600 font-semibold text-white hover:bg-indigo-500'
+                  ? 'bg-indigo-600 font-medium text-white hover:bg-indigo-500'
                   : isToday(d)
-                    ? 'font-semibold text-indigo-700 ring-1 ring-indigo-300 ring-inset hover:bg-indigo-50'
+                    ? 'font-medium text-indigo-700 ring-1 ring-indigo-300 ring-inset hover:bg-indigo-50'
                     : inMonth
                       ? 'text-slate-700 hover:bg-slate-100'
                       : 'text-slate-300 hover:bg-slate-50'

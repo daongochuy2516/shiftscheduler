@@ -166,7 +166,7 @@ export function ShiftList({
     <div className="space-y-6">
       {groups.map((group) => (
         <section key={group.date}>
-          <h2 className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+          <h2 className="mb-2 text-xs font-medium text-slate-500">
             <span className="capitalize">{dateHeading(group.date)}</span>
           </h2>
 
@@ -188,7 +188,7 @@ export function ShiftList({
                 >
                   <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 px-4 py-3">
                     <span className={`h-2.5 w-2.5 rounded-full ${color.dot}`} />
-                    <h3 className="font-semibold text-slate-900">
+                    <h3 className="font-medium text-slate-900">
                       {shift.title}
                     </h3>
                     <span className="text-sm text-slate-500">
@@ -355,7 +355,7 @@ export function ShiftList({
                                 }}
                                 disabled={busyId === assignment.id}
                                 data-tour="confirm"
-                                className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md bg-emerald-600 px-3 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:ml-0 sm:min-h-0 sm:px-2 sm:py-1"
+                                className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md bg-emerald-600 px-3 text-xs font-medium text-white shadow-xs transition hover:bg-emerald-500 disabled:opacity-60 sm:ml-0 sm:min-h-0 sm:px-2 sm:py-1"
                               >
                                 <Check className="h-3 w-3" />
                                 {busyId === assignment.id
@@ -399,7 +399,7 @@ export function ShiftList({
                   void confirm(confirmTarget.assignment, confirmTarget.shift)
                   setConfirmTarget(null)
                 }}
-                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500"
+                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-emerald-500"
               >
                 <Check className="h-4 w-4" />
                 {t('list.confirm')}

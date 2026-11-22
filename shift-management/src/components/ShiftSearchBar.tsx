@@ -283,7 +283,7 @@ export function ShiftSearchBar({
           {/* ---- bước 1: chọn loại bộ lọc ---- */}
           {popover.step === 'fields' && (
             <>
-              <p className="px-2 pt-1 pb-1.5 text-[11px] font-semibold tracking-wide text-slate-400 uppercase">
+              <p className="px-2 pt-1 pb-1.5 text-xs font-medium text-slate-500">
                 {t('allShifts.filter.chooseField')}
               </p>
               {availableFields.map(({ id, label, icon: Icon }) => (

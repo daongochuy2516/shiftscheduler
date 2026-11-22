@@ -59,7 +59,7 @@ export function SummaryGrid({
             className="grid border-b border-slate-200 bg-slate-50"
             style={{ gridTemplateColumns: gridTemplate }}
           >
-            <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
               {t('common.staff')}
             </div>
             {days.map((day) => {
@@ -81,7 +81,7 @@ export function SummaryGrid({
                     })}
                   </span>
                   <span
-                    className={`block text-sm font-semibold ${
+                    className={`block text-sm font-medium ${
                       isToday ? 'text-indigo-700' : 'text-slate-800'
                     }`}
                   >
@@ -90,7 +90,7 @@ export function SummaryGrid({
                 </div>
               )
             })}
-            <div className="px-2 py-2 text-right text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <div className="px-2 py-2 text-right text-xs font-medium text-slate-500">
               {t('timeline.weekTotal')}
             </div>
           </div>
@@ -140,7 +140,7 @@ export function SummaryGrid({
                 className="grid border-t border-slate-200 bg-slate-50"
                 style={{ gridTemplateColumns: gridTemplate }}
               >
-                <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
                   {t('summary.dayTotal')}
                 </div>
                 {days.map((day) => {
@@ -156,7 +156,7 @@ export function SummaryGrid({
                     </div>
                   )
                 })}
-                <div className="px-2 py-2 text-right text-xs font-semibold tabular-nums text-slate-900">
+                <div className="px-2 py-2 text-right text-xs font-medium tabular-nums text-slate-900">
                   {totalMinutes > 0 ? formatMinutesDuration(totalMinutes) : '—'}
                 </div>
               </div>
@@ -219,7 +219,7 @@ function StaffRow({
             {row.profile.display_name}
           </p>
           {isMe && (
-            <p className="text-[10px] font-medium text-indigo-600">{youLabel}</p>
+            <p className="text-[11px] font-medium text-indigo-600">{youLabel}</p>
           )}
         </div>
       </div>
@@ -255,10 +255,10 @@ function StaffRow({
                 })
                 const body = (
                   <>
-                    <span className="block truncate text-[11px] font-semibold">
+                    <span className="block truncate text-[11px] font-medium">
                       {entry.title}
                     </span>
-                    <span className="block truncate text-[10px] opacity-75">
+                    <span className="block truncate text-[11px] opacity-75">
                       {entry.start}–{entry.end}
                     </span>
                   </>
@@ -288,7 +288,7 @@ function StaffRow({
         )
       })}
 
-      <div className="flex items-center justify-end px-2 py-2 text-xs font-semibold tabular-nums text-slate-700">
+      <div className="flex items-center justify-end px-2 py-2 text-xs font-medium tabular-nums text-slate-700">
         {row.minutes > 0 ? formatMinutesDuration(row.minutes) : '—'}
       </div>
     </div>

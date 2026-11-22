@@ -141,13 +141,14 @@ export function Modal({
         <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="truncate text-base font-semibold text-slate-900">
+              <h2 className="truncate text-base font-medium text-slate-900">
                 {title}
               </h2>
               {titleAside}
             </div>
             {subtitle && (
-              <p className="mt-0.5 truncate text-sm text-slate-500">{subtitle}</p>
+              // Xuống dòng thay vì cắt "…": phụ đề là câu giải thích, mất nửa sau là mất nghĩa.
+              <p className="mt-0.5 text-sm text-pretty text-slate-500">{subtitle}</p>
             )}
           </div>
           {/* Vùng bấm 44px theo yêu cầu chạm, icon vẫn nhỏ như cũ. */}

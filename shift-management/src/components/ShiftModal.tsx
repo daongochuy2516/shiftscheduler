@@ -215,6 +215,12 @@ export function ShiftModal({
   const [joinDirty, setJoinDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  /**
+   * Lỗi "chưa nhập tiêu đề" chỉ hiện sau khi bấm lưu: form mới mở thì ô đương
+   * nhiên trống, báo lỗi ngay là trách người dùng khi họ chưa làm gì.
+   */
+  const [showTitleError, setShowTitleError] = useState(false)
+  const titleRef = useRef<HTMLInputElement | null>(null)
   const notify = useNotify()
   const highlightRef = useRef<HTMLDivElement | null>(null)
 
@@ -359,8 +365,18 @@ export function ShiftModal({
 
   const canSave =
     !titleError && !shiftRangeError && rowErrors.size === 0 && !saving
+  /**
+   * Nút lưu của form đầy đủ không khoá vì thiếu tiêu đề — bấm vào mới kiểm tra
+   * (handleSave). Các lỗi khác đã hiện tại chỗ ngay khi gõ nên vẫn khoá nút.
+   */
+  const saveBlocked = !!shiftRangeError || rowErrors.size > 0 || saving
 
   async function handleSave() {
+    if (titleError) {
+      setShowTitleError(true)
+      titleRef.current?.focus()
+      return
+    }
     if (!canSave) return
     await persist(
       rows,
@@ -531,7 +547,7 @@ export function ShiftModal({
             {dirty && (
               <button
                 type="button"
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleSave}
                 disabled={!canSave}
               >
@@ -554,7 +570,7 @@ export function ShiftModal({
             </button>
             <button
               type="button"
-              className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-rose-500 disabled:opacity-60"
+              className="rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-rose-500 disabled:opacity-60"
               onClick={handleDelete}
               disabled={saving}
             >
@@ -590,9 +606,9 @@ export function ShiftModal({
             </button>
             <button
               type="button"
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={handleSave}
-              disabled={!canSave}
+              disabled={saveBlocked}
             >
               {saving
                 ? t('common.saving')
@@ -664,14 +680,16 @@ export function ShiftModal({
                   {t('common.title')}
                 </label>
                 <input
+                  ref={titleRef}
                   id="shift-title"
                   className={infoLocked ? lockedInputClass : inputClass}
                   disabled={infoLocked}
                   value={form.title}
                   placeholder={t('shift.titlePlaceholder')}
+                  aria-invalid={showTitleError && !!titleError}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
-                {titleError && (
+                {showTitleError && titleError && (
                   <p className="mt-1 text-xs text-rose-600">{titleError}</p>
                 )}
               </div>
@@ -780,7 +798,7 @@ export function ShiftModal({
             {/* ---- Roster ---- */}
             <section>
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900">
+                <h3 className="text-sm font-medium text-slate-900">
                   {t('shift.staffOnShift')}
                 </h3>
                 <button

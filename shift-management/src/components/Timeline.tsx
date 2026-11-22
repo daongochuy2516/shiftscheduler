@@ -176,7 +176,7 @@ export function Timeline({
           {/* ---- hour header ---- */}
           <div className="flex border-b border-slate-200 bg-slate-50">
             <div
-              className="sticky left-0 z-20 shrink-0 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold tracking-wide text-slate-500 uppercase"
+              className="sticky left-0 z-20 shrink-0 border-r border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500"
               style={{ width: LEFT_COL }}
             >
               {t('common.staff')}
@@ -186,7 +186,7 @@ export function Timeline({
                 {hours.map((hour) => (
                   <div
                     key={hour}
-                    className="border-r border-slate-200 py-2 pl-2 text-xs font-medium text-slate-500 last:border-r-0"
+                    className="border-r border-slate-200 py-2 pl-2 text-xs text-slate-500 last:border-r-0"
                     style={{ width: HOUR_WIDTH }}
                   >
                     {String(hour).padStart(2, '0')}:00
@@ -244,7 +244,7 @@ export function Timeline({
                         {row.profile.display_name}
                       </p>
                       {isMe && (
-                        <p className="text-[10px] font-medium text-indigo-600">
+                        <p className="text-[11px] font-medium text-indigo-600">
                           {t('common.you')}
                         </p>
                       )}
@@ -348,7 +348,7 @@ export function Timeline({
                               tên đủ → tên tắt → chấm màu, trên dòng giờ trước,
                               không vừa thì dòng tên ca. Chỉ ẩn khi cả chấm
                               cũng không vừa; tooltip luôn đủ tên. */}
-                          <span className="flex min-w-0 items-center gap-1 text-xs font-semibold">
+                          <span className="flex min-w-0 items-center gap-1 text-xs font-medium">
                             {pending && (
                               <Clock3 className="h-3 w-3 shrink-0 opacity-70" />
                             )}

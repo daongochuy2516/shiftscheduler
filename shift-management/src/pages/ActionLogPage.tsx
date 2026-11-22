@@ -352,7 +352,7 @@ export function ActionLogPage() {
         <SlidersHorizontal className="h-4 w-4 text-slate-400" />
         {t('nav.filters')}
         {hasFilters && (
-          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
             {activeFilterCount}
           </span>
         )}
@@ -550,7 +550,7 @@ export function ActionLogPage() {
   function Heading() {
     return (
       <div>
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <h1 className="flex items-center gap-2 text-lg font-medium text-slate-900">
           <ScrollText className="h-5 w-5 shrink-0 text-slate-400" />
           {t('log.title')}
         </h1>
@@ -811,7 +811,7 @@ function JsonBlock({
   const tone = diff ? DIFF_TONE[diff.side] : null
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+      <p className="mb-1 text-xs font-medium text-slate-500">
         {title}
       </p>
       <pre className="overflow-x-auto rounded-md bg-white py-2 text-[11px] leading-relaxed text-slate-700 ring-1 ring-slate-200 select-text">
