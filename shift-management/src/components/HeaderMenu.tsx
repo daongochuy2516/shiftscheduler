@@ -11,6 +11,7 @@ import {
   LogOut,
   Monitor,
   Moon,
+  MoonStar,
   Sun,
   UserCog,
   Network,
@@ -31,6 +32,7 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
   { id: 'system', icon: Monitor, label: 'theme.systemShort' },
   { id: 'light', icon: Sun, label: 'theme.light' },
   { id: 'dark', icon: Moon, label: 'theme.dark' },
+  { id: 'oled', icon: MoonStar, label: 'theme.oled' },
 ]
 
 /**

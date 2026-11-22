@@ -15,6 +15,7 @@ import {
   LogOut,
   Monitor,
   Moon,
+  MoonStar,
   Plus,
   ScrollText,
   Search,
@@ -85,13 +86,14 @@ function greetingKey(): TranslationKey {
   return 'greeting.evening'
 }
 
-const THEME_ICON = { system: Monitor, light: Sun, dark: Moon } as const
-/** Cùng thứ tự đổi với ô Giao diện trên PC: Hệ thống → Sáng → Tối. */
-const THEME_NEXT = { system: 'light', light: 'dark', dark: 'system' } as const
+const THEME_ICON = { system: Monitor, light: Sun, dark: Moon, oled: MoonStar } as const
+/** Cùng thứ tự đổi với dòng Giao diện trên PC: Hệ thống → Sáng → Tối → Tối OLED. */
+const THEME_NEXT = { system: 'light', light: 'dark', dark: 'oled', oled: 'system' } as const
 const THEME_LABEL = {
   system: 'theme.systemShort',
   light: 'theme.light',
   dark: 'theme.dark',
+  oled: 'theme.oled',
 } as const satisfies Record<keyof typeof THEME_ICON, TranslationKey>
 
 /**

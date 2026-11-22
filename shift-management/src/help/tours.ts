@@ -522,8 +522,8 @@ export const TOURS: Record<TourId, Tour> = {
         ensure: ['menu'],
         screen: 'desktop',
         text: {
-          vi: { title: 'Giao diện', body: 'Bấm để đổi lần lượt Hệ thống → Sáng → Tối.' },
-          en: { title: 'Theme', body: 'Press to cycle System → Light → Dark.' },
+          vi: { title: 'Giao diện', body: 'Bấm để đổi lần lượt Hệ thống → Sáng → Tối → Tối OLED (nền đen tuyền).' },
+          en: { title: 'Theme', body: 'Press to cycle System → Light → Dark → OLED dark (pure black).' },
         },
       },
       {
