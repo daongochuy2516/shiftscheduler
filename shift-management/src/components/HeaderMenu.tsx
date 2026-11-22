@@ -23,8 +23,9 @@ import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.userAgent)
-/** Phím tắt copy link (bắt ở AppLayout), ghi trong tooltip của ô. */
-const COPY_LINK_KEYS = IS_MAC ? '⌘⇧L' : 'Ctrl + Shift + L'
+/** Phím tắt copy link (bắt ở AppLayout), vẽ thành phím nhỏ cuối dòng. */
+const COPY_LINK_KEYS = IS_MAC ? ['⌘', '⇧', 'L'] : ['Ctrl', 'Shift', 'L']
+const PALETTE_KEYS = IS_MAC ? ['⌘', 'K'] : ['Ctrl', 'K']
 
 const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
   { id: 'system', icon: Monitor, label: 'theme.systemShort' },
@@ -33,12 +34,17 @@ const THEMES: { id: ThemePref; icon: typeof Sun; label: TranslationKey }[] = [
 ]
 
 /**
- * Nút lưới trên header PC, kiểu trình mở ứng dụng của Google: gom trang Tài
- * khoản (chỉ admin), thông báo, giao diện, ngôn ngữ, trang Trạng thái, đổi mật
- * khẩu và đăng xuất vào một ô lưới, để header đỡ chật. Số thông báo chưa đọc
- * hiện ngay trên nút.
+ * Nút lưới trên header PC: gom trang Tài khoản (chỉ admin), Trạng thái, Hướng
+ * dẫn, thông báo, giao diện, ngôn ngữ, copy link, đổi mật khẩu và đăng xuất
+ * vào một menu, để header đỡ chật.
  *
- * Mobile không dùng: ở đó đã có nút chuông và sheet tài khoản.
+ * Dạng danh sách chia nhóm (trang · thiết lập · thao tác · đăng xuất), không
+ * phải lưới ô to: chín việc khác loại mà cùng một ô vuông thì việc nào cũng
+ * nặng như nhau. Giá trị hiện tại (giao diện, ngôn ngữ) và phím tắt nằm cuối
+ * dòng, thành một cột.
+ *
+ * Mobile không dùng: ở đó đã có nút chuông và sheet tài khoản (cũng là danh
+ * sách).
  */
 export function HeaderMenu({
   isAdmin,
@@ -49,7 +55,7 @@ export function HeaderMenu({
   signingOut,
 }: {
   isAdmin: boolean
-  /** Có khi trình duyệt cài được app (pwa/install.ts); không thì ẩn ô. */
+  /** Có khi trình duyệt cài được app (pwa/install.ts); không thì ẩn dòng. */
   onInstall?: () => void
   onCopyLink: () => void
   onChangePassword: () => void
@@ -70,7 +76,7 @@ export function HeaderMenu({
     const onDown = (e: MouseEvent) => {
       const target = e.target as Element
       // Bấm trên thẻ của wizard hướng dẫn thì giữ menu mở — wizard đang chỉ
-      // vào các ô trong menu này.
+      // vào các dòng trong menu này.
       if (target.closest?.('[data-tour-overlay]')) return
       if (!ref.current?.contains(target)) setOpen(false)
     }
@@ -89,7 +95,7 @@ export function HeaderMenu({
   const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]
 
   /**
-   * Bấm một ô là xong việc của menu — trừ ô giao diện và ngôn ngữ, bấm tiếp
+   * Bấm một dòng là xong việc của menu — trừ giao diện và ngôn ngữ, bấm tiếp
    * để đổi tiếp.
    */
   function run(action: () => void) {
@@ -119,98 +125,93 @@ export function HeaderMenu({
 
       {open && (
         <MenuPanel label={t('menu.label')}>
-          {/* Nhân viên 8 ô, admin thêm ô Tài khoản, trình duyệt cài được app
-              thì thêm ô Cài ứng dụng; lưới 3 cột. */}
-          <div className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-2">
-            {isAdmin && (
-              <Tile
-                icon={UserCog}
-                tone="bg-slate-100 text-slate-600"
-                tour="menu-accounts"
-                label={t('nav.accounts')}
-                onClick={() => run(() => navigate('/accounts'))}
-              />
-            )}
-            <Tile
-              icon={Bell}
-              tone="bg-slate-100 text-slate-600"
-              tour="menu-notifications"
-              label={t('notif.title')}
-              onClick={() => run(() => setCenterOpen(true))}
+          {/* ---- trang ---- */}
+          {isAdmin && (
+            <Item
+              icon={UserCog}
+              tour="menu-accounts"
+              label={t('nav.accounts')}
+              onClick={() => run(() => navigate('/accounts'))}
             />
-            <Tile
-              icon={theme.icon}
-              tone="bg-slate-100 text-slate-600"
-              tour="menu-theme"
-              label={t('theme.label')}
-              sub={t(theme.label)}
-              tooltip={t('menu.themeNext', { theme: t(nextTheme.label) })}
-              onClick={() => setPref(nextTheme.id)}
+          )}
+          <Item
+            icon={Network}
+            tour="menu-status"
+            label={t('nav.status')}
+            onClick={() => run(() => navigate('/status'))}
+          />
+          <Item
+            icon={BookOpen}
+            tour="menu-help"
+            label={t('nav.help')}
+            onClick={() => run(() => navigate('/help'))}
+          />
+
+          <Separator />
+          {/* ---- thiết lập ---- */}
+          <Item
+            icon={Bell}
+            tour="menu-notifications"
+            label={t('notif.title')}
+            onClick={() => run(() => setCenterOpen(true))}
+          />
+          <Item
+            icon={theme.icon}
+            tour="menu-theme"
+            label={t('theme.label')}
+            value={t(theme.label)}
+            tooltip={t('menu.themeNext', { theme: t(nextTheme.label) })}
+            onClick={() => setPref(nextTheme.id)}
+          />
+          <Item
+            icon={Languages}
+            tour="menu-language"
+            label={t('nav.language')}
+            value={t('menu.langName')}
+            tooltip={t('menu.langNext')}
+            onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+          />
+
+          <Separator />
+          {/* ---- thao tác ---- */}
+          {onInstall && (
+            <Item
+              icon={Download}
+              label={t('pwa.install')}
+              onClick={() => run(onInstall)}
             />
-            <Tile
-              icon={Languages}
-              tone="bg-slate-100 text-slate-600"
-              tour="menu-language"
-              label={t('nav.language')}
-              sub={t('menu.langName')}
-              tooltip={t('menu.langNext')}
-              onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-            />
-            <Tile
-              icon={Network}
-              tone="bg-slate-100 text-slate-600"
-              tour="menu-status"
-              label={t('nav.status')}
-              onClick={() => run(() => navigate('/status'))}
-            />
-            <Tile
-              icon={BookOpen}
-              tone="bg-slate-100 text-slate-600"
-              tour="menu-help"
-              label={t('nav.help')}
-              onClick={() => run(() => navigate('/help'))}
-            />
-            {onInstall && (
-              <Tile
-                icon={Download}
-                tone="bg-slate-100 text-slate-600"
-                label={t('pwa.install')}
-                onClick={() => run(onInstall)}
-              />
-            )}
-            <Tile
-              icon={Link}
-              tone="bg-slate-100 text-slate-600"
-              label={t('menu.copyLink')}
-              tooltip={COPY_LINK_KEYS}
-              onClick={() => run(onCopyLink)}
-            />
-            <Tile
-              icon={KeyRound}
-              tone="bg-slate-100 text-slate-600"
-              tour="menu-password"
-              label={t('pwd.title')}
-              onClick={() => run(onChangePassword)}
-            />
-            <Tile
-              icon={LogOut}
-              // Cùng tông với các ô khác; chỉ đỏ khi rê chuột vào (và khi đang
-              // chờ bấm lần hai — `alert`). Đỏ sẵn thì lại hút mắt vào đúng nút
-              // không nên bấm nhầm.
-              tone="bg-slate-100 text-slate-600 group-hover:bg-rose-50 group-hover:text-rose-600"
-              tour="menu-signout"
-              label={t('auth.signOut')}
-              sub={signOut.armed ? t('auth.signOutAgain') : undefined}
-              alert={signOut.armed}
-              disabled={signingOut}
-              onClick={signOut.press}
-            />
-          </div>
+          )}
+          <Item
+            icon={Link}
+            label={t('menu.copyLink')}
+            keys={COPY_LINK_KEYS}
+            onClick={() => run(onCopyLink)}
+          />
+          <Item
+            icon={KeyRound}
+            tour="menu-password"
+            label={t('pwd.title')}
+            onClick={() => run(onChangePassword)}
+          />
+
+          <Separator />
+          {/* Cùng tông với các dòng khác, chỉ đỏ khi rê chuột (và khi đang chờ
+              bấm lần hai): đỏ sẵn thì lại hút mắt vào đúng nút không nên bấm. */}
+          <Item
+            icon={LogOut}
+            tour="menu-signout"
+            label={signOut.armed ? t('auth.signOutAgain') : t('auth.signOut')}
+            danger
+            alert={signOut.armed}
+            disabled={signingOut}
+            onClick={signOut.press}
+          />
+
+          <Separator />
           {/* Cho người chưa biết có bảng lệnh nhanh. */}
-          <p className="px-3 pt-2 pb-1 text-center text-xs text-slate-500">
-            {t('menu.paletteHint', {
-              keys: IS_MAC ? '⌘K' : 'Ctrl + K',
-            })}
+          <p className="flex items-center justify-between gap-2 px-2.5 pt-1 pb-1.5 text-xs text-slate-500">
+            {t('palette.title')}
+            <Keys keys={PALETTE_KEYS} />
           </p>
         </MenuPanel>
       )}
@@ -219,7 +220,7 @@ export function HeaderMenu({
 }
 
 /**
- * Khung bảng menu. Tách riêng để có hiệu ứng: mở thì xổ ra từ góc nút
+ * Khung menu. Tách riêng để có hiệu ứng: mở thì xổ ra từ góc nút
  * (`menu-panel` trong index.css), đóng thì useExitAnimation để lại bản sao
  * thu gọn lại. Bảng nằm canh theo nút chứ không phủ màn hình, nên bản sao
  * phải giữ đúng vị trí (`freezePosition`).
@@ -232,40 +233,72 @@ function MenuPanel({ label, children }: { label: string; children: ReactNode }) 
       ref={ref}
       role="menu"
       aria-label={label}
-      className="menu-panel absolute top-full right-0 z-50 mt-2 w-96 rounded-3xl bg-slate-100 p-2 shadow-xl ring-1 ring-slate-900/10"
+      className="menu-panel absolute top-full right-0 z-50 mt-2 w-72 rounded-xl bg-white p-1 shadow-lg ring-1 ring-slate-900/10"
     >
       {children}
     </div>
   )
 }
 
-function Tile({
+function Separator() {
+  return <div role="separator" className="mx-2.5 my-1 h-px bg-slate-100" />
+}
+
+/** Phím tắt vẽ thành các phím nhỏ, như trong Quick Search. */
+function Keys({ keys }: { keys: readonly string[] }) {
+  return (
+    <span className="flex shrink-0 items-center gap-0.5">
+      {keys.map((key) => (
+        <kbd
+          key={key}
+          className="min-w-5 rounded border border-slate-200 px-1 text-center font-sans text-[11px] leading-4 text-slate-500"
+        >
+          {key}
+        </kbd>
+      ))}
+    </span>
+  )
+}
+
+function Item({
   icon: Icon,
-  tone,
   label,
-  sub,
-  badge,
+  value,
+  keys,
   tooltip,
   disabled,
+  danger = false,
   alert = false,
   tour,
   onClick,
 }: {
   icon: typeof Sun
-  /** Màu nền + màu icon của vòng tròn, viết nguyên chuỗi để Tailwind sinh. Mọi ô cùng một tông trung tính, kể cả đăng xuất (nó chỉ đỏ khi rê chuột). */
-  tone: string
   label: string
-  sub?: string
-  badge?: string | null
+  /** Giá trị hiện tại, cuối dòng (ví dụ "Hệ thống", "Tiếng Việt"). */
+  value?: string
+  /** Phím tắt, cuối dòng. */
+  keys?: readonly string[]
   /** Tooltip tự vẽ khi rê chuột (`data-tooltip`, xem Tooltip.tsx). */
   tooltip?: string
   disabled?: boolean
-  /** Đang chờ bấm lần hai để xác nhận: đổi sang nền đỏ cho khó bỏ qua. */
+  /** Thao tác khó gỡ (đăng xuất): xám như thường, đỏ khi rê chuột. */
+  danger?: boolean
+  /** Đang chờ bấm lần hai để xác nhận: nền đỏ cho khó bỏ qua. */
   alert?: boolean
   /** Mốc cho wizard hướng dẫn (`data-tour`). */
   tour?: string
   onClick: () => void
 }) {
+  const tone = alert
+    ? 'bg-rose-50 font-medium text-rose-700 ring-1 ring-rose-200 ring-inset'
+    : danger
+      ? 'text-slate-700 hover:bg-rose-50 hover:text-rose-600'
+      : 'text-slate-700 hover:bg-slate-100'
+  const iconTone = alert
+    ? 'text-rose-600'
+    : danger
+      ? 'text-slate-500 group-hover:text-rose-600'
+      : 'text-slate-500'
   return (
     <button
       type="button"
@@ -274,34 +307,12 @@ function Tile({
       data-tooltip={tooltip}
       disabled={disabled}
       onClick={onClick}
-      className={`group flex flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center transition disabled:opacity-50 ${
-        alert ? 'bg-rose-50 ring-1 ring-rose-200' : 'hover:bg-slate-50'
-      }`}
+      className={`group flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm transition-colors disabled:opacity-50 ${tone}`}
     >
-      <span
-        className={`relative flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
-          alert ? 'bg-rose-600 text-white' : tone
-        }`}
-      >
-        <Icon className="h-5 w-5" />
-        {badge && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] leading-none font-medium text-white">
-            {badge}
-          </span>
-        )}
-      </span>
-      <span className="text-sm leading-tight font-medium text-slate-800">
-        {label}
-      </span>
-      {sub && (
-        <span
-          className={`-mt-1 text-xs ${
-            alert ? 'font-medium text-rose-600' : 'text-slate-500'
-          }`}
-        >
-          {sub}
-        </span>
-      )}
+      <Icon className={`h-4 w-4 shrink-0 transition-colors ${iconTone}`} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {value && <span className="shrink-0 text-xs text-slate-500">{value}</span>}
+      {keys && <Keys keys={keys} />}
     </button>
   )
 }

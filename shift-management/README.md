@@ -121,7 +121,7 @@ Không có `.env` thì ứng dụng tự chuyển sang dữ liệu mẫu trong `
 
 ### Thử luật database: tắt khoá giao diện
 
-Mở DevTools → Console, gõ `localStorage.bypassuirestrict = 'true'` rồi tải lại trang. Giao diện bỏ mọi khoá theo vai trò như thể bạn là admin, kể cả khi đang là `staff`: ô bị xám mở ra, nút Xoá / Xác nhận / Thêm người khác hiện lại, ô chọn trạng thái dùng được, menu quản lý ca mẫu, ô **Tài khoản** trong nút lưới và mục *Dành cho admin* trong Hướng dẫn hiện ra. Riêng danh sách tài khoản do máy chủ quyết định có trả hay không, nên mở trang Tài khoản vẫn bị báo *Bạn không có quyền truy cập trang này*. Header có dải băng hồng nhắc đang bật.
+Mở DevTools → Console, gõ `localStorage.bypassuirestrict = 'true'` rồi tải lại trang. Giao diện bỏ mọi khoá theo vai trò như thể bạn là admin, kể cả khi đang là `staff`: ô bị xám mở ra, nút Xoá / Xác nhận / Thêm người khác hiện lại, ô chọn trạng thái dùng được, menu quản lý ca mẫu, dòng **Tài khoản** trong nút lưới và mục *Dành cho admin* trong Hướng dẫn hiện ra. Riêng danh sách tài khoản do máy chủ quyết định có trả hay không, nên mở trang Tài khoản vẫn bị báo *Bạn không có quyền truy cập trang này*. Header có dải băng hồng nhắc đang bật.
 
 Chỉ giao diện bỏ khoá. Database vẫn xét vai trò thật, nên bấm thao tác không được phép thì máy chủ từ chối và câu từ chối hiện ở [thông báo](#9c-thông-báo) — đúng cách để thử RLS / trigger mà không phải gọi API tay. Ở chế độ dữ liệu mẫu, bản mock cũng chặn theo vai trò thật y như database. Tắt: `localStorage.removeItem('bypassuirestrict')` rồi tải lại.
 
@@ -143,7 +143,7 @@ Vài điểm cần biết:
 - Nếu bạn mở một đường dẫn sâu khi chưa đăng nhập (ví dụ `/pending`, hay link đồng nghiệp gửi tới một ca `/?date=2026-09-08&shift=<id>`), hệ thống ghi nhớ **nguyên cả link** — trang, ngày, chế độ xem, bộ lọc, form đang mở — và **đưa bạn về đúng màn hình đó** sau khi đăng nhập xong, không phải mở lại link.
 - Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
 
-**Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Phải **bấm hai lần**: lần đầu ô chuyển đỏ, hiện *Bấm lần nữa để đăng xuất*; bấm tiếp trong 4 giây mới đăng xuất, để quá thì trở lại như cũ. Bạn sẽ được đưa về trang đăng nhập ngay.
+**Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Phải **bấm hai lần**: lần đầu dòng chuyển đỏ, hiện *Bấm lần nữa để đăng xuất*; bấm tiếp trong 4 giây mới đăng xuất, để quá thì trở lại như cũ. Bạn sẽ được đưa về trang đăng nhập ngay.
 
 ### Quên mật khẩu
 
@@ -192,7 +192,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. **Bấm** vào đồng hồ (rê chuột không bật gì) để mở bảng giống đồng hồ taskbar của Windows: giờ to, ngày đầy đủ kèm thứ, và **lịch tháng** — `‹ ›` đổi tháng, bấm tên tháng để chọn nhanh tháng rồi năm, bấm một ngày là mở trang Lịch của ngày đó. Ô **tô tím đặc** là ngày đang xem (ngày trên đường dẫn của trang Lịch / Tổng kết — mở lại bảng sau khi bấm là thấy ngay ngày vừa chọn, lịch mở đúng tháng đó); trang không có ngày thì tô hôm nay. Hôm nay, nếu khác ngày đang xem, có viền tím. Bấm đồng hồ lần nữa, bấm ra ngoài hoặc **Esc** để đóng. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
 | **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định ngày đang xem ở Lịch / Tổng kết, các trang khác là **hôm nay**) |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) và email. Tên lấy từ danh sách nhân viên nên admin vừa đổi tên bạn ở trang Tài khoản thì thanh trên đổi theo ngay. Dưới 768px chỉ còn avatar |
-| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở bảng các ô, theo thứ tự: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (bấm để đổi Hệ thống → Sáng → Tối, [mục 9f](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh), **Trạng thái** ([mục 9e](#9e-trang-trạng-thái)), **Hướng dẫn** ([mục 9d](#9d-hướng-dẫn-và-bài-từng-bước)), **Đổi mật khẩu**, **Đăng xuất**. Cuối bảng có dòng nhắc *Ctrl + K — Quick Search*. Bấm ô Giao diện hay Ngôn ngữ thì bảng giữ nguyên để bấm tiếp; các ô còn lại đóng bảng |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở menu dạng danh sách, chia nhóm bằng đường kẻ: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Trạng thái** ([mục 9e](#9e-trang-trạng-thái)), **Hướng dẫn** ([mục 9d](#9d-hướng-dẫn-và-bài-từng-bước)) · **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (giá trị hiện tại ở cuối dòng; bấm để đổi Hệ thống → Sáng → Tối, [mục 9f](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh) · **Cài ứng dụng** (khi trình duyệt cài được), **Copy link** (cuối dòng ghi phím tắt), **Đổi mật khẩu** · **Đăng xuất** (xám như các dòng khác, đỏ khi rê chuột). Dòng cuối nhắc phím tắt *Quick Search* (Ctrl + K). Bấm Giao diện hay Ngôn ngữ thì menu giữ nguyên để bấm tiếp; các dòng còn lại đóng menu |
 
 Cuối trang (chỉ PC) có một dòng chào theo buổi — sáng / trưa / chiều / tối — kèm tên bạn.
 
@@ -660,7 +660,7 @@ Chung cho mọi chế độ:
 
 ## 9. Đa ngôn ngữ và cập nhật thời gian thực
 
-**Ngôn ngữ.** Mặc định tiếng Việt. Ô **Ngôn ngữ** trong nút lưới (điện thoại: bảng avatar) đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
+**Ngôn ngữ.** Mặc định tiếng Việt. Dòng **Ngôn ngữ** trong nút lưới (điện thoại: bảng avatar) đổi toàn bộ giao diện, kể cả định dạng ngày tháng (*Thứ Hai, 8 tháng 9 2026* ↔ *Monday, 8 September 2026*). Lựa chọn được ghi nhớ cho lần sau.
 
 **Thời gian thực.** Ứng dụng lắng nghe thay đổi trên `shifts`, `shift_assignments`, `shift_templates` và `locations` qua Supabase Realtime. Khi đồng nghiệp tạo ca, nhận ca hay xác nhận, màn hình của bạn **tự cập nhật** — không cần F5.
 
@@ -800,7 +800,7 @@ Mở trang **Hướng dẫn** (`/help`) từ nút lưới → **Hướng dẫn**
 | Nhận ca mẫu | Nút Tạo ca, lựa chọn Nhận ca mẫu, danh sách mẫu, chọn ngày, nút xác nhận |
 | Mở và sửa ca của mình | Mở một ca, Đơn giản / Nâng cao, phần của bạn, điểm danh / rời ca, người khác |
 | Điểm danh | Trang Chờ xác nhận, ô Chỉ ca của tôi, thẻ ca, nút Xác nhận và các luật |
-| Menu và thông báo | Các ô trong nút lưới (điện thoại: chuông và avatar) |
+| Menu và thông báo | Các dòng trong nút lưới (điện thoại: chuông và avatar) |
 
 Phím: **→** hoặc **Enter** tiếp, **←** lùi, **Esc** dừng. Trong lúc hướng dẫn, trang phía dưới không bấm được — bài tự bấm hộ những gì cần mở. Phần nào chưa có trên màn hình (ví dụ hôm nay chưa có ca, hay chưa tới giờ điểm danh) thì thẻ nói rõ vì sao.
 
@@ -845,7 +845,7 @@ Với người sửa mã: phần thẻ nằm trong `StatusCards`, bọc bởi `F
 
 ### Sáng / Tối / Theo hệ thống
 
-Ba lựa chọn: **Hệ thống** (theo cài đặt của thiết bị, đổi theo ngay khi thiết bị đổi), **Sáng**, **Tối**. Đổi bằng ô **Giao diện** trong nút lưới — mỗi lần bấm chuyển một bước **Hệ thống → Sáng → Tối** — hoặc trong avatar trên điện thoại, hoặc gõ *giao diện tối* / *sáng* / *hệ thống* trong Ctrl + K.
+Ba lựa chọn: **Hệ thống** (theo cài đặt của thiết bị, đổi theo ngay khi thiết bị đổi), **Sáng**, **Tối**. Đổi bằng dòng **Giao diện** trong nút lưới — mỗi lần bấm chuyển một bước **Hệ thống → Sáng → Tối** — hoặc trong avatar trên điện thoại, hoặc gõ *giao diện tối* / *sáng* / *hệ thống* trong Ctrl + K.
 
 Lựa chọn nhớ trên trình duyệt đó (khoá `scheduler.theme`; chọn **Hệ thống** thì không lưu gì, để thiết bị quyết định). Một đoạn script nhỏ trong `index.html` áp giao diện trước khi trang vẽ nên mở ứng dụng ở chế độ tối không bị nháy trắng.
 
@@ -1071,7 +1071,7 @@ Việc của admin khi nhân viên quên điểm danh: mở trang **Chờ xác n
 
 ### Trang Tài khoản
 
-Chỉ admin thấy ô **Tài khoản** trong nút lưới ở góc phải trên cùng (mobile: trong sheet mở ra khi bấm avatar). Danh sách tài khoản (email, vai trò) chỉ đến từ hàm `list_accounts()` của `supabase/011_accounts_private.sql`: máy chủ kiểm tra người gọi là admin rồi mới trả, không phải thì từ chối. Người khác mở thẳng `/accounts` (hay đang tắt khoá giao diện) nhận về lời từ chối, trang báo *Bạn không có quyền truy cập trang này*. Chưa chạy 011 thì trang hiện thông báo vàng, không hiện tài khoản nào. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
+Chỉ admin thấy dòng **Tài khoản** trong nút lưới ở góc phải trên cùng (mobile: trong sheet mở ra khi bấm avatar). Danh sách tài khoản (email, vai trò) chỉ đến từ hàm `list_accounts()` của `supabase/011_accounts_private.sql`: máy chủ kiểm tra người gọi là admin rồi mới trả, không phải thì từ chối. Người khác mở thẳng `/accounts` (hay đang tắt khoá giao diện) nhận về lời từ chối, trang báo *Bạn không có quyền truy cập trang này*. Chưa chạy 011 thì trang hiện thông báo vàng, không hiện tài khoản nào. Cần chạy `supabase/007_accounts.sql`; chưa chạy thì trang hiện thông báo vàng và không sửa được gì.
 
 Mỗi dòng là một tài khoản, kèm email và vai trò:
 

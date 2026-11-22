@@ -488,7 +488,6 @@ export const en = {
 
   // ---- command palette (Ctrl + K) ----
   'palette.title': 'Quick Search',
-  'menu.paletteHint': '{{keys}} — Quick Search',
   'palette.placeholder': 'Quick Search',
   'palette.correctedTo': 'Showing results for “{{query}}”',
   'palette.group.result': 'Result',
@@ -1279,7 +1278,6 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
 
   // ---- command palette (Ctrl + K) ----
   'palette.title': 'Quick Search',
-  'menu.paletteHint': '{{keys}} — Quick Search',
   'palette.placeholder': 'Quick Search',
   'palette.correctedTo': 'Kết quả cho “{{query}}”',
   'palette.group.result': 'Kết quả',
