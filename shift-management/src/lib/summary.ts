@@ -52,6 +52,8 @@ export interface RecordedEntry {
   /** HH:mm */
   end: string
   minutes: number
+  /** Nơi trực của lượt, nguyên `location_ids` (chưa xếp theo thứ tự hiển thị). */
+  locationIds: UUID[]
 }
 
 export interface SummaryRow {
@@ -120,6 +122,7 @@ export function buildSummary({
         start,
         end,
         minutes: span,
+        locationIds: a.location_ids,
       })
       days.set(shift.date, entries)
       byUser.set(a.user_id, days)

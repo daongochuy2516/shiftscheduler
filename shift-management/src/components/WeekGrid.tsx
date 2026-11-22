@@ -12,6 +12,8 @@ import {
   toMinutes,
 } from '../lib/time'
 import { showRow } from '../lib/profiles'
+import { locationsById, sortLocationIds } from '../lib/locations'
+import { useSchedule } from '../data/ScheduleContext'
 import { Avatar } from './Avatar'
 
 const LEFT_COL = 176
@@ -24,6 +26,7 @@ interface Cell {
   start: string
   end: string
   pending: boolean
+  locationIds: UUID[]
 }
 
 export function WeekGrid({
@@ -47,7 +50,16 @@ export function WeekGrid({
 }) {
   const { t, dateLocale } = useI18n()
   const shiftColor = useShiftColor()
+  const { locations } = useSchedule()
+  const locationById = useMemo(() => locationsById(locations), [locations])
   const today = toDateKey(new Date())
+
+  /** "Fanpage, Discord" cho tooltip; ô tuần hẹp nên không vẽ nhãn. */
+  function locationText(ids: UUID[]): string {
+    return sortLocationIds(ids, locationById)
+      .map((id) => locationById.get(id)?.name ?? t('loc.unknown'))
+      .join(', ')
+  }
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -67,6 +79,7 @@ export function WeekGrid({
           start: normalizeTime(a.start_time),
           end: normalizeTime(a.end_time),
           pending: a.status === 'pending',
+          locationIds: a.location_ids,
         })
         days.set(shift.date, cells)
         map.set(a.user_id, days)
@@ -217,6 +230,7 @@ export function WeekGrid({
                       >
                         {cells.map((cell) => {
                           const color = shiftColor(cell.shift)
+                          const where = locationText(cell.locationIds)
                           return (
                             <button
                               key={cell.assignmentId}
@@ -224,7 +238,9 @@ export function WeekGrid({
                               onClick={() =>
                                 onSelectAssignment(cell.shift, cell.assignmentId)
                               }
-                              data-tooltip={`${cell.shift.title} · ${formatRange(cell.start, cell.end)}`}
+                              data-tooltip={`${cell.shift.title} · ${formatRange(cell.start, cell.end)}${
+                                where ? ` · ${where}` : ''
+                              }`}
                               className={`block w-full rounded border px-1.5 py-1 text-left transition focus:ring-2 focus:ring-indigo-500 focus:outline-none ${color.block} ${
                                 cell.pending ? 'border-dashed' : ''
                               }`}

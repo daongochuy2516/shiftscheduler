@@ -1,6 +1,7 @@
 import { addMinutes } from 'date-fns'
 import type {
   Account,
+  Shift,
   ShiftAssignment,
   ShiftWithAssignments,
   UUID,
@@ -11,8 +12,8 @@ import { fromDateKey, toMinutes } from './time'
  * Luật chấm công, bản phía client.
  *
  * Nơi quyết định thật là các trigger trong `supabase/005_attendance.sql`,
- * `006_shift_rules.sql` và bản mới nhất `010_harden_rules.sql` (đồng hồ máy
- * chủ, múi giờ Asia/Ho_Chi_Minh). File này chỉ để giao diện ẩn
+ * `006_shift_rules.sql`, `010_harden_rules.sql` (đồng hồ máy chủ, múi giờ
+ * Asia/Ho_Chi_Minh) và bản mới nhất `012_locations.sql` (thêm nơi trực). File này chỉ để giao diện ẩn
  * đúng những nút mà database sẽ từ chối, và để bản mock hành xử giống bản
  * thật. Đổi con số ở đây phải đổi cả trong file SQL.
  */
@@ -104,6 +105,42 @@ export function deleteBlock(
 /** Hạn chót tự rời ca: 30 phút sau lúc nhận ca. */
 export function leaveDeadline(assignment: Pick<ShiftAssignment, 'created_at'>): Date {
   return addMinutes(new Date(assignment.created_at), LEAVE_GRACE_MIN)
+}
+
+/**
+ * Nhân viên không đổi được nơi trực của lượt này (012): lượt của người khác
+ * (luật D), hoặc lượt đã điểm danh (khoá cùng chỗ với giờ). Lượt chờ xác nhận
+ * của mình thì đổi tự do, không phụ thuộc cửa sổ điểm danh. Admin và `role`
+ * null (005 chưa chạy) không bị khoá.
+ */
+export function locationsLocked(
+  assignment: Pick<ShiftAssignment, 'status' | 'user_id'>,
+  user: Pick<Account, 'id' | 'role'> | null,
+): boolean {
+  if (!isRestricted(user)) return false
+  return assignment.user_id !== user?.id || assignment.status === 'confirmed'
+}
+
+/**
+ * Câu lỗi của luật "nhận ca phải có nơi trực" (015). Trigger SQL, bản
+ * Supabase (kiểm tra trước khi ghi) và bản mock dùng đúng câu này, để hai chế
+ * độ từ chối bằng cùng một câu.
+ */
+export const CLAIM_NEEDS_LOCATION_MESSAGE = 'Nhận ca phải chọn ít nhất một nơi trực.'
+export const KEEP_LOCATION_MESSAGE = 'Lượt của ca mẫu phải giữ ít nhất một nơi trực.'
+
+/**
+ * Lượt trên ca sinh từ ca mẫu không được bỏ hết nơi trực (015, luật R2): áp
+ * cho mọi người trừ admin — admin sửa dữ liệu qua form ca. `role` null (005
+ * chưa chạy) thì database không biết ai là admin, nên không chặn. Chỉ áp khi
+ * tính năng nơi trực đã có (012) — chỗ gọi tự xét `locationsAvailable`.
+ */
+export function mustKeepLocation(
+  shift: Pick<Shift, 'template_id'>,
+  user: Pick<Account, 'role'> | null,
+): boolean {
+  if (!user?.role || user.role === 'admin') return false
+  return Boolean(shift.template_id)
 }
 
 export type RemoveBlock = 'confirmed' | 'other' | 'late'

@@ -11,17 +11,55 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { ShiftTemplate } from '../types'
+import { AlertTriangle, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import type { Location, ShiftTemplate, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule, useShifts } from '../data/ScheduleContext'
 import { formatRange, fromDateKey, toDateKey } from '../lib/time'
 import { useNotify } from '../notifications/NotificationContext'
-import { templateColor } from '../lib/colors'
+import { SHIFT_COLOR_KEYS, colorByKey, templateColor, type ShiftColorKey } from '../lib/colors'
+import { activeLocations } from '../lib/locations'
+import { locationsLocked } from '../lib/attendance'
 import { Modal } from './Modal'
 
 type PickerMode = 'week' | 'month'
+
+/** Nơi trực chọn lần trước, nhớ riêng từng người trên máy này. */
+const locationStorageKey = (userId: UUID) => `scheduler.claimLocations.${userId}`
+
+function readSavedLocations(userId: UUID | undefined): UUID[] {
+  if (!userId) return []
+  try {
+    const raw = localStorage.getItem(locationStorageKey(userId))
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is UUID => typeof id === 'string')
+      : []
+  } catch {
+    // Chế độ riêng tư / bộ nhớ bị chặn / chuỗi hỏng: coi như chưa chọn gì.
+    return []
+  }
+}
+
+function saveLocations(userId: UUID, ids: UUID[]) {
+  try {
+    localStorage.setItem(locationStorageKey(userId), JSON.stringify(ids))
+  } catch {
+    // Không nhớ được thì lần sau chọn lại — không ảnh hưởng việc nhận ca.
+  }
+}
+
+function isColorKey(value: unknown): value is ShiftColorKey {
+  return (SHIFT_COLOR_KEYS as readonly unknown[]).includes(value)
+}
+
+/** Lớp của chip nơi trực đang được chọn — màu của chính nơi trực đó. */
+function pickedChipClass(location: Location): string {
+  return isColorKey(location.color)
+    ? `${colorByKey(location.color).chip} border-transparent ring-2`
+    : 'border-transparent bg-slate-100 text-slate-700 ring-2 ring-slate-300'
+}
 
 /**
  * Asks which day(s) to claim a recurring template for, instead of silently
@@ -39,7 +77,8 @@ export function ClaimTemplateModal({
 }) {
   const { t, dateLocale } = useI18n()
   const { user } = useAuth()
-  const { claimTemplate } = useSchedule()
+  const { claimTemplate, locations, locationsAvailable, locationsLoaded, refresh } =
+    useSchedule()
 
   const [mode, setMode] = useState<PickerMode>('month')
   const [cursor, setCursor] = useState<Date>(viewedDate)
@@ -48,6 +87,59 @@ export function ClaimTemplateModal({
   )
   const [saving, setSaving] = useState(false)
   const notify = useNotify()
+
+  // ---- locations ----
+  const pickable = useMemo(
+    () => (locationsAvailable ? activeLocations(locations) : []),
+    [locations, locationsAvailable],
+  )
+  /**
+   * Đã chạy 012 thì nhận ca luôn phải kèm ít nhất một nơi trực (015 chặn ở
+   * database). Chưa chạy 012 thì không có luật này, bỏ qua cả phần chọn.
+   */
+  const needLocations = locationsAvailable
+  /**
+   * Bắt buộc chọn mà admin chưa tạo / đã ẩn hết nơi trực: nhận ca là không thể,
+   * database cũng sẽ từ chối, nên nói rõ phải nhờ ai thay vì để bấm rồi lỗi.
+   */
+  const noLocations = needLocations && pickable.length === 0
+  /**
+   * Danh sách rỗng vì tải lỗi (vd vào app lúc offline), không phải vì chưa có
+   * nơi trực: báo tải lỗi và cho thử lại, đừng bảo đi nhờ admin.
+   */
+  const locationsFailed = noLocations && !locationsLoaded
+  const [retrying, setRetrying] = useState(false)
+
+  async function retryLocations() {
+    setRetrying(true)
+    try {
+      await refresh()
+    } finally {
+      setRetrying(false)
+    }
+  }
+  // Giữ nguyên id đã lưu (kể cả id nay đã ẩn / xoá); chỉ lọc lúc dùng, để
+  // danh sách nơi trực nạp muộn hơn modal vẫn khớp lại được.
+  const [pickedRaw, setPickedRaw] = useState<Set<UUID>>(
+    () => new Set(readSavedLocations(user?.id)),
+  )
+  const [locationError, setLocationError] = useState(false)
+  /** Nơi trực đang chọn, chỉ những nơi còn chọn được, theo thứ tự hiển thị. */
+  const pickedIds = useMemo(
+    () => pickable.filter((l) => pickedRaw.has(l.id)).map((l) => l.id),
+    [pickable, pickedRaw],
+  )
+
+  function toggleLocation(id: UUID) {
+    setLocationError(false)
+    setPickedRaw((prev) => {
+      // Bỏ luôn id cũ không còn chọn được để chúng không quay lại lần sau.
+      const next = new Set([...prev].filter((x) => pickable.some((l) => l.id === x)))
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const todayKey = toDateKey(new Date())
   const color = templateColor(template)
@@ -69,24 +161,61 @@ export function ClaimTemplateModal({
 
   // Chỉ tải những ngày đang hiện trên lịch chọn. Chưa tải xong thì ô "đã
   // nhận" chưa kịp tô, nhưng không sao: nhận trùng một ngày là no-op ở
-  // backend, không tạo ca hay phân công thừa.
+  // backend (hoặc chỉ thêm nơi trực mới vào lượt sẵn có), không tạo ca hay
+  // phân công thừa.
   const { shifts } = useShifts({
     kind: 'range',
     from: toDateKey(days[0]),
     to: toDateKey(days[days.length - 1]),
   })
 
-  /** Days this template is already claimed by the signed-in user. */
-  const claimedKeys = useMemo(() => {
-    const keys = new Set<string>()
+  /**
+   * Days this template is already claimed by the signed-in user, with the
+   * locations their assignment that day already covers — or `null` when that
+   * assignment can't take new locations any more (already checked in).
+   */
+  const claimedLocations = useMemo(() => {
+    const map = new Map<string, Set<UUID> | null>()
     for (const shift of shifts) {
       if (shift.template_id !== template.id) continue
-      if (shift.assignments.some((a) => a.user_id === user?.id)) {
-        keys.add(shift.date)
-      }
+      const mine = shift.assignments.find((a) => a.user_id === user?.id)
+      if (!mine) continue
+      // Both backends treat re-claiming a confirmed assignment as a no-op (a
+      // staff UPDATE there would be rejected and stop the remaining days), so
+      // such a day is plainly "claimed", never "add locations".
+      const locked = mine.status === 'confirmed' || locationsLocked(mine, user)
+      map.set(shift.date, locked ? null : new Set(mine.location_ids))
+    }
+    return map
+  }, [shifts, template.id, user])
+
+  /**
+   * Claimed days that can't be picked: nothing new would happen there. A
+   * claimed day stays pickable while the chosen locations include one the
+   * assignment lacks — claiming it then adds those locations (backend union).
+   */
+  const blockedKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const [date, has] of claimedLocations) {
+      if (!has || !pickedIds.some((id) => !has.has(id))) keys.add(date)
     }
     return keys
-  }, [shifts, template.id, user?.id])
+  }, [claimedLocations, pickedIds])
+
+  /** At least one claimed day on screen could still take new locations. */
+  const anyCanAdd = useMemo(
+    () => [...claimedLocations.values()].some((has) => has !== null),
+    [claimedLocations],
+  )
+
+  /**
+   * Selected days minus those that became blocked after the location choice
+   * changed — kept in `selected` so picking the location back restores them.
+   */
+  const effectiveSelected = useMemo(
+    () => [...selected].filter((key) => !blockedKeys.has(key)).sort(),
+    [selected, blockedKeys],
+  )
 
   const weekdayLabels = useMemo(() => {
     const monday = startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -97,7 +226,7 @@ export function ClaimTemplateModal({
 
   function toggle(day: Date) {
     const key = toDateKey(day)
-    if (claimedKeys.has(key)) return
+    if (blockedKeys.has(key)) return
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
@@ -108,7 +237,7 @@ export function ClaimTemplateModal({
 
   function pickOnly(day: Date) {
     const key = toDateKey(day)
-    if (claimedKeys.has(key)) return
+    if (blockedKeys.has(key)) return
     setSelected(new Set([key]))
     setCursor(day)
   }
@@ -123,7 +252,7 @@ export function ClaimTemplateModal({
       for (let i = 0; i < 7; i++) {
         const day = addDays(start, i)
         const key = toDateKey(day)
-        if (isRepeatDay(day) && !claimedKeys.has(key)) next.add(key)
+        if (isRepeatDay(day) && !blockedKeys.has(key)) next.add(key)
       }
       return next
     })
@@ -150,13 +279,18 @@ export function ClaimTemplateModal({
   }
 
   async function handleClaim() {
-    if (!user || selected.size === 0) return
+    if (!user || effectiveSelected.length === 0 || noLocations) return
+    if (needLocations && pickedIds.length === 0) {
+      setLocationError(true)
+      return
+    }
     setSaving(true)
     // Sorted so a partial failure leaves the earliest days done.
-    const dates = [...selected].sort()
+    const dates = effectiveSelected
     const params = { title: template.title, count: dates.length }
     try {
-      await claimTemplate(template.id, dates, user.id)
+      await claimTemplate(template.id, dates, user.id, pickedIds)
+      if (needLocations) saveLocations(user.id, pickedIds)
       notify.success(
         'notif.claim.done',
         params,
@@ -188,9 +322,9 @@ export function ClaimTemplateModal({
       footer={
         <>
           <span className="mr-auto text-sm text-slate-600">
-            {selected.size === 0
+            {effectiveSelected.length === 0
               ? t('claim.none')
-              : t('claim.selected', { count: selected.size })}
+              : t('claim.selected', { count: effectiveSelected.length })}
           </span>
           <button
             type="button"
@@ -205,11 +339,11 @@ export function ClaimTemplateModal({
             data-tour="claim-submit"
             className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={handleClaim}
-            disabled={saving || selected.size === 0}
+            disabled={saving || effectiveSelected.length === 0 || noLocations}
           >
             {saving
               ? t('tpl.claiming')
-              : t('claim.action', { count: selected.size })}
+              : t('claim.action', { count: effectiveSelected.length })}
           </button>
         </>
       }
@@ -225,6 +359,72 @@ export function ClaimTemplateModal({
             {formatRange(template.start_time, template.end_time)}
           </span>
         </div>
+
+        {/* ---- locations ---- */}
+        {noLocations && (
+          <div
+            data-tour="claim-locations"
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="flex-1">
+              {t(locationsFailed ? 'claim.locationsNotLoaded' : 'claim.noLocations')}
+            </span>
+            {locationsFailed && (
+              <button
+                type="button"
+                onClick={() => void retryLocations()}
+                disabled={retrying}
+                className="-my-1 min-h-11 shrink-0 rounded-md px-2 text-sm font-semibold text-amber-900 underline-offset-2 hover:underline disabled:opacity-60 sm:min-h-0 sm:py-1"
+              >
+                {t('claim.retryLocations')}
+              </button>
+            )}
+          </div>
+        )}
+        {needLocations && !noLocations && (
+          <div data-tour="claim-locations">
+            <p className="mb-1.5 text-xs font-medium text-slate-600">
+              {t('claim.locations')}
+            </p>
+            <div
+              role="group"
+              aria-label={t('claim.locations')}
+              className="flex flex-wrap gap-1.5"
+            >
+              {pickable.map((location) => {
+                const on = pickedIds.includes(location.id)
+                return (
+                  <button
+                    key={location.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleLocation(location.id)}
+                    className={`inline-flex min-h-11 max-w-full min-w-11 items-center justify-center gap-1 rounded-full border px-3 text-sm font-medium transition sm:min-h-0 sm:py-1 sm:text-xs ${
+                      on
+                        ? pickedChipClass(location)
+                        : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {on && <Check className="h-3.5 w-3.5 shrink-0" />}
+                    <span className="truncate">{location.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {locationError ? (
+              <p className="mt-1 text-xs text-rose-600">
+                {t('claim.errLocationRequired')}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500">
+                {t('claim.locationsHint')}
+                {anyCanAdd && ` ${t('claim.claimedAddsLocations')}`}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ---- quick picks ---- */}
         <div>
@@ -337,8 +537,11 @@ export function ClaimTemplateModal({
           <div className="grid grid-cols-7 gap-1 px-1.5 pb-1.5">
             {days.map((day) => {
               const key = toDateKey(day)
-              const isClaimed = claimedKeys.has(key)
-              const isSelected = selected.has(key)
+              /** Claimed and nothing to add: a plain "done" cell. */
+              const isClaimed = blockedKeys.has(key)
+              /** Claimed, but picking it adds the chosen locations. */
+              const canAdd = !isClaimed && claimedLocations.has(key)
+              const isSelected = !isClaimed && selected.has(key)
               const repeats = isRepeatDay(day)
               const isToday = key === todayKey
               const outsideMonth = mode === 'month' && !isSameMonth(day, cursor)
@@ -353,18 +556,22 @@ export function ClaimTemplateModal({
                   data-tooltip={
                     isClaimed
                       ? t('claim.alreadyClaimed')
-                      : !repeats
-                        ? t('claim.notRepeatDay')
-                        : format(day, 'EEEE, d MMMM', { locale: dateLocale })
+                      : canAdd
+                        ? t('claim.addLocations')
+                        : !repeats
+                          ? t('claim.notRepeatDay')
+                          : format(day, 'EEEE, d MMMM', { locale: dateLocale })
                   }
                   className={`relative flex h-10 flex-col items-center justify-center rounded-md border text-sm transition ${
                     isClaimed
                       ? 'cursor-default border-emerald-200 bg-emerald-50 text-emerald-700'
                       : isSelected
                         ? 'border-indigo-600 bg-indigo-600 font-semibold text-white'
-                        : 'border-transparent hover:border-indigo-300 hover:bg-indigo-50'
+                        : canAdd
+                          ? 'border-dashed border-emerald-400 bg-emerald-50 text-emerald-700 hover:border-indigo-400 hover:bg-indigo-50'
+                          : 'border-transparent hover:border-indigo-300 hover:bg-indigo-50'
                   } ${
-                    !isClaimed && !isSelected
+                    !isClaimed && !isSelected && !canAdd
                       ? repeats
                         ? 'text-slate-800'
                         : 'text-slate-400'
@@ -373,12 +580,12 @@ export function ClaimTemplateModal({
                     isPast && !isSelected && !isClaimed ? 'opacity-60' : ''
                   } ${isToday && !isSelected && !isClaimed ? 'ring-1 ring-indigo-400' : ''}`}
                 >
-                  {isClaimed ? (
+                  {isClaimed || canAdd ? (
                     <Check className="h-4 w-4" />
                   ) : (
                     format(day, 'd')
                   )}
-                  {repeats && !isClaimed && !isSelected && (
+                  {repeats && !isClaimed && !isSelected && !canAdd && (
                     <span className="absolute bottom-1 h-1 w-1 rounded-full bg-indigo-400" />
                   )}
                 </button>
@@ -397,6 +604,12 @@ export function ClaimTemplateModal({
             <span className="h-3 w-3 rounded-sm border border-emerald-200 bg-emerald-50" />
             {t('claim.legendClaimed')}
           </li>
+          {needLocations && anyCanAdd && (
+            <li className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm border border-dashed border-emerald-400 bg-emerald-50" />
+              {t('claim.legendAddLocations')}
+            </li>
+          )}
           <li className="flex items-center gap-1.5">
             <span className="h-1 w-1 rounded-full bg-indigo-400" />
             {t('tpl.repeatOn')}

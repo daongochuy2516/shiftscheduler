@@ -56,9 +56,13 @@ const ACTIONS = [
   'template.updated',
   'template.toggled',
   'template.deleted',
+  'location.created',
+  'location.updated',
+  'location.toggled',
+  'location.deleted',
 ] as const
 
-const ENTITY_TYPES = ['shift', 'assignment', 'template'] as const
+const ENTITY_TYPES = ['shift', 'assignment', 'template', 'location'] as const
 
 /** Màu theo tính chất việc làm: tạo, sửa, xoá. */
 function actionTone(action: string): string {

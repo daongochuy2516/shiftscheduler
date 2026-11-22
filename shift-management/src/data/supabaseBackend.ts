@@ -5,6 +5,8 @@ import type {
   ActionLogPage,
   ActionLogQuery,
   AssignmentInput,
+  Location,
+  LocationInput,
   Profile,
   ProfileInput,
   Shift,
@@ -17,6 +19,7 @@ import type {
   TemplateInput,
   UUID,
 } from '../types'
+import { CLAIM_NEEDS_LOCATION_MESSAGE } from '../lib/attendance'
 import { getSupabase } from '../lib/supabaseClient'
 import { normalizeTime } from '../lib/time'
 import { ForbiddenError, type SchedulerBackend } from './backend'
@@ -29,6 +32,8 @@ function normalizeAssignment(row: ShiftAssignment): ShiftAssignment {
     end_time: normalizeTime(row.end_time),
     // Absent until migration 005 adds the column.
     confirmed_at: row.confirmed_at ?? null,
+    // Absent until migration 012 adds the column.
+    location_ids: row.location_ids ?? [],
   }
 }
 
@@ -77,6 +82,16 @@ function involvesStaff(id: UUID): string {
   ].join(',')
 }
 
+/**
+ * Đã chạy 012 chưa, theo lần `listLocations` gần nhất (`null` = chưa biết).
+ * `claimTemplate` cần biết để chặn nhận ca không có nơi trực (015, luật R1)
+ * trước khi ghi gì, mà không phải gửi thêm một truy vấn sẽ lỗi khi 012 chưa
+ * chạy. ScheduleProvider luôn tải danh sách nơi trực khi vào app, nên lúc
+ * người dùng bấm Nhận ca giá trị này thường đã có; vào app lúc mất mạng (danh
+ * sách lấy từ bản lưu offline) thì còn `null` và `claimTemplate` tự hỏi lại.
+ */
+let locationsInstalled: boolean | null = null
+
 function fail(context: string, error: PostgrestError): never {
   throw new Error(`${context}: ${error.message}`)
 }
@@ -104,7 +119,35 @@ export function isMissingFunction(error: PostgrestError): boolean {
   )
 }
 
-/** Columns sent to `shift_assignments`, minus the local-only `id`. */
+/**
+ * Ghi nơi trực kèm `short_name`; nếu PostgREST báo chưa có cột đó (014 chưa
+ * chạy — PGRST204) thì ghi lại không có nó, để admin vẫn thêm / sửa được nơi
+ * trực. Tên tắt khi đó bị bỏ qua (chip tự cắt từ tên).
+ */
+async function withoutMissingShortName(
+  input: LocationInput,
+  write: (
+    payload: Partial<LocationInput>,
+  ) => PromiseLike<{ error: PostgrestError | null }>,
+): Promise<{ error: PostgrestError | null }> {
+  const first = await write(input)
+  if (
+    first.error &&
+    first.error.code === 'PGRST204' &&
+    /short_name/.test(first.error.message)
+  ) {
+    const { short_name: _omit, ...rest } = input
+    void _omit
+    return write(rest)
+  }
+  return first
+}
+
+/**
+ * Columns sent to `shift_assignments`, minus the local-only `id`.
+ * `location_ids` only when the caller set it: before migration 012 the column
+ * doesn't exist and sending it at all fails the whole write (PGRST204).
+ */
 function assignmentRow(shiftId: UUID, input: AssignmentInput) {
   return {
     shift_id: shiftId,
@@ -113,6 +156,9 @@ function assignmentRow(shiftId: UUID, input: AssignmentInput) {
     end_time: input.end_time,
     status: input.status,
     note: input.note,
+    ...(input.location_ids !== undefined
+      ? { location_ids: input.location_ids }
+      : {}),
   }
 }
 
@@ -158,9 +204,17 @@ async function reconcileAssignments(
     if (error) fail('Could not update an assignment', error)
   }
 
-  const newRows = inputs
-    .filter((input) => !input.id)
-    .map((input) => assignmentRow(shiftId, input))
+  const added = inputs.filter((input) => !input.id)
+  // A bulk insert sends the union of every row's keys and fills a missing one
+  // with null, which `location_ids not null` rejects — so once one new row
+  // carries locations, give the others an explicit empty list.
+  const withLocations = added.some((input) => input.location_ids !== undefined)
+  const newRows = added.map((input) =>
+    assignmentRow(
+      shiftId,
+      withLocations ? { ...input, location_ids: input.location_ids ?? [] } : input,
+    ),
+  )
   if (newRows.length > 0) {
     const { error } = await supabase.from('shift_assignments').insert(newRows)
     if (error) fail('Could not add staff to the shift', error)
@@ -382,7 +436,59 @@ export const supabaseBackend: SchedulerBackend = {
     if (error) fail('Could not delete the template', error)
   },
 
-  async claimTemplate(templateId: UUID, date: string, userId: UUID) {
+  // ---- locations (012) ----
+
+  async listLocations(): Promise<Location[] | null> {
+    // `*` thay vì liệt kê cột: `short_name` (014) có thể chưa có, liệt kê
+    // một cột không tồn tại thì cả truy vấn lỗi.
+    const { data, error } = await getSupabase()
+      .from('locations')
+      .select('*')
+      .order('sort_order')
+      .order('name')
+    if (error) {
+      // Chưa chạy 012: tắt mọi thứ về nơi trực thay vì vỡ trang.
+      if (isMissingTable(error)) {
+        locationsInstalled = false
+        return null
+      }
+      fail('Không tải được danh sách nơi trực', error)
+    }
+    locationsInstalled = true
+    return ((data ?? []) as Location[]).map((row) => ({
+      ...row,
+      short_name: row.short_name ?? null,
+      color: row.color ?? null,
+    }))
+  },
+
+  async createLocation(input: LocationInput) {
+    // `created_by` lấy từ default của cột (auth.uid()).
+    const { error } = await withoutMissingShortName(input, (payload) =>
+      getSupabase().from('locations').insert(payload),
+    )
+    if (error) fail('Không tạo được nơi trực', error)
+  },
+
+  async updateLocation(id: UUID, input: LocationInput) {
+    const { error } = await withoutMissingShortName(input, (payload) =>
+      getSupabase().from('locations').update(payload).eq('id', id),
+    )
+    if (error) fail('Không sửa được nơi trực', error)
+  },
+
+  async deleteLocation(id: UUID) {
+    // Trigger của 012 từ chối khi còn lượt nào dùng nơi này.
+    const { error } = await getSupabase().from('locations').delete().eq('id', id)
+    if (error) fail('Không xoá được nơi trực', error)
+  },
+
+  async claimTemplate(
+    templateId: UUID,
+    date: string,
+    userId: UUID,
+    locationIds: UUID[],
+  ) {
     const supabase = getSupabase()
 
     const { data: template, error: templateError } = await supabase
@@ -391,6 +497,53 @@ export const supabaseBackend: SchedulerBackend = {
       .eq('id', templateId)
       .single()
     if (templateError) fail('Could not load the template', templateError)
+
+    // Chỉ đọc / gửi `location_ids` khi có chọn nơi trực: chưa chạy 012 thì
+    // cột chưa có, nhắc tới nó là hỏng cả truy vấn.
+    const withLocations = locationIds.length > 0
+    if (withLocations) {
+      // Kiểm tra trước khi ghi gì: nơi vừa bị ẩn / xoá mà để trigger 012 từ
+      // chối lượt mới thì ca vừa tạo phải xoá đi, và việc xoá đó sinh một
+      // dòng "Xoá ca" cho một thao tác đã thất bại. Áp cho mọi vai trò (ở đây
+      // không biết vai trò) — hộp nhận ca vốn chỉ đưa nơi đang bật; bản mock
+      // xét y như vậy.
+      const { data: usable, error: usableError } = await supabase
+        .from('locations')
+        .select('id')
+        .in('id', locationIds)
+        .eq('is_active', true)
+      if (usableError) fail('Không nhận được ca', usableError)
+      const ok = new Set((usable ?? []).map((row) => row.id as UUID))
+      if (locationIds.some((id) => !ok.has(id))) {
+        throw new Error('Nơi trực không tồn tại hoặc đã bị ẩn.')
+      }
+    }
+
+    // 015, luật R1: nhận ca cho chính mình phải có ít nhất một nơi trực. Nơi
+    // chặn thật là trigger; ở đây chặn sớm (trước khi tạo ca, ngay trước khi
+    // thêm lượt) để bị từ chối thì không có ca mồ côi phải xoá — việc xoá đó
+    // sinh một dòng "Xoá ca" thừa. Chỉ chặn khi đã chạy 012
+    // (`locationsInstalled`): chưa chạy thì giao diện gửi [] và nhận ca vẫn
+    // phải được. Chưa biết (null — vd lúc vào app mất mạng, danh sách nơi
+    // trực lấy từ bản lưu offline) thì hỏi máy chủ một lần trước khi ghi gì.
+    // Nhận lại ca đã có trong đó vẫn là no-op như trước, giống bản thật.
+    let claimNeedsLocation = false
+    if (!withLocations) {
+      if (locationsInstalled === null) {
+        const { error: probeError } = await supabase
+          .from('locations')
+          .select('id')
+          .limit(1)
+        if (probeError && !isMissingTable(probeError)) {
+          fail('Không nhận được ca', probeError)
+        }
+        locationsInstalled = !probeError
+      }
+      if (locationsInstalled) {
+        const { data: auth } = await supabase.auth.getSession()
+        claimNeedsLocation = auth.session?.user.id === userId
+      }
+    }
 
     // One shift per template per day: reuse it if someone already claimed.
     const { data: existing, error: findError } = await supabase
@@ -409,6 +562,8 @@ export const supabaseBackend: SchedulerBackend = {
     let createdShiftId: UUID | null = null
 
     if (!shiftId) {
+      // Ca chưa có thì chắc chắn chưa có lượt của mình: lần nhận này sẽ thêm.
+      if (claimNeedsLocation) throw new Error(CLAIM_NEEDS_LOCATION_MESSAGE)
       const { data: created, error: createError } = await supabase
         .from('shifts')
         .insert({
@@ -441,12 +596,36 @@ export const supabaseBackend: SchedulerBackend = {
 
     const { data: mine, error: mineError } = await supabase
       .from('shift_assignments')
-      .select('id')
+      .select(withLocations ? 'id, status, location_ids' : 'id, status')
       .eq('shift_id', shiftId)
       .eq('user_id', userId)
       .maybeSingle()
     if (mineError) fail('Could not check the roster', mineError)
-    if (mine) return // already claimed
+    if (mine) {
+      // Đã có trong ca: nhận lại với nơi trực mới thì gộp vào lượt đang có
+      // (một người một lượt mỗi ca), không có gì mới thì thôi như trước.
+      // Đã điểm danh thì nhận lại là no-op như trước: trigger 012 từ chối
+      // nhân viên đổi nơi trực lúc này, và lỗi sẽ dừng các ngày sau của lần
+      // nhận nhiều ngày. Admin sửa nơi trực trong form ca.
+      const row = mine as unknown as {
+        id: UUID
+        status: string
+        location_ids?: UUID[] | null
+      }
+      if (row.status === 'confirmed') return
+      const current = row.location_ids ?? []
+      const added = locationIds.filter((id) => !current.includes(id))
+      if (added.length === 0) return
+      const { error: mergeError } = await supabase
+        .from('shift_assignments')
+        .update({ location_ids: [...current, ...added] })
+        .eq('id', row.id)
+      if (mergeError) fail('Không nhận được ca', mergeError)
+      return
+    }
+    // Ca đã có từ trước (ca mới thì đã chặn ở trên) mà chưa có lượt của mình:
+    // đây là lượt mới, chưa ghi gì nên dừng ở đây không để lại gì.
+    if (claimNeedsLocation) throw new Error(CLAIM_NEEDS_LOCATION_MESSAGE)
 
     const { error: assignError } = await supabase
       .from('shift_assignments')
@@ -457,12 +636,18 @@ export const supabaseBackend: SchedulerBackend = {
         end_time: template.end_time,
         status: 'pending',
         note: null,
+        ...(withLocations ? { location_ids: locationIds } : {}),
       })
 
     if (assignError) {
       // Dọn ca vừa tạo — xem ghi chú ở chỗ khai báo createdShiftId.
       if (createdShiftId) {
         await supabase.from('shifts').delete().eq('id', createdShiftId)
+      }
+      // Câu của luật 015 trả nguyên văn, trùng với lần chặn sớm ở trên và
+      // bản mock.
+      if (assignError.message === CLAIM_NEEDS_LOCATION_MESSAGE) {
+        throw new Error(CLAIM_NEEDS_LOCATION_MESSAGE)
       }
       fail('Không nhận được ca', assignError)
     }
@@ -574,10 +759,21 @@ export const supabaseBackend: SchedulerBackend = {
       )
       .subscribe()
 
+    // Nơi trực cũng kênh riêng, cùng lý do: chưa chạy 012 thì chỉ kênh này lỗi.
+    const locationChannel = supabase
+      .channel('scheduler-location-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'locations' },
+        schedule,
+      )
+      .subscribe()
+
     return () => {
       if (timer) clearTimeout(timer)
       void supabase.removeChannel(channel)
       void supabase.removeChannel(templateChannel)
+      void supabase.removeChannel(locationChannel)
     }
   },
 }

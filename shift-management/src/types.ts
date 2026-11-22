@@ -86,6 +86,39 @@ export interface ShiftTemplate {
 }
 
 /**
+ * Nơi trực (012_locations.sql): Fanpage, Discord… Gắn vào từng lượt phân
+ * công chứ không vào ca — một người có thể trực nhiều nơi cùng lúc. Chỉ admin
+ * thêm / sửa / ẩn / xoá; ẩn (`is_active = false`) thì không chọn mới được
+ * nhưng các lượt cũ vẫn giữ và vẫn hiện tên.
+ */
+export interface Location {
+  id: UUID
+  name: string
+  /**
+   * Tên tắt cho chỗ hẹp (khối ca ngắn trên dòng thời gian), ví dụ "Page".
+   * `null` = tự cắt từ `name` (`locationShortName`). Cột của 014: chưa chạy
+   * thì luôn `null`.
+   */
+  short_name: string | null
+  /** Khoá trong bảng màu (lib/colors.ts). `null` = tự hash theo id. */
+  color: string | null
+  sort_order: number
+  is_active: boolean
+  created_by: UUID | null
+  created_at: string
+  updated_at: string
+}
+
+/** Những gì admin sửa được ở một nơi trực. */
+export interface LocationInput {
+  name: string
+  short_name: string | null
+  color: string | null
+  sort_order: number
+  is_active: boolean
+}
+
+/**
  * Một dòng nhật ký thao tác. Bảng chỉ cho đọc: log do trigger trong database
  * sinh ra, không có đường nào để client tạo/sửa/xoá.
  */
@@ -164,6 +197,12 @@ export interface ShiftAssignment {
    */
   confirmed_at: string | null
   note: string | null
+  /**
+   * Nơi trực của người này trong ca (id trong `locations`), không trùng, đã
+   * sắp theo id. Luôn là mảng: `[]` khi chưa chọn hoặc migration 012 chưa chạy.
+   * Mảng không có khoá ngoại — id của nơi đã xoá thì hiện là "không rõ".
+   */
+  location_ids: UUID[]
   created_at: string
   updated_at: string
 }
@@ -227,4 +266,10 @@ export interface AssignmentInput {
   end_time: string
   status: AssignmentStatus
   note: string | null
+  /**
+   * Bỏ trống (`undefined`) = không gửi cột, giữ nguyên giá trị đang có (lượt
+   * mới thì `[]`). Phải bỏ trống khi migration 012 chưa chạy, không thì máy
+   * chủ báo không có cột.
+   */
+  location_ids?: UUID[]
 }

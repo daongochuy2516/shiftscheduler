@@ -14,6 +14,7 @@ import {
   Layers,
   LayoutList,
   LogOut,
+  MapPin,
   Monitor,
   Moon,
   Plus,
@@ -33,7 +34,7 @@ import { useNotifications } from '../notifications/NotificationContext'
 import { useTheme, type ThemePref } from '../theme/ThemeContext'
 import { quickCalc, type CalcResult } from '../lib/quickCalc'
 import { scrollRoot } from '../lib/scrollRoot'
-import { uiIsAdmin } from '../lib/uiBypass'
+import { uiCanManageTemplates, uiIsAdmin } from '../lib/uiBypass'
 import { formatMinutesDuration, fromDateKey, toDateKey } from '../lib/time'
 import { useExitAnimation } from './useExitAnimation'
 import { useTwoStep } from './useTwoStep'
@@ -129,18 +130,21 @@ export function CommandPalette({
   onClose,
   onCreateShift,
   onClaimTemplate,
+  onManageLocations,
   onChangePassword,
   onSignOut,
 }: {
   onClose: () => void
   onCreateShift: () => void
   onClaimTemplate: () => void
+  /** Mở hộp Quản lý nơi trực (chỉ hiện lệnh với admin, khi đã chạy 012). */
+  onManageLocations: () => void
   onChangePassword: () => void
   onSignOut: () => void
 }) {
   const { t, lang, setLang, dateLocale } = useI18n()
   const { user } = useAuth()
-  const { profiles } = useSchedule()
+  const { profiles, locationsAvailable } = useSchedule()
   const { pref, setPref } = useTheme()
   const { setCenterOpen } = useNotifications()
   const navigate = useNavigate()
@@ -171,6 +175,8 @@ export function CommandPalette({
   }, [copiedId])
 
   const isAdmin = uiIsAdmin(user)
+  // Cùng điều kiện với mục "Quản lý nơi trực" trong menu Tạo ca.
+  const canManageLocations = locationsAvailable && uiCanManageTemplates(user)
 
   // ---- danh sách lệnh cố định ---------------------------------------------
   const fixed = useMemo<Command[]>(() => {
@@ -205,6 +211,13 @@ export function CommandPalette({
         id: 'act-new', group: 'action', icon: Plus, label: t('newShift.manual'), keywords: 'tao ca moi thu cong new shift create manual them',
         run: () => (onCreateShift(), 'close'),
       },
+      ...(canManageLocations
+        ? [{
+            id: 'act-locations', group: 'action' as const, icon: MapPin, label: t('loc.manage'),
+            keywords: 'quan ly noi truc dia diem vi tri manage locations location fanpage discord',
+            run: () => (onManageLocations(), 'close' as const),
+          }]
+        : []),
       {
         id: 'act-notif', group: 'action', icon: Bell, label: t('notif.title'), keywords: 'thong bao notifications',
         run: () => (setCenterOpen(true), 'close'),
@@ -243,7 +256,7 @@ export function CommandPalette({
       },
     ]
     return list
-  }, [t, lang, pref, isAdmin, navigate, setPref, setLang, setCenterOpen, onCreateShift, onClaimTemplate, onChangePassword, signOut, startTour])
+  }, [t, lang, pref, isAdmin, canManageLocations, navigate, setPref, setLang, setCenterOpen, onCreateShift, onClaimTemplate, onManageLocations, onChangePassword, signOut, startTour])
 
   // ---- kết quả tính nhanh ---------------------------------------------------
   const calc = useMemo(() => quickCalc(query), [query])

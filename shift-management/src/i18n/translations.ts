@@ -30,6 +30,8 @@ export const en = {
   'common.ends': 'Ends',
   'common.unknownStaff': 'Unknown staff',
   'common.loading': 'Loading…',
+  'common.location': 'Location',
+  'common.locations': 'Locations',
 
   // ---- status ----
   'status.pending': 'Pending',
@@ -145,6 +147,7 @@ export const en = {
   'shift.errTitleRequired': 'Title is required.',
   'shift.errShiftRange': 'Shift end time must be after the start time.',
   'shift.errRowRange': 'End time must be after start time.',
+  'shift.errLocationRequired': 'Pick at least one location.',
   'shift.warnOutside': 'Outside the shift window.',
   'shift.lockedByTemplate':
     'Fixed by the shift template. Adjust each person’s own hours below instead.',
@@ -181,7 +184,7 @@ export const en = {
   'shiftSimple.notePlaceholder': 'Note for your part (optional)',
   'shiftSimple.checkIn': 'Check in',
   'shiftSimple.checkInWindow': 'Check-in is open {{from}} – {{to}}.',
-  'shiftSimple.saveBeforeCheckIn': 'Save your new hours before checking in.',
+  'shiftSimple.saveBeforeCheckIn': 'Save your changes before checking in.',
   'shiftSimple.leave': 'Leave shift',
   'shiftSimple.leaveConfirm': 'Take yourself off this shift?',
   'shiftSimple.leaveUntil': 'until {{time}}',
@@ -228,6 +231,13 @@ export const en = {
   'notif.tpl.saveFailed': 'Could not save template “{{title}}”',
   'notif.tpl.deleted': 'Template “{{title}}” deleted',
   'notif.tpl.deleteFailed': 'Could not delete template “{{title}}”',
+  'notif.loc.created': 'Location “{{name}}” created',
+  'notif.loc.saved': 'Location “{{name}}” saved',
+  'notif.loc.saveFailed': 'Could not save location “{{name}}”',
+  'notif.loc.shown': 'Location “{{name}}” can be picked again',
+  'notif.loc.hidden': 'Location “{{name}}” hidden',
+  'notif.loc.deleted': 'Location “{{name}}” deleted',
+  'notif.loc.deleteFailed': 'Could not delete location “{{name}}”',
   'notif.pwd.changed': 'Password changed',
   'notif.pwd.failed': 'Could not change your password',
 
@@ -255,7 +265,7 @@ export const en = {
   'list.checkInOpens': 'Check-in opens {{time}}',
   'list.checkInClosed': 'Check-in closed — you don’t have permission to check in late',
   'list.checkedInAt': 'at {{time}}',
-  'list.searchPlaceholder': 'Search title, note or staff',
+  'list.searchPlaceholder': 'Search title, note, staff or location',
   'list.window.upcoming': 'Upcoming',
   'list.window.past': 'Past',
   'list.window.all': 'All',
@@ -316,6 +326,44 @@ export const en = {
   'tpl.errClaim': 'Could not claim the shift.',
   'tpl.addAll': 'Add every template to this day',
 
+  // ---- locations (where staff are on duty; admin-managed) ----
+  'loc.manage': 'Manage locations',
+  'loc.manageHint': 'Add, rename, recolour, reorder or hide locations',
+  'loc.sectionHint':
+    'Where staff are on duty, e.g. Fanpage or Discord. Staff pick them when claiming a shift.',
+  'loc.add': 'New location',
+  'loc.edit': 'Edit location',
+  'loc.name': 'Name',
+  'loc.shortName': 'Short name',
+  'loc.shortNameHint':
+    'Shown on short shift blocks where the full name does not fit. Leave empty to use the first 3 letters.',
+  'loc.namePlaceholder': 'e.g. Fanpage',
+  'loc.color': 'Colour',
+  'loc.colorHint': 'Colour of the chip shown next to staff on duty here.',
+  'loc.noColor': 'No colour',
+  'loc.order': 'Order',
+  'loc.orderHint': 'Lower numbers come first.',
+  'loc.errOrder': 'Order must be a whole number.',
+  'loc.active': 'Shown when claiming',
+  'loc.activeHint':
+    'Hidden locations stay on existing shifts but can no longer be picked.',
+  'loc.hidden': 'Hidden',
+  'loc.empty': 'No locations yet.',
+  'loc.emptyHint':
+    'Add the places staff cover during a shift, such as Fanpage or Discord.',
+  'loc.unknown': 'Deleted location',
+  'loc.none': 'No location',
+  'loc.pick': 'Pick locations',
+  'loc.lockedHint':
+    'You can’t change the locations of someone else’s assignment, or after check-in.',
+  'loc.errNameRequired': 'Name can’t be empty.',
+  'loc.errNameTooLong': 'Name can be at most {{max}} characters.',
+  'loc.errNameTaken': 'A location with this name already exists.',
+  'loc.deleteConfirm': 'Delete location “{{name}}”?',
+  'loc.inUseHint':
+    'Locations already used in a shift can’t be deleted — hide them instead.',
+  'loc.notInstalled': 'Locations are not installed (run 012_locations.sql)',
+
   // ---- claim date picker ----
   'claim.title': 'Claim shift',
   'claim.subtitle': 'Pick the days you want to work {{title}}.',
@@ -338,6 +386,18 @@ export const en = {
   'claim.legendOffDay': 'Outside the repeat days',
   'claim.partialError':
     'Some days were claimed before the error — reopen to check what is left.',
+  'claim.locations': 'Locations',
+  'claim.locationsHint': 'Pick one or more places you will cover.',
+  'claim.errLocationRequired': 'Pick at least one location.',
+  'claim.noLocations':
+    'No location is available yet — ask an admin to add one in Manage locations.',
+  'claim.locationsNotLoaded':
+    'Could not load the location list — check your connection and try again.',
+  'claim.retryLocations': 'Try again',
+  'claim.claimedAddsLocations':
+    'Days you already claimed (not yet checked in) can be picked again to add locations.',
+  'claim.addLocations': 'Already claimed — pick to add the chosen locations',
+  'claim.legendAddLocations': 'Claimed, locations can be added',
 
   // ---- change password ----
   'pwd.title': 'Change password',
@@ -474,7 +534,7 @@ export const en = {
   'notif.account.hidden': '“{{name}}” is hidden from the boards',
   'notif.account.saveFailed': 'Could not update “{{name}}”',
   'log.title': 'Action log',
-  'log.subtitle': 'Every change to shifts, assignments and templates.',
+  'log.subtitle': 'Every change to shifts, assignments, templates and locations.',
   'log.from': 'From date',
   'log.to': 'To date',
   'log.staff': 'Staff involved',
@@ -509,7 +569,7 @@ export const en = {
   'log.shiftInfo': 'Shift info',
   'log.shiftInfoHint': 'Open this shift as it is now, not as it was at this entry',
   'log.shiftGone': 'Shift deleted',
-  'log.shiftGoneHint': 'This shift has since been deleted',
+  'log.shiftGoneHint': 'This shift has since been deleted or merged into another shift',
   'log.view.label': 'Detail view',
   'log.view.simple': 'Simple',
   'log.view.advanced': 'Advanced',
@@ -530,6 +590,13 @@ export const en = {
   'log.f.template': 'Template',
   'log.f.createdBy': 'Created by',
   'log.f.newShift': 'Created the shift',
+  'log.f.name': 'Name',
+  'log.f.shortName': 'Short name',
+  'log.f.order': 'Order',
+  'log.f.location': 'Location',
+  'log.f.locations': 'Locations',
+  'log.f.locationsAtTime': 'Locations (at the time)',
+  'log.v.noLocations': 'None',
   'log.v.yes': 'Yes',
   'log.v.no': 'No',
   'log.v.self': 'self',
@@ -546,6 +613,7 @@ export const en = {
   'log.entity.shift': 'Shift',
   'log.entity.assignment': 'Assignment',
   'log.entity.template': 'Template',
+  'log.entity.location': 'Location',
 
   'log.action.shift.created': 'Shift created',
   'log.action.shift.updated': 'Shift edited',
@@ -561,6 +629,10 @@ export const en = {
   'log.action.template.updated': 'Template edited',
   'log.action.template.toggled': 'Template turned on/off',
   'log.action.template.deleted': 'Template deleted',
+  'log.action.location.created': 'Location created',
+  'log.action.location.updated': 'Location edited',
+  'log.action.location.toggled': 'Location shown/hidden',
+  'log.action.location.deleted': 'Location deleted',
   // ---- offline & cài app (PWA) ----
   'offline.banner': 'You’re offline, please check your network connection.',
   'offline.bannerNoData': 'You’re offline, please check your network connection.',
@@ -684,6 +756,7 @@ export const en = {
   'status.offline.kind.profiles': 'staff profiles',
   'status.offline.kind.templates': 'shift templates',
   'status.offline.kind.accounts': 'accounts',
+  'status.offline.kind.locations': 'locations',
   'status.offline.storage': 'Browser storage',
   'status.offline.storageHint': 'navigator.storage.estimate()',
   'status.offline.storageValue': '{{used}} of {{quota}}',
@@ -741,6 +814,8 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'common.ends': 'Kết thúc',
   'common.unknownStaff': 'Không rõ nhân viên',
   'common.loading': 'Đang tải…',
+  'common.location': 'Nơi trực',
+  'common.locations': 'Nơi trực',
 
   // ---- status ----
   'status.pending': 'Chờ xác nhận',
@@ -857,6 +932,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'shift.errTitleRequired': 'Vui lòng nhập tiêu đề.',
   'shift.errShiftRange': 'Giờ kết thúc của ca phải sau giờ bắt đầu.',
   'shift.errRowRange': 'Giờ kết thúc phải sau giờ bắt đầu.',
+  'shift.errLocationRequired': 'Chọn ít nhất một nơi trực.',
   'shift.warnOutside': 'Nằm ngoài khung giờ của ca.',
   'shift.lockedByTemplate':
     'Không thể sửa giờ của ca được tạo từ ca mẫu, chỉ có thể sửa giờ của từng nhân viên bên dưới.',
@@ -892,7 +968,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'shiftSimple.notePlaceholder': 'Ghi chú cho phần của bạn (không bắt buộc)',
   'shiftSimple.checkIn': 'Điểm danh',
   'shiftSimple.checkInWindow': 'Điểm danh mở từ {{from}} đến {{to}}.',
-  'shiftSimple.saveBeforeCheckIn': 'Lưu giờ mới trước khi điểm danh.',
+  'shiftSimple.saveBeforeCheckIn': 'Lưu thay đổi trước khi điểm danh.',
   'shiftSimple.leave': 'Rời ca',
   'shiftSimple.leaveConfirm': 'Rút bạn khỏi ca này?',
   'shiftSimple.leaveUntil': 'tới {{time}}',
@@ -940,6 +1016,13 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'notif.tpl.saveFailed': 'Không lưu được ca mẫu “{{title}}”',
   'notif.tpl.deleted': 'Đã xoá ca mẫu “{{title}}”',
   'notif.tpl.deleteFailed': 'Không xoá được ca mẫu “{{title}}”',
+  'notif.loc.created': 'Đã tạo nơi trực “{{name}}”',
+  'notif.loc.saved': 'Đã lưu nơi trực “{{name}}”',
+  'notif.loc.saveFailed': 'Không lưu được nơi trực “{{name}}”',
+  'notif.loc.shown': 'Nơi trực “{{name}}” đã chọn lại được',
+  'notif.loc.hidden': 'Đã ẩn nơi trực “{{name}}”',
+  'notif.loc.deleted': 'Đã xoá nơi trực “{{name}}”',
+  'notif.loc.deleteFailed': 'Không xoá được nơi trực “{{name}}”',
   'notif.pwd.changed': 'Đã đổi mật khẩu',
   'notif.pwd.failed': 'Không đổi được mật khẩu',
 
@@ -967,7 +1050,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'list.checkInOpens': 'Mở điểm danh lúc {{time}}',
   'list.checkInClosed': 'Hết giờ điểm danh — bạn không có quyền điểm danh trễ',
   'list.checkedInAt': 'lúc {{time}}',
-  'list.searchPlaceholder': 'Tìm theo tiêu đề, ghi chú hoặc nhân viên',
+  'list.searchPlaceholder': 'Tìm theo tiêu đề, ghi chú, nhân viên hoặc nơi trực',
   'list.window.upcoming': 'Sắp tới',
   'list.window.past': 'Đã qua',
   'list.window.all': 'Tất cả',
@@ -1025,6 +1108,44 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'tpl.errClaim': 'Không nhận được ca.',
   'tpl.addAll': 'Thêm mọi ca mẫu vào ngày này',
 
+  // ---- nơi trực (admin quản lý) ----
+  'loc.manage': 'Quản lý nơi trực',
+  'loc.manageHint': 'Thêm, đổi tên, đổi màu, sắp xếp hay ẩn nơi trực',
+  'loc.sectionHint':
+    'Nơi nhân viên trực trong ca, ví dụ Fanpage hay Discord. Nhân viên chọn khi nhận ca.',
+  'loc.add': 'Thêm nơi trực',
+  'loc.edit': 'Sửa nơi trực',
+  'loc.name': 'Tên',
+  'loc.shortName': 'Tên tắt',
+  'loc.shortNameHint':
+    'Hiện trên khối ca ngắn khi không đủ chỗ cho tên đầy đủ. Để trống thì lấy 3 chữ đầu của tên.',
+  'loc.namePlaceholder': 'ví dụ: Fanpage',
+  'loc.color': 'Màu',
+  'loc.colorHint': 'Màu của nhãn hiện cạnh tên người trực ở đây.',
+  'loc.noColor': 'Không màu',
+  'loc.order': 'Thứ tự',
+  'loc.orderHint': 'Số nhỏ đứng trước.',
+  'loc.errOrder': 'Thứ tự phải là số nguyên.',
+  'loc.active': 'Hiện khi nhận ca',
+  'loc.activeHint':
+    'Nơi trực bị ẩn vẫn còn trên các ca đã có nhưng không chọn được nữa.',
+  'loc.hidden': 'Đang ẩn',
+  'loc.empty': 'Chưa có nơi trực nào.',
+  'loc.emptyHint':
+    'Thêm những nơi nhân viên trực trong ca, như Fanpage hay Discord.',
+  'loc.unknown': 'Nơi trực đã xoá',
+  'loc.none': 'Chưa có nơi trực',
+  'loc.pick': 'Chọn nơi trực',
+  'loc.lockedHint':
+    'Không đổi được nơi trực của người khác, hay sau khi đã điểm danh.',
+  'loc.errNameRequired': 'Tên không được để trống.',
+  'loc.errNameTooLong': 'Tên dài tối đa {{max}} ký tự.',
+  'loc.errNameTaken': 'Đã có nơi trực trùng tên này.',
+  'loc.deleteConfirm': 'Xoá nơi trực “{{name}}”?',
+  'loc.inUseHint':
+    'Nơi trực đã dùng trong ca thì không xoá được — hãy ẩn đi.',
+  'loc.notInstalled': 'Chưa cài nơi trực (chạy 012_locations.sql)',
+
   // ---- claim date picker ----
   'claim.title': 'Nhận ca',
   'claim.subtitle': 'Chọn (các) ngày bạn muốn làm ca {{title}}.',
@@ -1047,6 +1168,18 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'claim.legendOffDay': 'Ngoài ngày lặp',
   'claim.partialError':
     'Một số ngày đã được nhận trước khi xảy ra lỗi — mở lại để xem còn thiếu ngày nào.',
+  'claim.locations': 'Nơi trực',
+  'claim.locationsHint': 'Chọn một hoặc nhiều nơi bạn sẽ trực.',
+  'claim.errLocationRequired': 'Hãy chọn ít nhất một nơi trực.',
+  'claim.noLocations':
+    'Chưa có nơi trực nào để chọn — nhờ admin thêm trong Quản lý nơi trực.',
+  'claim.locationsNotLoaded':
+    'Chưa tải được danh sách nơi trực — kiểm tra kết nối rồi thử lại.',
+  'claim.retryLocations': 'Thử lại',
+  'claim.claimedAddsLocations':
+    'Ngày đã nhận (chưa điểm danh) vẫn chọn lại được để thêm nơi trực.',
+  'claim.addLocations': 'Đã nhận — chọn để thêm nơi trực đang chọn',
+  'claim.legendAddLocations': 'Đã nhận, thêm được nơi trực',
 
   // ---- change password ----
   'pwd.title': 'Đổi mật khẩu',
@@ -1184,7 +1317,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'notif.account.hidden': 'Đã ẩn “{{name}}” khỏi các bảng',
   'notif.account.saveFailed': 'Không cập nhật được “{{name}}”',
   'log.title': 'Nhật ký thao tác',
-  'log.subtitle': 'Mọi thay đổi trên ca, phân công và ca mẫu.',
+  'log.subtitle': 'Mọi thay đổi trên ca, phân công, ca mẫu và nơi trực.',
   'log.from': 'Từ ngày',
   'log.to': 'Đến ngày',
   'log.staff': 'Nhân viên liên quan',
@@ -1219,7 +1352,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'log.shiftInfo': 'Thông tin ca',
   'log.shiftInfoHint': 'Mở ca như hiện tại, không phải như lúc ghi dòng này',
   'log.shiftGone': 'Ca đã bị xoá',
-  'log.shiftGoneHint': 'Ca này đã bị xoá sau đó',
+  'log.shiftGoneHint': 'Ca này đã bị xoá hoặc được gộp vào ca khác sau đó',
   'log.view.label': 'Kiểu xem chi tiết',
   'log.view.simple': 'Đơn giản',
   'log.view.advanced': 'Nâng cao',
@@ -1240,6 +1373,13 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'log.f.template': 'Ca mẫu',
   'log.f.createdBy': 'Người tạo',
   'log.f.newShift': 'Tạo ca mới',
+  'log.f.name': 'Tên',
+  'log.f.shortName': 'Tên tắt',
+  'log.f.order': 'Thứ tự',
+  'log.f.location': 'Nơi trực',
+  'log.f.locations': 'Nơi trực',
+  'log.f.locationsAtTime': 'Nơi trực (lúc ghi)',
+  'log.v.noLocations': 'Không có',
   'log.v.yes': 'Có',
   'log.v.no': 'Không',
   'log.v.self': 'tự làm',
@@ -1256,6 +1396,7 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'log.entity.shift': 'Ca',
   'log.entity.assignment': 'Phân công',
   'log.entity.template': 'Ca mẫu',
+  'log.entity.location': 'Nơi trực',
 
   'log.action.shift.created': 'Tạo ca',
   'log.action.shift.updated': 'Sửa ca',
@@ -1271,6 +1412,10 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'log.action.template.updated': 'Sửa ca mẫu',
   'log.action.template.toggled': 'Bật/tắt ca mẫu',
   'log.action.template.deleted': 'Xoá ca mẫu',
+  'log.action.location.created': 'Tạo nơi trực',
+  'log.action.location.updated': 'Sửa nơi trực',
+  'log.action.location.toggled': 'Ẩn/hiện nơi trực',
+  'log.action.location.deleted': 'Xoá nơi trực',
   // ---- offline & cài app (PWA) ----
   'offline.banner': 'Bạn đang offline, vui lòng kiểm tra kết nối mạng',
   'offline.bannerNoData': 'Bạn đang offline, vui lòng kiểm tra kết nối mạng',

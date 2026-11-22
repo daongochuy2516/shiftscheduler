@@ -1,4 +1,5 @@
 import type { SchedulerBackend } from './backend'
+import type { ShiftWithAssignments } from '../types'
 import { offlineKey, readCached, writeCached } from './offlineCache'
 import {
   countBlockedWrite,
@@ -86,6 +87,23 @@ async function cachedRead<T>(name: string, run: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Bản lưu do phiên bản app trước ghi (còn tới 2 ngày) không có
+ * `location_ids`; giao diện coi trường này luôn là mảng, thiếu là vỡ trang
+ * khi offline. Điền `[]` tại chỗ — dữ liệu mới từ máy chủ đã có sẵn nên
+ * vòng lặp chỉ đọc qua.
+ */
+function fillLocationIds(
+  shifts: ShiftWithAssignments[],
+): ShiftWithAssignments[] {
+  for (const shift of shifts) {
+    for (const a of shift.assignments) {
+      if (!Array.isArray(a.location_ids)) a.location_ids = []
+    }
+  }
+  return shifts
+}
+
 /** Thao tác ghi khi offline: chặn ngay, không xếp hàng gửi sau. */
 function online<A extends unknown[], R>(
   fn: (...args: A) => Promise<R>,
@@ -114,7 +132,9 @@ export function withOfflineCache(inner: SchedulerBackend): SchedulerBackend {
     listProfiles: () => cachedRead('profiles', () => inner.listProfiles()),
 
     listShifts: (query) =>
-      cachedRead(`shifts|${shiftQueryKey(query)}`, () => inner.listShifts(query)),
+      cachedRead(`shifts|${shiftQueryKey(query)}`, () =>
+        inner.listShifts(query),
+      ).then(fillLocationIds),
 
     shiftDateBounds: (userIds) =>
       cachedRead(`bounds|${[...userIds].sort().join('+')}`, () =>
@@ -122,6 +142,8 @@ export function withOfflineCache(inner: SchedulerBackend): SchedulerBackend {
       ),
 
     listTemplates: () => cachedRead('templates', () => inner.listTemplates()),
+
+    listLocations: () => cachedRead('locations', () => inner.listLocations()),
 
     listActionLogs: (query) =>
       cachedRead(`logs|${JSON.stringify(query)}`, () =>
@@ -151,9 +173,12 @@ export function withOfflineCache(inner: SchedulerBackend): SchedulerBackend {
     createTemplate: online((input) => inner.createTemplate(input)),
     updateTemplate: online((id, input) => inner.updateTemplate(id, input)),
     deleteTemplate: online((id) => inner.deleteTemplate(id)),
-    claimTemplate: online((templateId, date, userId) =>
-      inner.claimTemplate(templateId, date, userId),
+    claimTemplate: online((templateId, date, userId, locationIds) =>
+      inner.claimTemplate(templateId, date, userId, locationIds),
     ),
+    createLocation: online((input) => inner.createLocation(input)),
+    updateLocation: online((id, input) => inner.updateLocation(id, input)),
+    deleteLocation: online((id) => inner.deleteLocation(id)),
 
     subscribe(onChange) {
       const unsubscribe = inner.subscribe(onChange)

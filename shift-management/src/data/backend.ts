@@ -3,6 +3,8 @@ import type {
   ActionLogPage,
   ActionLogQuery,
   AssignmentInput,
+  Location,
+  LocationInput,
   Profile,
   ProfileInput,
   ShiftDateBounds,
@@ -91,10 +93,35 @@ export interface SchedulerBackend {
 
   /**
    * Adds `userId` to the template's shift on `date`, creating that shift from
-   * the template if nobody has claimed it yet. A second claim by the same
-   * person is a no-op.
+   * the template if nobody has claimed it yet, with `locationIds` as their
+   * places on duty (`[]` = none / migration 012 not run: the column is not
+   * sent). A second claim by the same person adds any new locations to their
+   * existing assignment ("Sáng – Fanpage" then "Sáng – Discord" = one
+   * assignment with both); with nothing new it is a no-op.
    */
-  claimTemplate(templateId: UUID, date: string, userId: UUID): Promise<void>
+  claimTemplate(
+    templateId: UUID,
+    date: string,
+    userId: UUID,
+    locationIds: UUID[],
+  ): Promise<void>
+
+  // ---- nơi trực (012) ----
+
+  /**
+   * Mọi nơi trực, kể cả đang ẩn, theo `sort_order` rồi tên. `null` khi
+   * migration 012 chưa chạy — giao diện ẩn mọi thứ về nơi trực.
+   */
+  listLocations(): Promise<Location[] | null>
+
+  /** Chỉ admin — database chặn mọi người khác (trigger của 012). */
+  createLocation(input: LocationInput): Promise<void>
+  updateLocation(id: UUID, input: LocationInput): Promise<void>
+  /**
+   * Bị từ chối khi còn lượt nào dùng nơi này (mảng không có khoá ngoại nên
+   * trigger chặn thay): còn dùng thì ẩn, đừng xoá.
+   */
+  deleteLocation(id: UUID): Promise<void>
 
   // ---- action log (chỉ đọc) ----
 

@@ -43,6 +43,7 @@ import { CommandPalette } from './CommandPalette'
 import { NewShiftButton, NewShiftChooser } from './NewShiftMenu'
 import { ClaimTemplateModal } from './ClaimTemplateModal'
 import { TemplateManagerModal } from './TemplateManagerModal'
+import { LocationManagerModal } from './LocationManagerModal'
 import type { ShiftTemplate } from '../types'
 import { useTwoStep } from './useTwoStep'
 import { RoleBadge } from './RoleBadge'
@@ -134,6 +135,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [newShift, setNewShift] = useState<'menu' | 'templates' | null>(null)
   const [claimTarget, setClaimTarget] = useState<ShiftTemplate | null>(null)
   const [managingTemplates, setManagingTemplates] = useState(false)
+  const [managingLocations, setManagingLocations] = useState(false)
   const [installHelpOpen, setInstallHelpOpen] = useState(false)
   const install = useInstallState()
   /**
@@ -279,6 +281,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onManual={() => openCreate(toDateKey(new Date()))}
               onTemplate={setClaimTarget}
               onManage={() => setManagingTemplates(true)}
+              onManageLocations={() => setManagingLocations(true)}
             />
 
             <button
@@ -570,12 +573,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
               setNewShift(null)
               setManagingTemplates(true)
             }}
+            onManageLocations={() => {
+              setNewShift(null)
+              setManagingLocations(true)
+            }}
           />
         </Modal>
       )}
 
       {managingTemplates && (
         <TemplateManagerModal onClose={() => setManagingTemplates(false)} />
+      )}
+
+      {managingLocations && (
+        <LocationManagerModal onClose={() => setManagingLocations(false)} />
       )}
 
       {claimTarget && (
@@ -591,6 +602,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           onClose={() => setPaletteOpen(false)}
           onCreateShift={() => openCreate(createDate)}
           onClaimTemplate={() => setNewShift('templates')}
+          onManageLocations={() => setManagingLocations(true)}
           onChangePassword={() => setChangingPassword(true)}
           onSignOut={handleSignOut}
         />

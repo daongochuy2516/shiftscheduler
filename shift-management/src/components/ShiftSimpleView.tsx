@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { addMinutes, format } from 'date-fns'
 import {
   AlertTriangle,
   Check,
+  EyeOff,
   Lock,
   LogOut,
   NotebookPen,
   Plus,
 } from 'lucide-react'
-import type { AssignmentInput, ShiftWithAssignments, UUID } from '../types'
+import type {
+  AssignmentInput,
+  Location,
+  ShiftWithAssignments,
+  UUID,
+} from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { useSchedule } from '../data/ScheduleContext'
 import { useShiftColor } from '../data/useShiftColor'
@@ -18,8 +24,17 @@ import {
   checkInWindow,
   hoursLocked,
   leaveDeadline,
+  locationsLocked,
   removeBlock,
 } from '../lib/attendance'
+import { SHIFT_COLOR_KEYS, colorByKey, type ShiftColorKey } from '../lib/colors'
+import {
+  activeLocations,
+  locationsById,
+  normalizeLocationIds,
+  sameLocationIds,
+  sortLocationIds,
+} from '../lib/locations'
 import { uiRestricted } from '../lib/uiBypass'
 import {
   formatDuration,
@@ -30,6 +45,7 @@ import {
   toMinutes,
 } from '../lib/time'
 import { Avatar } from './Avatar'
+import { LocationChips } from './LocationChip'
 import { StatusBadge } from './StatusBadge'
 
 export type EditorRow = AssignmentInput & { key: string }
@@ -38,6 +54,115 @@ export interface JoinDraft {
   start_time: string
   end_time: string
   note: string | null
+  location_ids: UUID[]
+}
+
+/** Nơi trực chưa chọn màu: xám trung tính, như `LocationChip`. */
+const NEUTRAL_TONE = 'bg-slate-100 text-slate-600 ring-slate-200'
+/** Id nơi trực đã bị xoá (mảng không có khoá ngoại nên id vẫn nằm lại). */
+const GONE_TONE = 'bg-slate-50 text-slate-400 ring-slate-200 italic'
+/** Hằng để `useMemo` của bộ chọn không tính lại mỗi lần vẽ. */
+const NO_IDS: readonly UUID[] = []
+
+function isColorKey(value: unknown): value is ShiftColorKey {
+  return (SHIFT_COLOR_KEYS as readonly unknown[]).includes(value)
+}
+
+function locationTone(location: Location | undefined): string {
+  if (!location) return GONE_TONE
+  return isColorKey(location.color) ? colorByKey(location.color).chip : NEUTRAL_TONE
+}
+
+/**
+ * Chọn nhiều nơi trực cho một lượt. Chọn được những nơi đang bật; nơi đang
+ * ẩn hay đã xoá mà lượt đang có (hoặc có ở bản đã lưu — `initial`) vẫn hiện
+ * để bỏ ra / chọn lại, vì máy chủ chỉ kiểm tra những id mới thêm (012).
+ * Khoá (`disabled`) thì chỉ còn hàng nhãn để xem. Chưa chạy 012, hay chưa có
+ * nơi trực nào để chọn, thì không vẽ gì.
+ *
+ * Giá trị luôn ở dạng chuẩn (`normalizeLocationIds`) để so "đã sửa chưa"
+ * bằng JSON không bị lệch vì thứ tự bấm.
+ */
+export function LocationPicker({
+  value,
+  initial = NO_IDS,
+  disabled = false,
+  onChange,
+  labelClassName,
+  className,
+}: {
+  value: readonly UUID[]
+  initial?: readonly UUID[]
+  disabled?: boolean
+  onChange: (ids: UUID[]) => void
+  labelClassName: string
+  /** Khoảng cách với phần trên đặt ở đây, để khi không vẽ gì thì không thừa ô trống. */
+  className?: string
+}) {
+  const { locations, locationsAvailable } = useSchedule()
+  const { t } = useI18n()
+  const byId = useMemo(() => locationsById(locations), [locations])
+  const options = useMemo(() => {
+    const ids = new Set(activeLocations(locations).map((l) => l.id))
+    for (const id of value) ids.add(id)
+    for (const id of initial) ids.add(id)
+    return sortLocationIds([...ids], byId)
+  }, [locations, byId, value, initial])
+
+  if (!locationsAvailable || options.length === 0) return null
+  if (disabled && value.length === 0 && initial.length === 0) return null
+
+  const selected = new Set(value)
+  return (
+    <div className={className}>
+      <span className={labelClassName}>{t('common.locations')}</span>
+      {disabled ? (
+        <span data-tooltip={t('loc.lockedHint')} className="inline-flex">
+          {value.length > 0 ? (
+            <LocationChips ids={value} byId={byId} />
+          ) : (
+            <span className="text-xs text-slate-400">{t('loc.none')}</span>
+          )}
+        </span>
+      ) : (
+        <div role="group" aria-label={t('loc.pick')} className="flex flex-wrap gap-1.5">
+          {options.map((id) => {
+            const location = byId.get(id)
+            const on = selected.has(id)
+            const hidden = !!location && !location.is_active
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={on}
+                data-tooltip={hidden ? t('loc.hidden') : undefined}
+                onClick={() =>
+                  onChange(
+                    normalizeLocationIds(
+                      on ? value.filter((x) => x !== id) : [...value, id],
+                    ),
+                  )
+                }
+                className={`inline-flex min-h-11 max-w-full items-center gap-1 rounded-full px-3 text-sm font-medium ring-1 ring-inset transition sm:min-h-0 sm:px-2 sm:py-0.5 sm:text-xs ${
+                  on
+                    ? locationTone(location)
+                    : 'bg-white text-slate-500 ring-slate-300 hover:bg-slate-50 hover:text-slate-700'
+                }`}
+              >
+                {on ? (
+                  <Check className="h-3.5 w-3.5 shrink-0 sm:h-3 sm:w-3" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5 shrink-0 sm:h-3 sm:w-3" />
+                )}
+                <span className="truncate">{location?.name ?? t('loc.unknown')}</span>
+                {hidden && <EyeOff className="h-3 w-3 shrink-0 opacity-70" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const inputClass =
@@ -80,8 +205,14 @@ export function ShiftSimpleView({
   onCheckIn: (assignmentId: UUID) => void
 }) {
   const { user } = useAuth()
-  const { profilesById } = useSchedule()
+  const { profilesById, locations, locationsAvailable, locationsLoaded } =
+    useSchedule()
   const { t, dateLocale } = useI18n()
+  const locationById = useMemo(() => locationsById(locations), [locations])
+  const noActiveLocations = useMemo(
+    () => activeLocations(locations).length === 0,
+    [locations],
+  )
   const shiftColor = useShiftColor()
   const restricted = uiRestricted(user)
 
@@ -101,6 +232,7 @@ export function ShiftSimpleView({
     start_time: shiftStart,
     end_time: shiftEnd,
     note: null,
+    location_ids: [],
   })
   const [confirmingLeave, setConfirmingLeave] = useState(false)
   const [confirmingEarly, setConfirmingEarly] = useState(false)
@@ -137,6 +269,35 @@ export function ShiftSimpleView({
     (toMinutes(start) < toMinutes(shiftStart) ||
       toMinutes(end) > toMinutes(shiftEnd))
   const isWholeShift = start === shiftStart && end === shiftEnd
+  const myLocationIds = mine ? (mine.location_ids ?? []) : draft.location_ids
+  /**
+   * Nơi trực của lượt đã điểm danh thì nhân viên không đổi được (012). Tính
+   * trên bản đã lưu như các khoá khác; dòng chưa lưu thì không khoá.
+   */
+  const myLocationsLocked =
+    restricted && !!saved && mine?.id === saved.id && locationsLocked(saved, user)
+  /**
+   * Tham gia ca sinh từ ca mẫu là nhận ca: phải có ít nhất một nơi trực (015),
+   * admin cũng vậy. Chưa chạy 012 thì không bắt. Không còn nơi trực nào thì
+   * ô chọn không hiện — nói rõ phải nhờ admin (hay danh sách tải lỗi, nếu
+   * chưa tải được lần nào).
+   */
+  const joinLocationError =
+    !mine &&
+    shift.template_id != null &&
+    locationsAvailable &&
+    draft.location_ids.length === 0
+      ? !noActiveLocations
+        ? t('shift.errLocationRequired')
+        : locationsLoaded
+          ? t('claim.noLocations')
+          : t('claim.locationsNotLoaded')
+      : null
+
+  function setMyLocations(location_ids: UUID[]) {
+    if (mine) onPatchRow(mine.key, { location_ids })
+    else setDraft((d) => ({ ...d, location_ids }))
+  }
 
   function setTimes(patch: Partial<Pick<JoinDraft, 'start_time' | 'end_time'>>) {
     if (mine) onPatchRow(mine.key, patch)
@@ -162,6 +323,13 @@ export function ShiftSimpleView({
       : null
   const hoursDirty =
     !!mine && (mine.start_time !== savedStart || mine.end_time !== savedEnd)
+  /** Điểm danh chỉ gửi trạng thái: phần giờ / nơi trực sửa dở phải lưu trước. */
+  const draftDirty =
+    hoursDirty ||
+    (!!mine &&
+      !!saved &&
+      mine.id === saved.id &&
+      !sameLocationIds(mine.location_ids ?? [], saved.location_ids ?? []))
   const canCheckIn =
     !!saved &&
     !confirmed &&
@@ -266,6 +434,15 @@ export function ShiftSimpleView({
             )}
           </div>
 
+          <LocationPicker
+            className="mt-2"
+            value={myLocationIds}
+            initial={mine?.id === saved?.id ? saved?.location_ids : undefined}
+            disabled={myLocationsLocked}
+            onChange={setMyLocations}
+            labelClassName={labelClass}
+          />
+
           <div className="mt-2">
             <input
               className={inputClass}
@@ -314,15 +491,26 @@ export function ShiftSimpleView({
               className="mt-3 border-t border-slate-100 pt-3"
             >
               {!mine && (
-                <button
-                  type="button"
-                  onClick={() => onJoin(draft)}
-                  disabled={!user || rangeError || saving}
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  {saving ? t('shiftSimple.joining') : t('shiftSimple.join')}
-                </button>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <button
+                    type="button"
+                    onClick={() => onJoin(draft)}
+                    disabled={!user || rangeError || saving || !!joinLocationError}
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {saving ? t('shiftSimple.joining') : t('shiftSimple.join')}
+                  </button>
+                  {joinLocationError && (
+                    <span
+                      role="alert"
+                      className="inline-flex items-start gap-1 text-xs font-medium text-rose-600"
+                    >
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                      {joinLocationError}
+                    </span>
+                  )}
+                </div>
               )}
 
               {mine && confirmingLeave && (
@@ -384,7 +572,7 @@ export function ShiftSimpleView({
                         if (started) onCheckIn(saved.id)
                         else setConfirmingEarly(true)
                       }}
-                      disabled={hoursDirty || saving}
+                      disabled={draftDirty || saving}
                       className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0 sm:w-auto sm:py-2"
                     >
                       <Check className="h-4 w-4" />
@@ -393,7 +581,7 @@ export function ShiftSimpleView({
                   )}
 
                   <span className="text-xs text-slate-500">
-                    {canCheckIn && hoursDirty
+                    {canCheckIn && draftDirty
                       ? t('shiftSimple.saveBeforeCheckIn')
                       : saved && !confirmed && restricted && gate === 'early'
                         ? t('list.checkInOpens', {
@@ -469,8 +657,15 @@ export function ShiftSimpleView({
                     seed={row.user_id}
                     size="sm"
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800">
-                    {profile?.display_name ?? t('common.unknownStaff')}
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="min-w-0 truncate text-sm font-medium text-slate-800">
+                      {profile?.display_name ?? t('common.unknownStaff')}
+                    </span>
+                    <LocationChips
+                      ids={row.location_ids ?? []}
+                      byId={locationById}
+                      size="xs"
+                    />
                   </span>
                   <span className="shrink-0 text-sm text-slate-600 tabular-nums">
                     {formatRange(row.start_time, row.end_time)}

@@ -12,6 +12,8 @@ import type { ShiftWithAssignments, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
 import { useShiftColor } from '../data/useShiftColor'
 import { normalizeTime, toDateKey, toMinutes } from '../lib/time'
+import { locationsById, sortLocationIds } from '../lib/locations'
+import { useSchedule } from '../data/ScheduleContext'
 
 /** Chips shown per day cell before collapsing into a "+N more" line. */
 const MAX_CHIPS = 3
@@ -32,7 +34,17 @@ export function MonthGrid({
 }) {
   const { t, dateLocale } = useI18n()
   const shiftColor = useShiftColor()
+  const { locations } = useSchedule()
+  const locationById = useMemo(() => locationsById(locations), [locations])
   const todayKey = toDateKey(new Date())
+
+  /** Mọi nơi trực có người trong ca, không trùng — ô tháng theo ca, không theo người. */
+  function shiftLocationText(shift: ShiftWithAssignments): string {
+    const ids = new Set(shift.assignments.flatMap((a) => a.location_ids))
+    return sortLocationIds([...ids], locationById)
+      .map((id) => locationById.get(id)?.name ?? t('loc.unknown'))
+      .join(', ')
+  }
 
   // The grid always shows whole weeks, so it spills into the neighbouring
   // months at both ends.
@@ -117,6 +129,7 @@ export function MonthGrid({
                   const pending = shift.assignments.some(
                     (a) => a.status === 'pending',
                   )
+                  const where = shiftLocationText(shift)
                   return (
                     <button
                       key={shift.id}
@@ -124,7 +137,7 @@ export function MonthGrid({
                       onClick={() => onSelectShift(shift)}
                       data-tooltip={`${shift.title} · ${normalizeTime(shift.start_time)}–${normalizeTime(
                         shift.end_time,
-                      )}`}
+                      )}${where ? ` · ${where}` : ''}`}
                       className={`block w-full rounded border px-1.5 py-0.5 text-left transition focus:ring-2 focus:ring-indigo-500 focus:outline-none ${color.block} ${
                         pending ? 'border-dashed' : ''
                       } ${mine ? 'ring-1 ring-indigo-400' : ''}`}

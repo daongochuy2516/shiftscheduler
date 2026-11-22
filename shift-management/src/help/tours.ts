@@ -208,11 +208,11 @@ export const TOURS: Record<TourId, Tour> = {
         text: {
           vi: {
             title: 'Bấm "Tạo ca"',
-            body: 'Ca mẫu nằm trong nút Tạo ca. Ca mẫu là những ca lặp lại admin đã tạo sẵn, ví dụ Trực trang 08:00–18:00.',
+            body: 'Ca mẫu nằm trong nút Tạo ca. Ca mẫu là những ca lặp lại admin đã tạo sẵn, ví dụ Sáng 08:00–13:00 — nơi trực (Fanpage, Discord…) chọn lúc nhận.',
           },
           en: {
             title: 'Press "New shift"',
-            body: 'Templates live behind the New shift button. A template is a recurring shift an admin set up, like Page Support 08:00–18:00.',
+            body: 'Templates live behind the New shift button. A template is a recurring shift an admin set up, like Sáng (morning) 08:00–13:00 — the location (Fanpage, Discord…) is picked when you claim.',
           },
         },
       },
@@ -222,11 +222,11 @@ export const TOURS: Record<TourId, Tour> = {
         text: {
           vi: {
             title: 'Bấm nút tròn',
-            body: 'Ca mẫu nằm trong nút tạo ca. Ca mẫu là những ca lặp lại admin đã tạo sẵn, ví dụ Trực trang 08:00–18:00.',
+            body: 'Ca mẫu nằm trong nút tạo ca. Ca mẫu là những ca lặp lại admin đã tạo sẵn, ví dụ Sáng 08:00–13:00 — nơi trực (Fanpage, Discord…) chọn lúc nhận.',
           },
           en: {
             title: 'Press the round button',
-            body: 'Templates live behind the new-shift button. A template is a recurring shift an admin set up, like Page Support 08:00–18:00.',
+            body: 'Templates live behind the new-shift button. A template is a recurring shift an admin set up, like Sáng (morning) 08:00–13:00 — the location (Fanpage, Discord…) is picked when you claim.',
           },
         },
       },
@@ -261,16 +261,32 @@ export const TOURS: Record<TourId, Tour> = {
         },
       },
       {
+        targets: ['claim-locations'],
+        ensure: CLAIM_OPEN,
+        text: {
+          vi: {
+            title: 'Chọn nơi trực',
+            body: 'Chọn một hoặc nhiều nơi bạn sẽ trực trong ca, ví dụ Fanpage và Discord — bắt buộc chọn ít nhất một. Lựa chọn được nhớ cho lần nhận sau. Trước khi điểm danh vẫn đổi được nơi trực trong form ca. Nếu ở đây chỉ có ô vàng báo chưa có nơi trực nào thì chưa nhận ca được — nhờ admin thêm trong Quản lý nơi trực.',
+            missing: 'Ở đây không có nơi trực để chọn — cứ chọn ngày rồi nhận.',
+          },
+          en: {
+            title: 'Pick your locations',
+            body: 'Pick one or more places you will cover during the shift, such as Fanpage and Discord — at least one is required. Your choice is remembered for next time. Until you check in you can still change them in the shift form. If all you see here is an amber notice saying there are no locations yet, you can\'t claim until an admin adds one in Manage locations.',
+            missing: 'No location to pick here — just pick the days and claim.',
+          },
+        },
+      },
+      {
         targets: ['claim-days'],
         ensure: CLAIM_OPEN,
         text: {
           vi: {
             title: 'Chọn ngày',
-            body: 'Chọn một hoặc nhiều ngày muốn nhận. Chỉ những ngày mẫu lặp vào mới chọn được; ngày bạn đã nhận rồi có dấu riêng.',
+            body: 'Chọn một hoặc nhiều ngày muốn nhận — ngày nào cũng chọn được; ngày mẫu lặp vào có chấm nhỏ, các nút "Các ngày lặp" chọn nhanh cả tuần. Ngày bạn đã nhận có dấu tích; viền nét đứt nghĩa là nhận lại ngày đó sẽ thêm nơi trực đang chọn vào lượt của bạn.',
           },
           en: {
             title: 'Pick the days',
-            body: 'Pick one or more days. Only days the template repeats on can be picked; days you already claimed are marked.',
+            body: 'Pick one or more days — any day can be picked; days the template repeats on have a small dot, and the "Repeat days" buttons pick a whole week at once. Days you already claimed show a tick; a dashed border means claiming that day again adds the chosen locations to your assignment.',
           },
         },
       },
@@ -333,11 +349,11 @@ export const TOURS: Record<TourId, Tour> = {
         text: {
           vi: {
             title: 'Phần của bạn',
-            body: 'Sửa giờ và ghi chú của bạn ở đây ("Cả ca" đưa về khung giờ của ca), rồi bấm Lưu thay đổi ở chân form. Chưa có trong ca thì bấm Nhận ca này.',
+            body: 'Sửa giờ, nơi trực và ghi chú của bạn ở đây ("Cả ca" đưa về khung giờ của ca), rồi bấm Lưu thay đổi ở chân form. Chưa có trong ca thì bấm Nhận ca này — ca tạo từ ca mẫu thì phải chọn ít nhất một nơi trực trước, nút mới bấm được.',
           },
           en: {
             title: 'Your part',
-            body: 'Edit your hours and note here ("Whole shift" snaps back to the shift\'s window), then press Save changes at the bottom. Not on the shift yet? Press Join this shift.',
+            body: 'Edit your hours, locations and note here ("Whole shift" snaps back to the shift\'s window), then press Save changes at the bottom. Not on the shift yet? Press Join this shift — on a shift made from a template, pick at least one location first or the button stays disabled.',
           },
         },
       },

@@ -15,6 +15,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
 import { LoadError } from '../components/LoadError'
+import { locationsById } from '../lib/locations'
 
 type Window = 'upcoming' | 'past' | 'all'
 
@@ -49,6 +50,7 @@ export function AllShiftsPage() {
   const {
     rosterProfiles,
     profilesById,
+    locations,
     loading,
     shiftDateBounds,
     dataVersion,
@@ -178,18 +180,26 @@ export function AllShiftsPage() {
   const loaded = useShiftChunks(queries)
   const { shifts } = loaded
 
+  const locationById = useMemo(() => locationsById(locations), [locations])
+
   // Tìm kiếm lọc ngay trên phần đã tải; lọc theo người đã làm ở database.
+  // Tên nơi trực cũng khớp: từ khi gộp ca mẫu, "Discord" không còn nằm trong
+  // tiêu đề ca mà nằm ở từng lượt phân công.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return shifts
     return shifts.filter((shift) => {
       if (shift.title.toLowerCase().includes(q)) return true
       if (shift.note?.toLowerCase().includes(q)) return true
-      return shift.assignments.some((a) =>
-        profilesById.get(a.user_id)?.display_name.toLowerCase().includes(q),
+      return shift.assignments.some(
+        (a) =>
+          profilesById.get(a.user_id)?.display_name.toLowerCase().includes(q) ||
+          a.location_ids.some((id) =>
+            locationById.get(id)?.name.toLowerCase().includes(q),
+          ),
       )
     })
-  }, [shifts, query, profilesById])
+  }, [shifts, query, profilesById, locationById])
 
   // ---- cuộn vô hạn -------------------------------------------------------
   // Phần tử canh gác ở cuối danh sách, còn cách đáy 600px là tải lát kế tiếp.

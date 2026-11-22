@@ -4,6 +4,8 @@ import type {
   ActionLogPage,
   ActionLogQuery,
   AssignmentInput,
+  Location,
+  LocationInput,
   Profile,
   ProfileInput,
   Shift,
@@ -20,28 +22,40 @@ import { currentMockProfile } from '../auth/mockAuth'
 import {
   canManageTemplates,
   checkInWindow,
+  CLAIM_NEEDS_LOCATION_MESSAGE,
   deleteBlock,
   hasOthers,
   hoursLocked,
   isRestricted,
+  KEEP_LOCATION_MESSAGE,
+  locationsLocked,
+  mustKeepLocation,
   removeBlock,
   type RemoveBlock,
 } from '../lib/attendance'
+import {
+  compareLocations,
+  normalizeLocationIds,
+  sameLocationIds,
+} from '../lib/locations'
 import { ForbiddenError, type SchedulerBackend } from './backend'
 import {
   MOCK_ASSIGNMENTS,
+  MOCK_LOCATIONS,
   MOCK_PROFILES,
   MOCK_SHIFTS,
   MOCK_TEMPLATES,
 } from './mockData'
 
-const STORAGE_KEY = 'scheduler.mock.v3'
+// v4: thêm nơi trực (012) và gộp ca mẫu thành Sáng / Chiều / Tối.
+const STORAGE_KEY = 'scheduler.mock.v4'
 const LATENCY_MS = 120
 
 interface Snapshot {
   shifts: Shift[]
   assignments: ShiftAssignment[]
   templates: ShiftTemplate[]
+  locations: Location[]
   logs: ActionLog[]
   /**
    * Tài khoản mẫu là hằng số (MOCK_PROFILES, dùng chung với đăng nhập mock);
@@ -56,6 +70,7 @@ function seed(): Snapshot {
     shifts: MOCK_SHIFTS,
     assignments: MOCK_ASSIGNMENTS,
     templates: MOCK_TEMPLATES,
+    locations: MOCK_LOCATIONS,
     logs: [],
   }
 }
@@ -63,7 +78,18 @@ function seed(): Snapshot {
 function load(): Snapshot {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as Snapshot
+    if (raw) {
+      const saved = JSON.parse(raw) as Snapshot
+      // Lượt luôn có mảng nơi trực, như bản Supabase chuẩn hoá khi đọc.
+      return {
+        ...saved,
+        locations: saved.locations ?? [],
+        assignments: saved.assignments.map((a) => ({
+          ...a,
+          location_ids: a.location_ids ?? [],
+        })),
+      }
+    }
   } catch {
     // Corrupt or unavailable storage — fall through to the seed data.
   }
@@ -142,10 +168,30 @@ function shiftLabel(shiftId: UUID): { title: string; date: string } {
 }
 
 /**
+ * Tên các nơi trực của một lượt theo thứ tự hiển thị, bỏ id lạ (nơi đã xoá)
+ * — `location_names` trong nhật ký của trigger 012.
+ */
+function locationNames(ids: readonly UUID[]): string[] {
+  return state.locations
+    .filter((l) => ids.includes(l.id))
+    .sort(compareLocations)
+    .map((l) => l.name)
+}
+
+/** Đuôi " — Fanpage, Discord" của summary nhận ca / thêm vào ca (012). */
+function locationSuffix(names: string[]): string {
+  return names.length > 0 ? ` — ${names.join(', ')}` : ''
+}
+
+/**
  * Ngữ cảnh chung của mọi dòng nhật ký về phân công — cùng các khoá với
  * `v_meta` của trigger (003_action_logs.sql), để trang Nhật ký đọc như nhau.
  */
-function assignmentMeta(shiftId: UUID, userId: UUID): Record<string, unknown> {
+function assignmentMeta(
+  shiftId: UUID,
+  userId: UUID,
+  locationIds: readonly UUID[],
+): Record<string, unknown> {
   const label = shiftLabel(shiftId)
   return {
     shift_id: shiftId,
@@ -154,6 +200,8 @@ function assignmentMeta(shiftId: UUID, userId: UUID): Record<string, unknown> {
     target_user_id: userId,
     target_name: nameOf(userId),
     self: userId === me(),
+    // 012: nơi trực hiện tại của lượt (lúc gỡ thì là của lượt bị gỡ).
+    location_names: locationNames(locationIds),
   }
 }
 
@@ -199,6 +247,80 @@ function me(): UUID | null {
   return currentMockProfile()?.id ?? null
 }
 
+/** Bản sao trigger của 012: chỉ admin tạo / sửa / xoá nơi trực. */
+function assertCanManageLocations() {
+  if (!canManageTemplates(currentMockProfile())) {
+    throw new Error('Bạn không có quyền sửa nơi trực.')
+  }
+}
+
+const LOCATION_IN_USE_ERROR = 'Nơi trực đang được dùng — hãy ẩn thay vì xoá.'
+const LOCATION_UNUSABLE_ERROR = 'Nơi trực không tồn tại hoặc đã bị ẩn.'
+const CONFIRMED_LOCATIONS_ERROR =
+  'Bạn không có quyền sửa nơi trực của lượt đã điểm danh.'
+
+/**
+ * 012: nhân viên chỉ gắn được nơi trực đang bật. Chỉ xét phần **mới thêm**
+ * so với `before` — lượt đang mang một nơi vừa bị ẩn vẫn lưu được.
+ */
+function assertLocationsUsable(ids: readonly UUID[], before: readonly UUID[] = []) {
+  if (!restricted()) return
+  for (const id of ids) {
+    if (before.includes(id)) continue
+    if (!state.locations.some((l) => l.id === id && l.is_active)) {
+      throw new Error(LOCATION_UNUSABLE_ERROR)
+    }
+  }
+}
+
+/** `location_ids` mà một lần ghi sẽ để lại trên lượt (không gửi = giữ nguyên). */
+function nextLocationIds(
+  before: ShiftAssignment | null,
+  input: Pick<AssignmentInput, 'location_ids'>,
+): UUID[] {
+  if (input.location_ids === undefined) return before?.location_ids ?? []
+  return normalizeLocationIds(input.location_ids)
+}
+
+/**
+ * Ràng buộc của bảng `locations` (012), cùng câu lỗi Postgres trả về. Tên đã
+ * được trigger cắt khoảng trắng trước khi xét.
+ */
+/** Như trigger của 014: trim, chuỗi rỗng thành null. */
+function cleanShortName(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? ''
+  return trimmed === '' ? null : trimmed
+}
+
+function assertLocationInput(input: LocationInput, id: UUID | null) {
+  const name = input.name.trim()
+  if (name.length < 1 || name.length > 50) {
+    throw new Error(
+      'new row for relation "locations" violates check constraint "locations_name_valid"',
+    )
+  }
+  // Bản sao `locations_short_name_valid` của 014 (sau khi trigger trim).
+  if ((cleanShortName(input.short_name)?.length ?? 0) > 10) {
+    throw new Error(
+      'new row for relation "locations" violates check constraint "locations_short_name_valid"',
+    )
+  }
+  if (input.color !== null && !/^[a-z]{1,20}$/.test(input.color)) {
+    throw new Error(
+      'new row for relation "locations" violates check constraint "locations_color_format"',
+    )
+  }
+  if (
+    state.locations.some(
+      (l) => l.id !== id && l.name.toLowerCase() === name.toLowerCase(),
+    )
+  ) {
+    throw new Error(
+      'duplicate key value violates unique constraint "locations_name_lower_unique"',
+    )
+  }
+}
+
 /** Bản sao trigger của 008: chỉ admin tạo / sửa / xoá ca mẫu. */
 function assertCanManageTemplates() {
   if (!canManageTemplates(currentMockProfile())) {
@@ -216,13 +338,25 @@ function assertCanRemove(a: ShiftAssignment) {
 /**
  * Kiểm tra cả danh sách **trước** khi sửa gì: một dòng bị từ chối thì không
  * dòng nào được lưu, thay vì để lại ca lưu dở.
+ *
+ * `templateId` là ca mẫu gốc của ca **sau** lần lưu (bản thật lưu ca trước
+ * rồi mới tới từng lượt, nên trigger của lượt thấy giá trị mới) — dùng cho
+ * luật "ca mẫu phải có nơi trực" (015). Thứ tự xét giống bản thật: gỡ, sửa,
+ * rồi thêm; trong mỗi dòng theo đúng thứ tự trong trigger.
  */
 function assertRosterAllowed(
   shiftId: UUID | null,
   date: string,
+  templateId: UUID | null,
   inputs: AssignmentInput[],
 ) {
-  if (!restricted()) return
+  if (!restricted()) {
+    // Admin / role null: chỉ còn luật R1 của 015 (áp cho mọi người có phiên).
+    for (const input of inputs) {
+      if (!input.id) assertClaimHasLocation(templateId, input)
+    }
+    return
+  }
   const byId = new Map(inputs.filter((i) => i.id).map((i) => [i.id, i]))
   for (const before of state.assignments) {
     if (before.shift_id !== shiftId) continue
@@ -231,15 +365,20 @@ function assertRosterAllowed(
       assertCanRemove(before)
       continue
     }
-    // Cùng thứ tự với trigger 006: lượt của người khác, rồi đổi người, rồi
-    // tới luật điểm danh.
+    const locationsChanged = !sameLocationIds(
+      nextLocationIds(before, input),
+      before.location_ids,
+    )
+    // Cùng thứ tự với trigger (006, bản mới nhất 012): lượt của người khác,
+    // rồi đổi người, rồi tới luật điểm danh / nơi trực.
     if (
       before.user_id !== me() &&
       (input.user_id !== before.user_id ||
         input.start_time !== before.start_time ||
         input.end_time !== before.end_time ||
         input.status !== before.status ||
-        (input.note ?? null) !== (before.note ?? null))
+        (input.note ?? null) !== (before.note ?? null) ||
+        locationsChanged)
     ) {
       throw new Error(EDIT_OTHER_ERROR)
     }
@@ -257,14 +396,33 @@ function assertRosterAllowed(
       }
       if (
         input.status === 'confirmed' &&
-        (hoursChanged || (input.note ?? null) !== (before.note ?? null))
+        (hoursChanged ||
+          (input.note ?? null) !== (before.note ?? null) ||
+          locationsChanged)
       ) {
         throw new Error(
           'Bạn không có quyền vừa điểm danh vừa sửa lượt: lưu thay đổi trước rồi mới điểm danh.',
         )
       }
+      // 015, luật R2 — trong trigger nằm sau các luật trên, trước luật
+      // "nơi trực phải đang hiện". Chỉ xét khi mảng đổi: lượt cũ đã rỗng từ
+      // trước vẫn sửa giờ / điểm danh được.
+      if (
+        locationsChanged &&
+        nextLocationIds(before, input).length === 0 &&
+        mustKeepLocation({ template_id: templateId }, currentMockProfile())
+      ) {
+        throw new Error(KEEP_LOCATION_MESSAGE)
+      }
+      if (locationsChanged) {
+        assertLocationsUsable(nextLocationIds(before, input), before.location_ids)
+      }
       if (input.status === 'confirmed') assertCanConfirm(input, date)
       continue
+    }
+    // 012: đã điểm danh là đã trực ở đâu xong — khoá cùng chỗ với giờ.
+    if (locationsChanged && locationsLocked(before, currentMockProfile())) {
+      throw new Error(CONFIRMED_LOCATIONS_ERROR)
     }
     if (input.status !== 'confirmed') {
       throw new Error('Bạn không có quyền bỏ điểm danh.')
@@ -279,12 +437,27 @@ function assertRosterAllowed(
   }
   for (const input of inputs) {
     if (input.id) continue
+    // 015, luật R1 đứng đầu trigger, trước mọi luật dành cho nhân viên.
+    assertClaimHasLocation(templateId, input)
     if (input.user_id !== me()) throw new Error(ADD_OTHER_ERROR)
     if (input.status === 'confirmed') {
       throw new Error(
         'Bạn không có quyền điểm danh lúc thêm vào ca: thêm vào ca trước rồi mới điểm danh.',
       )
     }
+    assertLocationsUsable(nextLocationIds(null, input))
+  }
+}
+
+/**
+ * Bản sao luật R1 của 015: tự thêm mình vào ca sinh từ ca mẫu (tức là nhận
+ * ca) thì phải có ít nhất một nơi trực — mọi vai trò, kể cả admin. Luật R2
+ * (không bỏ hết nơi trực) nằm trong vòng sửa lượt của `assertRosterAllowed`.
+ */
+function assertClaimHasLocation(templateId: UUID | null, input: AssignmentInput) {
+  if (!templateId || input.id) return
+  if (input.user_id === me() && nextLocationIds(null, input).length === 0) {
+    throw new Error(CLAIM_NEEDS_LOCATION_MESSAGE)
   }
 }
 
@@ -333,7 +506,7 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
       entity_id: gone.id,
       summary: `Gỡ ${nameOf(gone.user_id)} khỏi ca ${label.title} ngày ${label.date}`,
       old_data: { ...gone },
-      metadata: assignmentMeta(shiftId, gone.user_id),
+      metadata: assignmentMeta(shiftId, gone.user_id, gone.location_ids),
     })
   }
 
@@ -341,29 +514,35 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
     if (input.id) {
       const before = state.assignments.find((a) => a.id === input.id)
       if (!before) continue
+      const location_ids = nextLocationIds(before, input)
       const after: ShiftAssignment = {
         ...before,
         ...input,
         id: before.id,
         confirmed_at: confirmedAt(before, input.status, now),
+        location_ids,
         updated_at: now,
       }
       state.assignments = state.assignments.map((a) =>
         a.id === input.id ? after : a,
       )
 
+      const sameLocations = sameLocationIds(before.location_ids, location_ids)
+      // 012: "đổi trạng thái" chỉ khi nơi trực cũng không đổi, giống trigger.
       const onlyStatus =
         before.status !== input.status &&
         before.start_time === input.start_time &&
         before.end_time === input.end_time &&
         before.user_id === input.user_id &&
-        (before.note ?? null) === (input.note ?? null)
+        (before.note ?? null) === (input.note ?? null) &&
+        sameLocations
       const unchanged =
         before.status === input.status &&
         before.start_time === input.start_time &&
         before.end_time === input.end_time &&
         before.user_id === input.user_id &&
-        (before.note ?? null) === (input.note ?? null)
+        (before.note ?? null) === (input.note ?? null) &&
+        sameLocations
       if (unchanged) continue
 
       pushLog({
@@ -376,7 +555,7 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
         old_data: { ...before },
         new_data: { ...after },
         metadata: {
-          ...assignmentMeta(shiftId, input.user_id),
+          ...assignmentMeta(shiftId, input.user_id, location_ids),
           ...(onlyStatus
             ? { old_status: before.status, new_status: input.status }
             : {}),
@@ -392,20 +571,53 @@ function reconcileAssignments(shiftId: UUID, inputs: AssignmentInput[]) {
         status: input.status,
         confirmed_at: confirmedAt(null, input.status, now),
         note: input.note,
+        location_ids: nextLocationIds(null, input),
         created_at: now,
         updated_at: now,
       }
       state.assignments.push(created)
+      const names = locationNames(created.location_ids)
       pushLog({
         action: 'assignment.created',
         entity_type: 'assignment',
         entity_id: created.id,
-        summary: `Thêm ${nameOf(input.user_id)} vào ca ${label.title} ngày ${label.date} (${input.start_time}-${input.end_time})`,
+        summary:
+          `Thêm ${nameOf(input.user_id)} vào ca ${label.title} ngày ${label.date} (${input.start_time}-${input.end_time})` +
+          locationSuffix(names),
         new_data: { ...created },
-        metadata: assignmentMeta(shiftId, input.user_id),
+        metadata: assignmentMeta(shiftId, input.user_id, created.location_ids),
       })
     }
   }
+}
+
+/**
+ * Nhận lại ca mẫu đã nhận, với nơi trực mới: chỉ đổi `location_ids` của lượt
+ * đang có. Luật như trigger thấy một UPDATE đổi nơi trực: lượt của mình,
+ * chưa điểm danh, mọi nơi đang bật.
+ */
+function mergeClaimLocations(mine: ShiftAssignment, ids: UUID[]) {
+  const location_ids = normalizeLocationIds(ids)
+  if (restricted()) {
+    if (mine.user_id !== me()) throw new Error(EDIT_OTHER_ERROR)
+    if (locationsLocked(mine, currentMockProfile())) {
+      throw new Error(CONFIRMED_LOCATIONS_ERROR)
+    }
+    assertLocationsUsable(location_ids, mine.location_ids)
+  }
+  const now = new Date().toISOString()
+  const after: ShiftAssignment = { ...mine, location_ids, updated_at: now }
+  state.assignments = state.assignments.map((a) => (a.id === mine.id ? after : a))
+  const label = shiftLabel(mine.shift_id)
+  pushLog({
+    action: 'assignment.updated',
+    entity_type: 'assignment',
+    entity_id: mine.id,
+    summary: `Sửa phân công của ${nameOf(mine.user_id)} trong ca ${label.title} ngày ${label.date}`,
+    old_data: { ...mine },
+    new_data: { ...after },
+    metadata: assignmentMeta(mine.shift_id, mine.user_id, location_ids),
+  })
 }
 
 /**
@@ -493,7 +705,7 @@ export const mockBackend: SchedulerBackend = {
   },
 
   async createShift(input: ShiftInput, assignments: AssignmentInput[]) {
-    assertRosterAllowed(null, input.date, assignments)
+    assertRosterAllowed(null, input.date, input.template_id ?? null, assignments)
     assertUniqueStaff(assignments)
     const now = new Date().toISOString()
     const shift: Shift = {
@@ -573,7 +785,14 @@ export const mockBackend: SchedulerBackend = {
         'Bạn không có quyền dời ca sang ngày khác khi đã tới giờ điểm danh.',
       )
     }
-    assertRosterAllowed(id, input.date, assignments)
+    assertRosterAllowed(
+      id,
+      input.date,
+      input.template_id !== undefined
+        ? (input.template_id ?? null)
+        : (before?.template_id ?? null),
+      assignments,
+    )
     assertUniqueStaff(assignments)
     state.shifts = state.shifts.map((s) =>
       s.id === id ? { ...s, ...input, updated_at: now } : s,
@@ -644,6 +863,7 @@ export const mockBackend: SchedulerBackend = {
           end_time: a.end_time,
           status: a.status,
           note: a.note,
+          location_ids: a.location_ids,
         }))
 
       pushLog({
@@ -696,7 +916,7 @@ export const mockBackend: SchedulerBackend = {
         old_data: { ...before },
         new_data: { ...before, status, confirmed_at, updated_at: now },
         metadata: {
-          ...assignmentMeta(before.shift_id, before.user_id),
+          ...assignmentMeta(before.shift_id, before.user_id, before.location_ids),
           old_status: before.status,
           new_status: status,
         },
@@ -754,7 +974,9 @@ export const mockBackend: SchedulerBackend = {
         before.start_time === after.start_time &&
         before.end_time === after.end_time &&
         before.weekdays.join() === after.weekdays.join() &&
-        (before.note ?? null) === (after.note ?? null)
+        (before.note ?? null) === (after.note ?? null) &&
+        // 012: đổi màu cùng lúc thì là "sửa", không phải "bật / tắt".
+        (before.color ?? null) === (after.color ?? null)
       pushLog({
         action: onlyToggled ? 'template.toggled' : 'template.updated',
         entity_type: 'template',
@@ -793,14 +1015,165 @@ export const mockBackend: SchedulerBackend = {
     await delay(null)
   },
 
-  async claimTemplate(templateId: UUID, date: string, userId: UUID) {
+  // ---- nơi trực (012) ----
+
+  listLocations(): Promise<Location[]> {
+    // Dữ liệu mẫu lưu trước 014 không có short_name.
+    return delay(
+      [...state.locations]
+        .map((l) => ({ ...l, short_name: l.short_name ?? null }))
+        .sort(compareLocations),
+    )
+  },
+
+  async createLocation(input: LocationInput) {
+    assertCanManageLocations()
+    assertLocationInput(input, null)
+    const now = new Date().toISOString()
+    const created: Location = {
+      id: uid('loc'),
+      ...input,
+      name: input.name.trim(),
+      short_name: cleanShortName(input.short_name),
+      created_by: me(),
+      created_at: now,
+      updated_at: now,
+    }
+    state.locations = [...state.locations, created]
+    pushLog({
+      action: 'location.created',
+      entity_type: 'location',
+      entity_id: created.id,
+      summary: `Tạo nơi trực ${created.name}`,
+      new_data: { ...created },
+      metadata: { location_name: created.name },
+    })
+    persist()
+    await delay(null)
+  },
+
+  async updateLocation(id: UUID, input: LocationInput) {
+    assertCanManageLocations()
+    assertLocationInput(input, id)
+    const before = state.locations.find((l) => l.id === id)
+    if (!before) {
+      await delay(null)
+      return
+    }
+    const now = new Date().toISOString()
+    const after: Location = {
+      ...before,
+      ...input,
+      name: input.name.trim(),
+      short_name: cleanShortName(input.short_name),
+      updated_at: now,
+    }
+    const same = (a: Location, b: Location) =>
+      a.name === b.name &&
+      (a.short_name ?? null) === (b.short_name ?? null) &&
+      (a.color ?? null) === (b.color ?? null) &&
+      a.sort_order === b.sort_order
+    // Lưu mà không đổi gì thì không có dòng nhật ký, như trigger.
+    if (same(before, after) && before.is_active === after.is_active) {
+      await delay(null)
+      return
+    }
+    state.locations = state.locations.map((l) => (l.id === id ? after : l))
+    // Chỉ ẩn / hiện thì ghi thành hành động riêng, như ca mẫu.
+    const onlyToggled = same(before, after)
+    pushLog({
+      action: onlyToggled ? 'location.toggled' : 'location.updated',
+      entity_type: 'location',
+      entity_id: id,
+      summary: onlyToggled
+        ? `${after.is_active ? 'Hiện' : 'Ẩn'} nơi trực ${after.name}`
+        : `Sửa nơi trực ${after.name}`,
+      old_data: { ...before },
+      new_data: { ...after },
+      metadata: {
+        location_name: after.name,
+        ...(onlyToggled ? { is_active: after.is_active } : {}),
+      },
+    })
+    persist()
+    await delay(null)
+  },
+
+  async deleteLocation(id: UUID) {
+    assertCanManageLocations()
+    // Mảng không có khoá ngoại nên trigger chặn thay, kể cả admin.
+    if (state.assignments.some((a) => a.location_ids.includes(id))) {
+      throw new Error(LOCATION_IN_USE_ERROR)
+    }
+    const before = state.locations.find((l) => l.id === id)
+    state.locations = state.locations.filter((l) => l.id !== id)
+    if (before) {
+      pushLog({
+        action: 'location.deleted',
+        entity_type: 'location',
+        entity_id: id,
+        summary: `Xoá nơi trực ${before.name}`,
+        old_data: { ...before },
+        metadata: { location_name: before.name },
+      })
+    }
+    persist()
+    await delay(null)
+  },
+
+  async claimTemplate(
+    templateId: UUID,
+    date: string,
+    userId: UUID,
+    locationIds: UUID[],
+  ) {
     const template = state.templates.find((t) => t.id === templateId)
     if (!template) throw new Error('Template not found')
+    const location_ids = normalizeLocationIds(locationIds)
+    // Hộp nhận ca chỉ đưa nơi trực đang bật. Bản Supabase kiểm tra điều này
+    // bằng một lần đọc trước khi ghi gì (với mọi vai trò — phía client không
+    // biết vai trò), để nơi vừa bị ẩn / xoá không để lại ca mồ côi và dòng
+    // "Xoá ca" thừa; ở đây xét y như vậy.
+    if (location_ids.some((id) => !state.locations.some((l) => l.id === id && l.is_active))) {
+      throw new Error(LOCATION_UNUSABLE_ERROR)
+    }
 
     const now = new Date().toISOString()
     let shift = state.shifts.find(
       (s) => s.template_id === templateId && s.date === date,
     )
+
+    // Đã có trong ca: nơi trực mới gộp vào lượt đang có — bản thật là một
+    // lệnh UPDATE, trigger ghi "Sửa phân công". Không có gì mới thì thôi.
+    const mine = shift
+      ? state.assignments.find(
+          (a) => a.shift_id === shift?.id && a.user_id === userId,
+        )
+      : undefined
+    if (mine) {
+      // Đã điểm danh: nhận lại là no-op như trước khi có nơi trực (nhân viên
+      // không đổi được nơi trực lúc này; dừng ở lỗi thì các ngày sau trong
+      // cùng lần nhận nhiều ngày sẽ bị bỏ dở). Admin sửa trong form ca.
+      const added =
+        mine.status === 'confirmed'
+          ? []
+          : location_ids.filter((id) => !mine.location_ids.includes(id))
+      if (added.length > 0) {
+        mergeClaimLocations(mine, [...mine.location_ids, ...added])
+        persist()
+      }
+      await delay(null)
+      return
+    }
+    // Lượt mới (nơi trực đã xét ở đầu hàm). Xét trước khi tạo ca, để bị từ
+    // chối thì không để lại ca mồ côi.
+    if (userId !== me() && restricted()) throw new Error(ADD_OTHER_ERROR)
+    // 015, luật R1: nhận ca cho chính mình phải có nơi trực — mọi vai trò.
+    // Xét trước khi tạo ca, như bản Supabase, để không có ca mồ côi hay dòng
+    // nhật ký thừa. Nhận lại ca đã có ở trên vẫn là no-op như bản thật.
+    if (userId === me() && location_ids.length === 0) {
+      throw new Error(CLAIM_NEEDS_LOCATION_MESSAGE)
+    }
 
     // Ca có được tạo mới bởi chính cú bấm Nhận ca này không. Cố ý KHÔNG ghi
     // log riêng cho việc tạo ca: một cú bấm phải là một dòng nhật ký, và dòng
@@ -835,15 +1208,19 @@ export const mockBackend: SchedulerBackend = {
         status: 'pending',
         confirmed_at: null,
         note: null,
+        location_ids,
         created_at: now,
         updated_at: now,
       }
       state.assignments.push(created)
+      const names = locationNames(location_ids)
       pushLog({
         action: 'assignment.claimed',
         entity_type: 'assignment',
         entity_id: created.id,
-        summary: `Nhận ca ${shift.title} ngày ${date} (${template.start_time}-${template.end_time})`,
+        summary:
+          `Nhận ca ${shift.title} ngày ${date} (${template.start_time}-${template.end_time})` +
+          locationSuffix(names),
         new_data: { ...created },
         metadata: {
           shift_id: shift.id,
@@ -852,6 +1229,7 @@ export const mockBackend: SchedulerBackend = {
           target_user_id: userId,
           target_name: nameOf(userId),
           self: true,
+          location_names: names,
           template_id: templateId,
           shift_created: shiftCreated,
           shift_snapshot: { ...shift },

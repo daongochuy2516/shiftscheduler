@@ -25,10 +25,13 @@ import {
   deleteBlock,
   hasOthers,
   hoursLocked,
+  locationsLocked,
+  mustKeepLocation,
   removeBlock,
   type DeleteBlock,
   type RemoveBlock,
 } from '../lib/attendance'
+import { activeLocations, normalizeLocationIds } from '../lib/locations'
 import { uiRestricted } from '../lib/uiBypass'
 import {
   formatDuration,
@@ -42,6 +45,7 @@ import { Modal } from './Modal'
 import { Select } from './Select'
 import { DateInput } from './DateInput'
 import {
+  LocationPicker,
   ShiftSimpleView,
   type EditorRow,
   type JoinDraft,
@@ -92,6 +96,8 @@ function toRows(shift: ShiftWithAssignments | null): Row[] {
       end_time: normalizeTime(a.end_time),
       status: a.status,
       note: a.note,
+      // Dạng chuẩn ngay từ đầu: so "đã sửa" bằng JSON không lệch vì thứ tự.
+      location_ids: normalizeLocationIds(a.location_ids ?? []),
     }))
 }
 
@@ -141,6 +147,9 @@ export function ShiftModal({
     updateShift,
     deleteShift,
     setAssignmentStatus,
+    locations,
+    locationsAvailable,
+    locationsLoaded,
   } = useSchedule()
   const { t } = useI18n()
   const isEdit = shift !== null
@@ -260,6 +269,7 @@ export function ShiftModal({
         end_time: form.end_time,
         status: 'pending',
         note: null,
+        location_ids: [],
       },
     ])
   }
@@ -274,15 +284,75 @@ export function ShiftModal({
   const shiftRangeError = isInvalidRange(form.start_time, form.end_time)
     ? t('shift.errShiftRange')
     : null
+  /**
+   * Nơi trực bắt buộc trên ca sinh từ ca mẫu (015), chỉ khi đã có 012:
+   * - Dòng mới của chính mình là "nhận ca" — ai cũng phải chọn, admin cũng vậy.
+   * - Dòng đã lưu của mình: nhân viên không được bỏ hết nơi trực đang có. Lượt
+   *   vốn trống từ trước (dữ liệu cũ) thì giữ trống vẫn lưu được, vì database
+   *   chỉ xét khi danh sách nơi trực đổi.
+   * Dòng của người khác thì không đụng: admin thêm / sửa hộ không bị luật này.
+   */
+  const locationErrors = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!shift || shift.template_id == null || !locationsAvailable || !user) {
+      return map
+    }
+    const noActive = activeLocations(locations).length === 0
+    // `restricted` để cờ bypassuirestrict mở khoá này như các khoá khác.
+    const keepRule = restricted && mustKeepLocation(shift, user)
+    for (const row of rows) {
+      if (row.user_id !== user.id || (row.location_ids ?? []).length > 0) continue
+      const saved = row.id ? savedById.get(row.id) : undefined
+      const claiming = !saved
+      const emptying = !!saved && keepRule && (saved.location_ids ?? []).length > 0
+      if (!claiming && !emptying) continue
+      // Ô chọn của dòng vẫn đưa nơi trực đã lưu (kể cả nơi nay đã ẩn), nên
+      // chỉ khi không còn lựa chọn nào mới nói "nhờ admin" — hay "tải lỗi"
+      // nếu danh sách chưa tải được. Còn thì chỉ cần "chọn ít nhất một".
+      const noOptions = noActive && (saved?.location_ids ?? []).length === 0
+      map.set(
+        row.key,
+        !noOptions
+          ? t('shift.errLocationRequired')
+          : locationsLoaded
+            ? t('claim.noLocations')
+            : t('claim.locationsNotLoaded'),
+      )
+    }
+    return map
+  }, [
+    shift,
+    locationsAvailable,
+    locationsLoaded,
+    user,
+    locations,
+    restricted,
+    rows,
+    savedById,
+    t,
+  ])
+
   const rowErrors = useMemo(() => {
     const map = new Map<string, string>()
     for (const row of rows) {
       if (isInvalidRange(row.start_time, row.end_time)) {
         map.set(row.key, t('shift.errRowRange'))
+      } else {
+        const locationError = locationErrors.get(row.key)
+        if (locationError) map.set(row.key, locationError)
       }
     }
     return map
-  }, [rows, t])
+  }, [rows, locationErrors, t])
+
+  /**
+   * Chế độ Đơn giản không vẽ lỗi từng dòng của form đầy đủ: báo lỗi nơi trực
+   * của lượt mình ở chân form, cạnh nút Lưu đang bị khoá.
+   */
+  const myLocationError = rows
+    .filter((r) => r.user_id === user?.id)
+    .map((r) => locationErrors.get(r.key))
+    .find(Boolean)
 
   /** Non-blocking: staff scheduled outside the shift's own window. */
   const rowWarnings = useMemo(() => {
@@ -333,10 +403,17 @@ export function ShiftModal({
           }
         : {}),
     }
-    const assignments: AssignmentInput[] = nextRows.map(({ key: _key, ...rest }) => ({
-      ...rest,
-      note: rest.note?.trim() ? rest.note.trim() : null,
-    }))
+    // Chưa chạy 012 thì không có cột location_ids: gửi nó là PostgREST báo
+    // lỗi (PGRST204), nên chỉ gửi khi đã có bảng nơi trực.
+    const assignments: AssignmentInput[] = nextRows.map(
+      ({ key: _key, location_ids, ...rest }) => ({
+        ...rest,
+        note: rest.note?.trim() ? rest.note.trim() : null,
+        ...(locationsAvailable
+          ? { location_ids: normalizeLocationIds(location_ids ?? []) }
+          : {}),
+      }),
+    )
     const params = { title: payload.title }
     try {
       if (isEdit) {
@@ -370,6 +447,7 @@ export function ShiftModal({
           end_time: draft.end_time,
           status: 'pending',
           note: draft.note,
+          location_ids: draft.location_ids,
         },
       ],
       {
@@ -447,6 +525,11 @@ export function ShiftModal({
           // Hành động chính nằm trong thân form; chân form chỉ còn lưu phần
           // giờ/ghi chú đang sửa dở.
           <>
+            {dirty && myLocationError && (
+              <span className="mr-auto text-xs font-medium text-rose-600">
+                {myLocationError}
+              </span>
+            )}
             <button
               type="button"
               className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
@@ -759,6 +842,10 @@ export function ShiftModal({
                     const rowLocked =
                       removeLock === 'confirmed' || othersRow || hoursStarted
                     const personLocked = restricted
+                    // 012: nơi trực của lượt người khác / đã điểm danh thì
+                    // nhân viên không đổi được (pending thì đổi tự do).
+                    const rowLocationsLocked =
+                      restricted && !!saved && locationsLocked(saved, user)
                     const rowInputClass = rowLocked ? lockedInputClass : inputClass
                     return (
                       <li key={row.key}>
@@ -868,6 +955,17 @@ export function ShiftModal({
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
+
+                          <LocationPicker
+                            className="mt-2"
+                            value={row.location_ids ?? []}
+                            initial={saved?.location_ids}
+                            disabled={rowLocationsLocked}
+                            onChange={(location_ids) =>
+                              patchRow(row.key, { location_ids })
+                            }
+                            labelClassName={labelClass}
+                          />
 
                           <div className="mt-2">
                             <input

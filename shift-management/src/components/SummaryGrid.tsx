@@ -1,10 +1,13 @@
+import { useMemo } from 'react'
 import { format, isSameDay } from 'date-fns'
 import { CalendarOff } from 'lucide-react'
-import type { UUID } from '../types'
+import type { Location, UUID } from '../types'
 import { useI18n } from '../i18n/I18nContext'
+import { useSchedule } from '../data/ScheduleContext'
 import { useShiftColor } from '../data/useShiftColor'
 import { formatMinutesDuration, formatRange, toDateKey } from '../lib/time'
-import type { SummaryRow } from '../lib/summary'
+import { locationsById, sortLocationIds } from '../lib/locations'
+import type { RecordedEntry, SummaryRow } from '../lib/summary'
 import { Avatar } from './Avatar'
 
 const LEFT_COL = 176
@@ -37,6 +40,8 @@ export function SummaryGrid({
   dense: boolean
 }) {
   const { t, dateLocale } = useI18n()
+  const { locations } = useSchedule()
+  const locationById = useMemo(() => locationsById(locations), [locations])
   const today = toDateKey(new Date())
   const dayWidth = dense ? DAY_DENSE : DAY_MIN
   const gridTemplate = `${LEFT_COL}px repeat(${days.length}, minmax(${dayWidth}px, 1fr)) ${TOTAL_COL}px`
@@ -122,6 +127,7 @@ export function SummaryGrid({
                   gridTemplate={gridTemplate}
                   isMe={row.profile.id === currentUserId}
                   youLabel={t('common.you')}
+                  locationById={locationById}
                 />
               ))}
 
@@ -165,6 +171,7 @@ function StaffRow({
   gridTemplate,
   isMe,
   youLabel,
+  locationById,
 }: {
   row: SummaryRow
   days: Date[]
@@ -172,8 +179,18 @@ function StaffRow({
   gridTemplate: string
   isMe: boolean
   youLabel: string
+  locationById: ReadonlyMap<UUID, Location>
 }) {
   const shiftColor = useShiftColor()
+  const { t } = useI18n()
+
+  /** "Ca · 08:00–13:00 · Fanpage, Discord" — nơi trực chỉ nằm trong tooltip. */
+  function entryTooltip(e: RecordedEntry): string {
+    const where = sortLocationIds(e.locationIds, locationById)
+      .map((id) => locationById.get(id)?.name ?? t('loc.unknown'))
+      .join(', ')
+    return `${e.title} · ${formatRange(e.start, e.end)}${where ? ` · ${where}` : ''}`
+  }
   return (
     <div
       className={`grid border-b border-slate-100 last:border-b-0 ${
@@ -217,9 +234,7 @@ function StaffRow({
           >
             {dense ? (
               <span
-                data-tooltip={entries
-                  .map((e) => `${e.title} · ${formatRange(e.start, e.end)}`)
-                  .join('\n')}
+                data-tooltip={entries.map(entryTooltip).join('\n')}
                 className={`text-xs font-medium tabular-nums ${
                   minutes > 0 ? 'text-slate-700' : 'text-slate-300'
                 }`}
@@ -235,7 +250,7 @@ function StaffRow({
                 return (
                   <div
                     key={entry.assignmentId}
-                    data-tooltip={`${entry.title} · ${formatRange(entry.start, entry.end)}`}
+                    data-tooltip={entryTooltip(entry)}
                     className={`rounded border px-1.5 py-1 ${color.block}`}
                   >
                     <span className="block truncate text-[11px] font-semibold">
