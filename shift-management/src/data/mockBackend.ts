@@ -1,5 +1,4 @@
 import type {
-  Account,
   ActionLog,
   ActionLogPage,
   ActionLogQuery,
@@ -42,10 +41,16 @@ import { ForbiddenError, type SchedulerBackend } from './backend'
 import {
   MOCK_ASSIGNMENTS,
   MOCK_LOCATIONS,
-  MOCK_PROFILES,
   MOCK_SHIFTS,
   MOCK_TEMPLATES,
 } from './mockData'
+import {
+  findMockAccount,
+  mockAccounts,
+  resetMockAccounts,
+  saveMockProfileEdit,
+} from './mockAccounts'
+import { hasLeft, isActiveAdmin } from '../lib/employment'
 
 // v4: thêm nơi trực (012) và gộp ca mẫu thành Sáng / Chiều / Tối.
 const STORAGE_KEY = 'scheduler.mock.v4'
@@ -57,12 +62,8 @@ interface Snapshot {
   templates: ShiftTemplate[]
   locations: Location[]
   logs: ActionLog[]
-  /**
-   * Tài khoản mẫu là hằng số (MOCK_PROFILES, dùng chung với đăng nhập mock);
-   * phần admin đã sửa ở trang Tài khoản nằm ở đây, ghép lên khi đọc. Tuỳ
-   * chọn để dữ liệu đã lưu từ bản cũ vẫn đọc được.
-   */
-  profileEdits?: Record<UUID, ProfileInput>
+  // Tài khoản (kể cả phần admin đã sửa) nằm ở mockAccounts.ts: đăng nhập
+  // mock cũng cần đọc.
 }
 
 function seed(): Snapshot {
@@ -151,15 +152,8 @@ function pushLog(entry: {
   ]
 }
 
-/** Tài khoản mẫu kèm phần admin đã sửa ở trang Tài khoản. */
-function mockAccounts(): Account[] {
-  return MOCK_PROFILES.map((p) => ({ ...p, ...state.profileEdits?.[p.id] })).sort(
-    (a, b) => a.display_name.localeCompare(b.display_name),
-  )
-}
-
 function nameOf(userId: UUID): string {
-  return MOCK_PROFILES.find((p) => p.id === userId)?.display_name ?? '?'
+  return findMockAccount(userId)?.display_name ?? '?'
 }
 
 function shiftLabel(shiftId: UUID): { title: string; date: string } {
@@ -635,7 +629,7 @@ function involves(row: ActionLog, id: UUID): boolean {
   return (meta.staff_removed ?? []).some((r) => r.user_id === id)
 }
 
-export const mockBackend: SchedulerBackend = {
+const baseBackend: SchedulerBackend = {
   listProfiles(): Promise<Profile[]> {
     // Chỉ phần danh bạ, như bản thật sau 011: email và vai trò không có ở đây.
     return delay(
@@ -649,25 +643,41 @@ export const mockBackend: SchedulerBackend = {
   },
 
   async listAccounts() {
-    // Bản sao list_accounts() của 011: máy chủ xét vai trò thật.
-    if (currentMockProfile()?.role !== 'admin') {
+    // Bản sao list_accounts() của 011: máy chủ xét vai trò thật (016: admin
+    // đã nghỉ không còn là admin).
+    if (!isActiveAdmin(currentMockProfile())) {
       throw new ForbiddenError('Bạn không có quyền truy cập trang này.')
     }
     return delay(mockAccounts())
   },
 
   async updateProfile(id: UUID, input: ProfileInput) {
-    // Bản sao của 007_accounts.sql: chỉ admin, tên không được trống.
-    if (currentMockProfile()?.role !== 'admin') {
+    // Bản sao của 007_accounts.sql + 016_employment.sql: chỉ admin, tên không
+    // được trống, ngày vào không sau ngày nghỉ. Ngày nghỉ không ghi được từ
+    // web (ProfileInput không có cột đó) — trong mock nó chỉ có ở mockData.
+    const actor = currentMockProfile()
+    if (!isActiveAdmin(actor)) {
       throw new Error('Bạn không có quyền sửa tài khoản.')
     }
     if (input.display_name.trim() === '') {
       throw new Error('Tên hiển thị không được để trống.')
     }
-    if (!MOCK_PROFILES.some((p) => p.id === id)) {
+    const before = findMockAccount(id)
+    if (!before) {
       throw new Error('Bạn không có quyền sửa tài khoản.')
     }
-    state.profileEdits = { ...state.profileEdits, [id]: input }
+    const joined = input.joined_on !== undefined ? input.joined_on : before.joined_on
+    const left = before.left_on
+    if (joined && left && left < joined) {
+      throw new Error(
+        'new row for relation "profiles" violates check constraint "profiles_left_after_joined"',
+      )
+    }
+    // Như PostgREST: khoá vắng mặt là không đổi cột đó.
+    const edit = Object.fromEntries(
+      Object.entries(input).filter(([, v]) => v !== undefined),
+    ) as unknown as ProfileInput
+    saveMockProfileEdit(id, edit)
     persist()
     await delay(null)
   },
@@ -1280,9 +1290,47 @@ export const mockBackend: SchedulerBackend = {
   },
 }
 
+/**
+ * Bản sao các policy restrictive của 016: người đã nghỉ đọc về rỗng (RLS lọc
+ * hết dòng), ghi bị từ chối. Tài khoản và giờ máy chủ đã tự xét ở trên / không
+ * dính RLS.
+ */
+const LEFT_WRITE_ERROR = 'new row violates row-level security policy'
+
+function guardLeft(b: SchedulerBackend): SchedulerBackend {
+  const left = () => hasLeft(currentMockProfile())
+  const deny = () => Promise.reject(new Error(LEFT_WRITE_ERROR))
+  return {
+    ...b,
+    listProfiles: () => (left() ? delay([]) : b.listProfiles()),
+    listShifts: (q) => (left() ? delay([]) : b.listShifts(q)),
+    shiftDateBounds: (ids) =>
+      left() ? delay({ earliest: null, latest: null }) : b.shiftDateBounds(ids),
+    listTemplates: () => (left() ? delay([]) : b.listTemplates()),
+    listLocations: () => (left() ? delay([]) : b.listLocations()),
+    listActionLogs: (q) =>
+      left() ? delay({ rows: [], total: 0 }) : b.listActionLogs(q),
+    createShift: (i, a) => (left() ? deny() : b.createShift(i, a)),
+    updateShift: (id, i, a) => (left() ? deny() : b.updateShift(id, i, a)),
+    deleteShift: (id) => (left() ? deny() : b.deleteShift(id)),
+    setAssignmentStatus: (id, st) =>
+      left() ? deny() : b.setAssignmentStatus(id, st),
+    createTemplate: (i) => (left() ? deny() : b.createTemplate(i)),
+    updateTemplate: (id, i) => (left() ? deny() : b.updateTemplate(id, i)),
+    deleteTemplate: (id) => (left() ? deny() : b.deleteTemplate(id)),
+    claimTemplate: (t, d, u, l) => (left() ? deny() : b.claimTemplate(t, d, u, l)),
+    createLocation: (i) => (left() ? deny() : b.createLocation(i)),
+    updateLocation: (id, i) => (left() ? deny() : b.updateLocation(id, i)),
+    deleteLocation: (id) => (left() ? deny() : b.deleteLocation(id)),
+  }
+}
+
+export const mockBackend: SchedulerBackend = guardLeft(baseBackend)
+
 /** Wipes local edits and restores the seeded demo data. */
 export function resetMockData() {
   localStorage.removeItem(STORAGE_KEY)
+  resetMockAccounts()
   state = seed()
   persist()
 }

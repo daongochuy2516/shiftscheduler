@@ -81,6 +81,19 @@ function storageKey(userId: UUID): string {
   return `scheduler.notifications.${userId}`
 }
 
+/**
+ * Xoá thông báo đã lưu của một người — thông báo có tên ca, ngày giờ, nên
+ * người đã nghỉ việc (016) không được giữ lại trên máy.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function clearStoredNotifications(userId: UUID) {
+  try {
+    localStorage.removeItem(storageKey(userId))
+  } catch {
+    // Không có gì để xoá.
+  }
+}
+
 function readStored(userId: UUID): AppNotification[] {
   try {
     const raw = localStorage.getItem(storageKey(userId))

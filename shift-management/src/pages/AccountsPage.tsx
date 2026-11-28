@@ -9,7 +9,10 @@ import { useAccounts } from '../data/useAccounts'
 import { useI18n } from '../i18n/I18nContext'
 import { useNotify } from '../notifications/NotificationContext'
 import { isListed } from '../lib/profiles'
+import { hasLeft, todayKey } from '../lib/employment'
+import { formatDateText } from '../lib/dateText'
 import { Avatar } from '../components/Avatar'
+import { DateInput } from '../components/DateInput'
 import { PageSkeleton } from '../components/PageSkeleton'
 import { RoleBadge } from '../components/RoleBadge'
 import { LoadError } from '../components/LoadError'
@@ -18,8 +21,8 @@ const inputClass =
   'w-full min-h-11 sm:min-h-0 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-base sm:text-sm text-slate-900 shadow-xs outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500'
 
 /**
- * Trang Tài khoản — chỉ admin. Sửa tên hiển thị và việc hiện / ẩn một người
- * trên các bảng xếp ca, cho toàn hệ thống.
+ * Trang Tài khoản — chỉ admin. Sửa tên hiển thị, việc hiện / ẩn một người
+ * trên các bảng xếp ca, và ngày vào / ngày nghỉ (016) — cho toàn hệ thống.
  *
  * Người không phải admin không thấy link. Dữ liệu trang này (email, vai trò)
  * chỉ đến từ list_accounts() (011): máy chủ kiểm tra admin rồi mới trả, không
@@ -89,6 +92,12 @@ export function AccountsPage() {
   }
 
   const hiddenCount = accounts.filter((p) => !isListed(p)).length
+  const today = todayKey()
+  const leftCount = accounts.filter((p) => hasLeft(p, today)).length
+  // 016 chưa chạy thì list_accounts() không có hai cột này: không hiện ô,
+  // không gửi lên (PGRST204).
+  const employmentAvailable =
+    accounts.length === 0 || accounts[0].joined_on !== undefined
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -105,11 +114,28 @@ export function AccountsPage() {
         </div>
       )}
 
+      {accountsAvailable && !employmentAvailable && (
+        <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm ring-1 ring-amber-200">
+          <p className="font-medium text-amber-900">
+            {t('accounts.employmentNotInstalled')}
+          </p>
+          <p className="mt-0.5 text-amber-800">
+            {t('accounts.employmentNotInstalledHint')}
+          </p>
+        </div>
+      )}
+
       <p className="text-sm text-slate-500">
         {t('accounts.count', { count: accounts.length })}
         {hiddenCount > 0 &&
           ` · ${t('accounts.hiddenCount', { count: hiddenCount })}`}
+        {leftCount > 0 &&
+          ` · ${t('accounts.leftCount', { count: leftCount })}`}
       </p>
+      {/* Nói một lần ở đây thay vì lặp dưới mỗi hàng. */}
+      {employmentAvailable && (
+        <p className="-mt-2 text-xs text-slate-400">{t('accounts.leftOnHint')}</p>
+      )}
 
       <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5">
         {accounts.map((profile) => (
@@ -119,6 +145,7 @@ export function AccountsPage() {
             profile={profile}
             isMe={profile.id === user.id}
             disabled={!accountsAvailable}
+            employment={employmentAvailable}
             onSaved={reload}
           />
         ))}
@@ -131,11 +158,14 @@ function AccountRow({
   profile,
   isMe,
   disabled,
+  employment,
   onSaved,
 }: {
   profile: Account
   isMe: boolean
   disabled: boolean
+  /** 016 đã chạy: có ô ngày vào / ngày nghỉ và gửi hai cột đó lên. */
+  employment: boolean
   /** Danh sách này không nằm trong ScheduleContext: lưu xong phải tự tải lại. */
   onSaved: () => void
 }) {
@@ -143,9 +173,13 @@ function AccountRow({
   const { t } = useI18n()
   const notify = useNotify()
   const [name, setName] = useState(profile.display_name)
+  const [joined, setJoined] = useState(profile.joined_on ?? '')
+  // Ngày nghỉ chỉ đặt ở Supabase (016): trang này chỉ hiện.
+  const left = profile.left_on ?? ''
   const [pending, setPending] = useState(0)
   const listed = isListed(profile)
   const nameError = name.trim() === ''
+  const hasLeftNow = hasLeft({ left_on: left || null })
 
   /**
    * Không có nút Lưu: tên lưu khi rời ô (hoặc Enter), công tắc lưu ngay.
@@ -158,6 +192,8 @@ function AccountRow({
   const latest = useRef<ProfileInput>({
     display_name: profile.display_name,
     displayed: listed,
+    // Chỉ có khoá khi 016 đã chạy — vắng khoá là không gửi cột.
+    ...(employment ? { joined_on: profile.joined_on ?? null } : {}),
   })
 
   function save(patch: Partial<ProfileInput>, title: TranslationKey) {
@@ -175,6 +211,7 @@ function AccountRow({
         notify.error('notif.account.saveFailed', err, params)
         latest.current = before
         setName(before.display_name)
+        setJoined(before.joined_on ?? '')
       } finally {
         setPending((n) => n - 1)
       }
@@ -231,6 +268,17 @@ function AccountRow({
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
             <span className="truncate select-text">{profile.email}</span>
             <RoleBadge role={profile.role} />
+            {hasLeftNow ? (
+              <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] leading-none font-medium text-slate-600 ring-1 ring-slate-200 ring-inset">
+                {t('accounts.leftBadge')}
+              </span>
+            ) : (
+              left && (
+                <span className="shrink-0 rounded px-1.5 py-0.5 text-[11px] leading-none font-medium text-amber-700 ring-1 ring-amber-200 ring-inset">
+                  {t('accounts.leavingBadge', { date: formatDateText(left) })}
+                </span>
+              )
+            )}
             {isMe && (
               <span className="font-medium text-indigo-600">
                 {t('common.you')}
@@ -240,6 +288,45 @@ function AccountRow({
               <span className="text-slate-400">{t('common.saving')}</span>
             )}
           </p>
+          {employment && (
+            // Ngày vào lưu ngay khi chọn xong một ngày, như công tắc hiện / ẩn.
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:max-w-md">
+              <div>
+                <label
+                  htmlFor={`joined-${profile.id}`}
+                  className="mb-1 block text-xs text-slate-500"
+                >
+                  {t('accounts.joinedOn')}
+                </label>
+                <DateInput
+                  id={`joined-${profile.id}`}
+                  className={inputClass}
+                  value={joined}
+                  max={left || null}
+                  disabled={disabled}
+                  onChange={(date) => {
+                    if (!date || date === latest.current.joined_on) return
+                    setJoined(date)
+                    save({ joined_on: date }, 'notif.account.joinedSet')
+                  }}
+                />
+              </div>
+              {/* Chỉ hiện: ngày nghỉ đặt trong Supabase, database từ chối mọi
+                  thay đổi từ web (016), kể cả của admin. */}
+              <div data-tooltip={t('accounts.leftOnReadonly')}>
+                <span className="mb-1 block text-xs text-slate-500">
+                  {t('accounts.leftOn')}
+                </span>
+                <span
+                  className={`flex min-h-11 items-center rounded-md bg-slate-50 px-2.5 py-1.5 text-base ring-1 ring-slate-200 ring-inset sm:min-h-0 sm:text-sm ${
+                    left ? 'text-slate-700 select-text' : 'text-slate-400'
+                  }`}
+                >
+                  {left ? formatDateText(left) : t('accounts.leftOnNone')}
+                </span>
+              </div>
+            </div>
+          )}
         </form>
       </div>
 

@@ -11,7 +11,7 @@ Ca: Sáng, 08:00–13:00
 └── An     08:00–11:00   chờ xác nhận   Fanpage
 ```
 
-Các trang: **Lịch**, **Tất cả ca**, **Tổng kết**, **Ca của tôi**, **Chờ xác nhận**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, và **Tài khoản** (chỉ admin).
+Các trang: **Lịch**, **Tất cả ca**, **Tổng kết**, **Ca của tôi**, **Chờ xác nhận**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, **Hồ sơ của tôi**, và **Tài khoản** (chỉ admin).
 
 Tài liệu liên quan: [roadmap.md](roadmap.md) (thiết kế phân quyền, luật điểm danh và phần còn chưa làm); trang **Hướng dẫn** trong ứng dụng là bản viết cho nhân viên, nội dung ở `src/help/content.ts`.
 
@@ -92,6 +92,7 @@ Chạy theo thứ tự trong **SQL Editor** của Supabase:
 | `supabase/013_merge_location_templates.sql` | **Chuyển dữ liệu một lần, riêng cho Thinkmay**: gộp 6 ca mẫu cũ *Sáng / Chiều / Tối – trực page / discord* thành 3 ca mẫu **Sáng**, **Chiều**, **Tối**; tạo nơi trực **Fanpage** và **Discord**; mỗi cặp ca page + discord cùng ngày cùng khung gộp thành một ca, người đứng cả hai thành **một lượt hai nơi trực**. Một transaction, **không ghi dòng nhật ký nào**; chạy lại khi không còn ca mẫu cũ thì không làm gì. Cần 012 trước |
 | `supabase/014_location_short_name.sql` | **Tên tắt** cho nơi trực (cột `short_name`, tối đa 10 ký tự), dùng trên khối ca ngắn ở dòng thời gian. Đặt sẵn *Page* cho Fanpage và *Dis* cho Discord (không ghi nhật ký). Cần 012 trước |
 | `supabase/015_claim_requires_location.sql` | **Nhận ca phải có nơi trực**: ghi đè trigger điểm danh — tự thêm chính mình vào ca sinh từ ca mẫu (nhận ca) phải kèm **ít nhất một nơi trực**, áp cho mọi người đăng nhập kể cả admin; nhân viên không được sửa lượt của mình trên ca mẫu thành không còn nơi trực nào (admin được). Chạy trong SQL Editor (không có phiên đăng nhập) thì không áp. Chạy lại an toàn. Cần 012 trước |
+| `supabase/016_employment.sql` | **Ngày vào làm / ngày nghỉ việc** (có ngày nghỉ thì bắt buộc là `staff`): cột `profiles.joined_on` (tài khoản cũ lấy theo ngày tạo tài khoản, chỉ ở lần chạy đầu) (chỉ admin sửa) và `profiles.left_on` — **chỉ đặt được trong Supabase** (SQL Editor / Table Editor), web không ai đổi được, kể cả admin. Từ ngày nghỉ, người đó **không đọc / ghi được bảng nào** (policy restrictive trên mọi bảng; sự kiện xoá của Realtime không còn mang nội dung dòng — các bảng về `replica identity default`) và admin đã nghỉ không còn là admin — chỉ còn xem hồ sơ của mình ([Hồ sơ của tôi](#hồ-sơ-của-tôi)). Chạy lại an toàn. Cần 011 trước |
 
 Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng dụng **vẫn chạy bình thường**, chỉ thiếu tính năng tương ứng:
 
@@ -110,6 +111,7 @@ Các file từ 002 trở đi là **tuỳ chọn** — chưa chạy thì ứng d�
 | 013 | Ca mẫu và ca cũ giữ nguyên như trước (6 ca mẫu, mỗi khung hai ca song song) |
 | 014 | Không có ô *Tên tắt*: chỗ chật dùng 3 chữ đầu của tên ("Fan", "Dis") |
 | 015 | Luật "nhận ca phải có nơi trực" chỉ có ở giao diện (hộp nhận ca, form ca); gọi thẳng API vẫn nhận ca không nơi trực được |
+| 016 | Hồ sơ ghi *Chưa cập nhật* ở ngày vào và ai cũng *Đang làm việc*; trang Tài khoản hiện thông báo vàng thay cho ô ngày vào / ngày nghỉ |
 
 > **Thứ tự triển khai nơi trực**: chạy `012_locations.sql` → `013_merge_location_templates.sql` trong SQL Editor, **rồi** mới deploy bản web mới. Bản web mới chạy được cả khi chưa chạy 012 (ẩn mọi thứ về nơi trực). Bản web cũ vẫn đọc được sau 013, nhưng nhận ca theo ca mẫu cũ sẽ lỗi vì mẫu đó đã bị xoá.
 
@@ -142,6 +144,7 @@ Vài điểm cần biết:
 - Sai email hoặc mật khẩu sẽ hiện *"Email hoặc mật khẩu không đúng."* Các lỗi khác (bị khoá, giới hạn số lần thử) hiện nguyên văn để dễ báo cho quản trị viên.
 - Nếu bạn mở một đường dẫn sâu khi chưa đăng nhập (ví dụ `/pending`, hay link đồng nghiệp gửi tới một ca `/?date=2026-09-08&shift=<id>`), hệ thống ghi nhớ **nguyên cả link** — trang, ngày, chế độ xem, bộ lọc, form đang mở — và **đưa bạn về đúng màn hình đó** sau khi đăng nhập xong, không phải mở lại link.
 - Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
+- **Đã nghỉ việc** (ngày nghỉ đặt trong Supabase đã tới): vẫn đăng nhập được nhưng chỉ thấy trang **Hồ sơ của tôi** với nút Đăng xuất — mọi đường dẫn khác đưa về `/me` ([Hồ sơ của tôi](#hồ-sơ-của-tôi)).
 
 **Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Phải **bấm hai lần**: lần đầu dòng chuyển đỏ, hiện *Bấm lần nữa để đăng xuất*; bấm tiếp trong 4 giây mới đăng xuất, để quá thì trở lại như cũ. Bạn sẽ được đưa về trang đăng nhập ngay.
 
@@ -192,7 +195,7 @@ Thanh trên cùng có mặt ở mọi trang:
 | Đồng hồ | Giờ phút giây và ngày tháng năm, chạy theo **giờ máy chủ** — đồng hồ mà luật điểm danh dùng. **Bấm** vào đồng hồ (rê chuột không bật gì) để mở bảng giống đồng hồ taskbar của Windows: giờ to, ngày đầy đủ kèm thứ, và **lịch tháng** — `‹ ›` đổi tháng, bấm tên tháng để chọn nhanh tháng rồi năm, bấm một ngày là mở trang Lịch của ngày đó. Ô **tô tím đặc** là ngày đang xem (ngày trên đường dẫn của trang Lịch / Tổng kết — mở lại bảng sau khi bấm là thấy ngay ngày vừa chọn, lịch mở đúng tháng đó); trang không có ngày thì tô hôm nay. Hôm nay, nếu khác ngày đang xem, có viền tím. Bấm đồng hồ lần nữa, bấm ra ngoài hoặc **Esc** để đóng. Có chấm vàng cạnh giờ nghĩa là chưa lấy được giờ máy chủ, đang hiện giờ máy |
 | **Tạo ca** (nút xanh) | Xổ menu hai lựa chọn: **Nhận ca mẫu** (chọn một mẫu trong danh sách rồi chọn ngày) hoặc **Tạo ca thủ công** (form tạo ca, mặc định ngày đang xem ở Lịch / Tổng kết, các trang khác là **hôm nay**) |
 | Avatar + tên | Tài khoản đang đăng nhập, kèm nhãn vai trò **Admin** / **Staff** (giống nhau ở cả hai ngôn ngữ) và email. Tên lấy từ danh sách nhân viên nên admin vừa đổi tên bạn ở trang Tài khoản thì thanh trên đổi theo ngay. Dưới 768px chỉ còn avatar |
-| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở menu dạng danh sách, chia nhóm bằng đường kẻ: **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Trạng thái** ([mục 9e](#9e-trang-trạng-thái)), **Hướng dẫn** ([mục 9d](#9d-hướng-dẫn-và-bài-từng-bước)) · **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (giá trị hiện tại ở cuối dòng; bấm để đổi Hệ thống → Sáng → Tối → Tối OLED, [mục 9f](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh) · **Cài ứng dụng** (khi trình duyệt cài được), **Copy link** (cuối dòng ghi phím tắt), **Đổi mật khẩu** · **Đăng xuất** (xám như các dòng khác, đỏ khi rê chuột). Dòng cuối nhắc phím tắt *Quick Search* (Ctrl + K). Bấm Giao diện hay Ngôn ngữ thì menu giữ nguyên để bấm tiếp; các dòng còn lại đóng menu |
+| ⋮⋮⋮ (nút lưới, ngoài cùng bên phải) | Mở menu dạng danh sách, chia nhóm bằng đường kẻ: **Hồ sơ của tôi** ([mục 3](#hồ-sơ-của-tôi)), **Tài khoản** (chỉ admin thấy — sửa tên hiển thị, hiện / ẩn người trên bảng, [mục 11](#trang-tài-khoản)), **Trạng thái** ([mục 9e](#9e-trang-trạng-thái)), **Hướng dẫn** ([mục 9d](#9d-hướng-dẫn-và-bài-từng-bước)) · **Thông báo** ([mục 9c](#9c-thông-báo)), **Giao diện** (giá trị hiện tại ở cuối dòng; bấm để đổi Hệ thống → Sáng → Tối → Tối OLED, [mục 9f](#9f-giao-diện-sáng--tối-và-chữ-bôi-đen)), **Ngôn ngữ** (bấm để đổi tiếng Việt ↔ tiếng Anh) · **Cài ứng dụng** (khi trình duyệt cài được), **Copy link** (cuối dòng ghi phím tắt), **Đổi mật khẩu** · **Đăng xuất** (xám như các dòng khác, đỏ khi rê chuột). Dòng cuối nhắc phím tắt *Quick Search* (Ctrl + K). Bấm Giao diện hay Ngôn ngữ thì menu giữ nguyên để bấm tiếp; các dòng còn lại đóng menu |
 
 Cuối trang (chỉ PC) có một dòng chào theo buổi — sáng / trưa / chiều / tối — kèm tên bạn.
 
@@ -205,9 +208,23 @@ Thanh trên chỉ còn logo, nút chuông 🔔 và avatar; phần điều hướ
 | **Thanh dưới** | Bốn trang dùng nhiều nhất: **Lịch**, **Tất cả ca**, **Ca của tôi**, **Chờ xác nhận**. Trang đang mở có gạch trên màu indigo; số lượt chờ của bạn hiện trên icon (từ 10 trở lên ghi `9+`) |
 | **Nút tròn** góc dưới phải | Mở bảng **Tạo ca**: *Nhận ca mẫu*, *Tạo ca thủ công* (ngày = ngày đang xem), và *Quản lý ca mẫu* với admin |
 | **Chuông 🔔** | Mở ngăn thông báo |
-| **Avatar** | Mở bảng tài khoản: tên, nhãn vai trò, email và lời chào ở đầu, rồi các mục có cùng màu với ô trên PC — **Tổng kết**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, **Tài khoản** (admin), **Quick Search**, **Đổi mật khẩu**, **Ngôn ngữ** và **Giao diện** (bấm để đổi, giá trị đang dùng ghi bên phải), **Đăng xuất** (bấm hai lần) |
+| **Avatar** | Mở bảng tài khoản: tên, nhãn vai trò, email và lời chào ở đầu, rồi các mục có cùng màu với ô trên PC — **Hồ sơ của tôi**, **Tổng kết**, **Nhật ký**, **Trạng thái**, **Hướng dẫn**, **Tài khoản** (admin), **Quick Search**, **Đổi mật khẩu**, **Ngôn ngữ** và **Giao diện** (bấm để đổi, giá trị đang dùng ghi bên phải), **Đăng xuất** (bấm hai lần) |
 
 Nút bấm trên điện thoại cao tối thiểu 44px; hộp thoại mở dạng bảng trượt từ đáy lên (*bottom sheet*). Từ 640px trở lên giao diện PC không đổi.
+
+### Hồ sơ của tôi
+
+`/me` — mở từ nút lưới (điện thoại: bấm avatar) hoặc Quick Search. Chỉ đọc, chỉ của chính bạn:
+
+| Dòng | Nội dung |
+| --- | --- |
+| Tên hiển thị, Email | Theo tài khoản; admin đổi tên ở trang Tài khoản |
+| Ngày vào | Ngày dạng `dd/MM/yyyy` kèm thời gian đã làm (*Đã làm 1 năm 3 tháng*; đã nghỉ thì *Làm tổng cộng …* tính tới ngày nghỉ). Vào chưa tới 30 ngày có nhãn **Mới**. Admin chưa đặt thì ghi *Chưa cập nhật* |
+| Trạng thái | **Đang làm việc** (chấm xanh) · **Đang làm việc · nghỉ từ …** khi ngày nghỉ còn ở tương lai (chấm vàng) · **Đã nghỉ từ …** (chấm xám) |
+
+Ngày vào do admin sửa ([Trang Tài khoản](#trang-tài-khoản)); ngày nghỉ chỉ đặt trong Supabase ([mục 11](#đặt-ngày-nghỉ-việc)). Ứng dụng đọc lại hồ sơ mỗi lần mở trang, mỗi khi bạn quay lại tab và mỗi 2 phút, nên thay đổi hiện ra mà không phải đăng nhập lại.
+
+**Người đã nghỉ việc** (từ ngày nghỉ trở đi) vẫn đăng nhập được nhưng cả ứng dụng chỉ còn trang này: thanh trên chỉ có tên ứng dụng và **Đăng xuất**, đầu trang có hộp *Tài khoản đã ngừng hoạt động*, mọi đường dẫn khác đưa về `/me`. Tới ngày nghỉ thì tab đang mở cũng tự chuyển sang trang này (chậm nhất khoảng 2 phút sau khi ngày nghỉ được đặt), và lịch lưu offline cùng thông báo trên máy bị xoá. Database chặn thật: người đã nghỉ gọi thẳng API cũng đọc về rỗng và không ghi được gì (016). Riêng khi mở app lúc **mất mạng** bằng hồ sơ lưu từ trước khi bị đặt ngày nghỉ, máy chưa biết người đó đã nghỉ nên vẫn hiện lịch lưu trên máy (tối đa 2 ngày, chỉ xem) cho tới khi có mạng lại.
 
 ### Khi cửa sổ hẹp
 
@@ -930,6 +947,7 @@ Với người sửa mã:
 | `/logs` | Nhật ký thao tác |
 | `/status` | Trạng thái hệ thống |
 | `/help` | Hướng dẫn và các bài từng bước |
+| `/me` | Hồ sơ của tôi (người đã nghỉ việc mở link nào cũng về đây) |
 | `/accounts` | Tài khoản (chỉ admin; người khác bị đưa về `/`) |
 | `/login` | Đăng nhập |
 | `/login?forgot=1` | Đăng nhập, hộp *Quên mật khẩu* đang mở |
@@ -949,7 +967,7 @@ Chưa đăng nhập mà mở link thì sau khi đăng nhập được đưa về
 | Nhật ký | `from`, `to`, `staff` (lặp lại được), `action`, `entity`, `q`, `page` (từ 2), `log` (id dòng đang mở Chi tiết, lặp lại được), `detail=advanced` (kiểu xem Nâng cao của Chi tiết; chỉ có khi đang mở ít nhất một dòng) |
 | Hướng dẫn | `q` (chữ tìm), `section` (id mục vừa nhảy tới qua mục lục — mở link là cuộn tới đó) |
 | Đăng nhập | `forgot=1` (hộp Quên mật khẩu) |
-| Ca của tôi, Trạng thái, Tài khoản | Không có tham số riêng |
+| Ca của tôi, Trạng thái, Tài khoản, Hồ sơ của tôi | Không có tham số riêng |
 
 **Tham số hộp thoại** — dùng được ở mọi trang (trừ Đăng nhập), nằm cạnh tham số của trang:
 
@@ -1079,14 +1097,34 @@ Mỗi dòng là một tài khoản, kèm email và vai trò:
 | --- | --- |
 | Đổi tên hiển thị | Sửa ô tên — **tự lưu** khi rời ô hoặc bấm Enter. **Esc** trả lại tên đang lưu. Để trống thì tên cũ được giữ nguyên |
 | Hiện / ẩn trên bảng | Bấm công tắc **Đang hiện / Đang ẩn** — **tự lưu** ngay |
+| Ngày vào | Chọn hoặc gõ ngày trong ô **Ngày vào** (cần 016) — **tự lưu** khi đủ một ngày hợp lệ. Không sau ngày nghỉ |
+| Ngày nghỉ | **Chỉ xem** (cần 016): ghi ngày hoặc *Đang làm việc*. Không sửa được ở đây — đặt trong Supabase ([dưới](#đặt-ngày-nghỉ-việc)) |
 
 Không có nút Lưu. Mỗi lần lưu báo bằng [thông báo](#9c-thông-báo); lỗi thì ô quay về giá trị cũ.
+
+**Ngày nghỉ** (đặt trong Supabase): từ ngày đó người này là *đã nghỉ* — dòng có nhãn **Đã nghỉ** (ngày ở tương lai thì nhãn vàng **Nghỉ từ …**, họ vẫn làm bình thường tới hôm đó), dòng đếm đầu trang thêm *n đã nghỉ*. Họ vẫn đăng nhập được nhưng chỉ xem được [hồ sơ của mình](#hồ-sơ-của-tôi). Người đã nghỉ luôn là `staff` ([quy tắc vận hành](#đặt-ngày-nghỉ-việc)); database cũng coi admin lỡ còn ngày nghỉ là người thường. Có ngày nghỉ **không tự ẩn** người đó khỏi bảng xếp ca — muốn bỏ khỏi ô chọn nhân viên thì gạt công tắc sang **Đang ẩn**; ca cũ của họ vẫn giữ nguyên.
+
+#### Đặt ngày nghỉ việc
+
+Chỉ làm trong Supabase SQL Editor — web không có chỗ nào đổi được, admin gọi thẳng API cũng bị từ chối (*Ngày nghỉ việc chỉ quản trị database mới đổi được.*).
+
+> **Quy tắc vận hành: đặt ngày nghỉ thì luôn hạ vai trò về `staff` trong cùng câu lệnh.** Không để tồn tại tài khoản vừa là admin vừa có ngày nghỉ (bỏ ngày nghỉ là có lại quyền admin ngay). Database ép quy tắc này bằng check `profiles_left_is_staff`: đặt ngày nghỉ cho admin mà quên hạ vai trò, hay phong admin cho người có ngày nghỉ, đều bị từ chối. Nếu một admin cần giữ quyền tới hết ngày làm cuối thì đừng đặt ngày nghỉ trước — đặt (kèm hạ vai trò) đúng hôm nghỉ.
+
+```sql
+-- Nghỉ từ 01/12/2026
+update public.profiles set left_on = '2026-12-01', role = 'staff' where email = 'ten@congty.com';
+
+-- Trở lại làm việc (vai trò vẫn là staff; phong lại admin là một quyết định riêng, mục Phong admin)
+update public.profiles set left_on = null where email = 'ten@congty.com';
+```
+
+Không dùng Table Editor để đặt ngày nghỉ: sửa từng ô thì dễ quên cột `role`. Ngày nghỉ không được trước ngày vào. Người đang mở web sẽ chuyển sang trang Hồ sơ khi quay lại tab.
 
 **Ẩn** dành cho tài khoản chỉ vào để xem, ví dụ quản lý xem tổng: người đang ẩn không hiện trên Lịch ngày / tuần, Tổng kết, ô chọn nhân viên trong form ca và bộ lọc ở trang Tất cả ca. Họ vẫn đăng nhập và dùng web bình thường. Nếu người đang ẩn **có ca** trong khoảng đang xem thì dòng của họ vẫn hiện — ẩn người không làm mất ca. Nhật ký vẫn liệt kê họ khi lọc theo người.
 
 Đổi email hay vai trò không làm ở đây: email theo tài khoản đăng nhập, vai trò đổi trong SQL Editor (mục trên).
 
-Database chặn thật: chỉ admin sửa được tên hiển thị và hiện / ẩn, của bất kỳ ai. Người khác — kể cả sửa dòng của chính mình, kể cả gọi thẳng Supabase API — bị từ chối với *Bạn không có quyền sửa tài khoản.* Thay đổi ở trang này không ghi vào Nhật ký.
+Database chặn thật: chỉ admin sửa được tên hiển thị, hiện / ẩn và ngày vào, của bất kỳ ai; ngày nghỉ thì không ai sửa được qua web. Người khác — kể cả sửa dòng của chính mình, kể cả gọi thẳng Supabase API — bị từ chối với *Bạn không có quyền sửa tài khoản.* Thay đổi ở trang này không ghi vào Nhật ký.
 
 ### Thiết lập Auth cần thiết
 
@@ -1116,6 +1154,9 @@ Database chặn thật: chỉ admin sửa được tên hiển thị và hiện 
 | Nhận ca mẫu không kèm nơi trực | **Không ai**, kể cả admin (thêm hộ người khác thì không bị) | 015 |
 | Đổi tên hiển thị, hiện / ẩn người trên bảng | Chỉ **admin**, của bất kỳ ai | 007 |
 | Xem email, vai trò của người khác (trang Tài khoản) | Chỉ **admin** — máy chủ kiểm tra trước khi trả | 011 |
+| Đặt ngày vào | Chỉ **admin**. Ngày vào / nghỉ của người khác chỉ admin xem được | 016 |
+| Đặt ngày nghỉ việc | **Không ai** qua web / API, kể cả admin — chỉ trong Supabase Dashboard ([Đặt ngày nghỉ việc](#đặt-ngày-nghỉ-việc)) | 016 |
+| Xem / làm bất cứ gì ngoài hồ sơ của mình khi **đã nghỉ việc** | **Không ai** (đặt nghỉ thì hạ về `staff`; admin lỡ còn ngày nghỉ cũng bị chặn) | 016 |
 | Phong admin | Chỉ làm tay trong SQL Editor ([mục 11](#phong-admin)) | 005 |
 | Sửa / xoá / tạo dòng Nhật ký | **Không ai** qua ứng dụng ([mục 9b](#9b-nhật-ký-thao-tác)) | 003 |
 

@@ -1,5 +1,5 @@
 import type { Account } from '../types'
-import { MOCK_PROFILES } from '../data/mockData'
+import { findMockAccount, mockAccounts } from '../data/mockAccounts'
 import { OFFLINE_ERROR_MESSAGE, isOnline } from '../lib/network'
 import { CURRENT_PASSWORD_WRONG, type AuthBackend } from './backend'
 
@@ -13,8 +13,8 @@ const listeners = new Set<(user: Account | null) => void>()
 
 function readSession(): Account | null {
   try {
-    const id = localStorage.getItem(SESSION_KEY)
-    return MOCK_PROFILES.find((p) => p.id === id) ?? null
+    // Ghép phần admin đã sửa (tên, ngày nghỉ…) như my_profile() của bản thật.
+    return findMockAccount(localStorage.getItem(SESSION_KEY))
   } catch {
     return null
   }
@@ -54,7 +54,7 @@ export const mockAuth: AuthBackend = {
     await new Promise((r) => setTimeout(r, 300))
     // Giống bản Supabase: đăng nhập cần máy chủ.
     if (!isOnline()) return OFFLINE_ERROR_MESSAGE
-    const profile = MOCK_PROFILES.find(
+    const profile = mockAccounts().find(
       (p) => p.email.toLowerCase() === email.trim().toLowerCase(),
     )
     if (!profile || password !== passwordFor(profile.id)) {

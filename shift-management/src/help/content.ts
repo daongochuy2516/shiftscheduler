@@ -282,12 +282,14 @@ const vi: HelpSection[] = [
   {
     id: 'account',
     title: 'Tài khoản',
-    summary: 'Mật khẩu và đăng xuất.',
+    summary: 'Hồ sơ, mật khẩu và đăng xuất.',
     tour: 'menu',
     blocks: [
       {
         type: 'list',
         items: [
+          '**Hồ sơ của tôi**: nút lưới (điện thoại: avatar) → Hồ sơ của tôi — tên hiển thị, email, ngày vào, đang làm hay đã nghỉ.',
+          'Đã **nghỉ việc** thì vẫn đăng nhập được nhưng chỉ xem được hồ sơ của mình.',
           '**Đổi mật khẩu**: nút lưới (điện thoại: avatar) → Đổi mật khẩu.',
           '**Đăng xuất**: bấm **hai lần**.',
           'Quên mật khẩu: nhờ admin đặt lại.',
@@ -348,6 +350,7 @@ const vi: HelpSection[] = [
           '**Nơi trực**: **Tạo ca → Quản lý nơi trực** (hoặc gõ trong Quick Search) để thêm, đổi tên, đổi màu, sắp thứ tự, ẩn / hiện, xoá. Đổi tên một lần là mọi ca đổi theo.',
           'Nơi trực **đã có trong ca** thì không xoá được — hãy **ẩn**: ca cũ vẫn giữ nhãn, nhưng nhân viên không chọn được nữa. Admin vẫn chọn / đổi nơi trực của bất kỳ ai, kể cả lượt đã điểm danh, và được bỏ trống nơi trực khi sửa hộ. Nhưng tự **nhận ca** thì admin cũng phải chọn ít nhất một nơi trực, và ẩn hết nơi trực là không ai nhận ca được.',
           '**Tài khoản** (nút lưới → Tài khoản): sửa tên hiển thị, **ẩn** người khỏi các bảng xếp ca (ví dụ tài khoản quản lý chỉ vào để xem). Người đang ẩn vẫn hiện nếu có ca.',
+          'Cũng ở trang Tài khoản: sửa **Ngày vào**. **Ngày nghỉ** chỉ xem ở đây — đặt trong Supabase SQL Editor, luôn kèm hạ vai trò về `staff` (câu lệnh mẫu trong README). Từ ngày nghỉ người đó chỉ xem được hồ sơ của mình; có ngày nghỉ không tự ẩn họ khỏi bảng — gạt sang **Đang ẩn** nếu muốn.',
           'Phong admin và đổi vai trò làm trong Supabase SQL Editor, không có đường nào trong web.',
         ],
       },
@@ -603,12 +606,14 @@ const en: HelpSection[] = [
   {
     id: 'account',
     title: 'Account',
-    summary: 'Password and signing out.',
+    summary: 'Profile, password and signing out.',
     tour: 'menu',
     blocks: [
       {
         type: 'list',
         items: [
+          '**My profile**: grid button (phone: avatar) → My profile — email, name, join date, and whether you are working or have left.',
+          'After your **leaving date** you can still sign in, but you only see your own profile.',
           '**Change password**: grid button (phone: avatar) → Change password.',
           '**Sign out**: press **twice**.',
           'Forgot your password: ask an admin to reset it.',
@@ -669,6 +674,7 @@ const en: HelpSection[] = [
           '**Locations**: **New shift → Manage locations** (or type it in Quick Search) to add, rename, recolour, reorder, hide / show and delete. Renaming once updates every shift.',
           'A location **already used on a shift** can’t be deleted — **hide** it instead: old shifts keep the chip, but staff can no longer pick it. Admins can still set anyone’s locations, checked in or not, and may leave them empty when editing for someone. Claiming a shift yourself still needs at least one location, admins included — and with every location hidden nobody can claim.',
           '**Accounts** (grid button → Accounts): change display names, **hide** people from the schedule boards (say, a manager account that only looks). Hidden people still show where they have shifts.',
+          'Also on Accounts: edit **Joined**. **Left on** is read-only here — it is set in the Supabase SQL Editor, always together with setting the role back to `staff` (sample statement in the README). From that date the person only sees their own profile; it does not hide them from the boards — switch them to **Hidden** if you want that.',
           'Making someone admin and changing roles happens in the Supabase SQL Editor — there is no way to do it in the site.',
         ],
       },

@@ -21,9 +21,14 @@ interface AuthContextValue {
     currentPassword: string,
     newPassword: string,
   ) => Promise<string | null>
+  /** Đọc lại hồ sơ của mình từ máy chủ (ngày nghỉ, tên…). */
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+/** Ngồi yên trong tab thì đọc lại hồ sơ sau ngần này (một RPC nhỏ). */
+const PROFILE_RECHECK_MS = 2 * 60_000
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Account | null>(null)
@@ -57,6 +62,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /**
+   * Đọc lại hồ sơ của mình: admin vừa đặt ngày nghỉ (016) hay đổi tên thì
+   * giao diện theo kịp mà không phải đăng nhập lại. Chỉ nhận kết quả có
+   * người — mất phiên thật thì onAuthChange đã lo, còn null ở đây có thể chỉ
+   * là mạng chập chờn. Giữ nguyên object khi không đổi gì để không vẽ lại cả
+   * app mỗi lần chuyển tab.
+   */
+  const refreshUser = useCallback(async () => {
+    const next = await auth.getSession()
+    if (!next) return
+    setUser((prev) => {
+      // Đã đăng xuất / đổi tài khoản: việc của onAuthChange.
+      if (!prev || prev.id !== next.id) return prev
+      return JSON.stringify(prev) === JSON.stringify(next) ? prev : next
+    })
+  }, [])
+
+  // Quay lại tab là lúc dễ có thay đổi từ người khác nhất. Ngồi yên trong tab
+  // thì cũng đọc lại định kỳ: ngày nghỉ đặt trong Supabase không đi qua
+  // Realtime, không có vòng này thì người vừa nghỉ vẫn thấy giao diện cũ
+  // (dù database đã trả rỗng và từ chối mọi thao tác) tới khi đổi tab.
+  const signedIn = user !== null
+  useEffect(() => {
+    if (!signedIn) return
+    const recheck = () => {
+      if (document.visibilityState === 'visible') void refreshUser()
+    }
+    document.addEventListener('visibilitychange', recheck)
+    window.addEventListener('focus', recheck)
+    const id = window.setInterval(recheck, PROFILE_RECHECK_MS)
+    return () => {
+      document.removeEventListener('visibilitychange', recheck)
+      window.removeEventListener('focus', recheck)
+      window.clearInterval(id)
+    }
+  }, [refreshUser, signedIn])
+
   const signIn = useCallback(
     (email: string, password: string) => auth.signIn(email, password),
     [],
@@ -75,8 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ user, loading, signIn, signOut, changePassword }),
-    [user, loading, signIn, signOut, changePassword],
+    () => ({ user, loading, signIn, signOut, changePassword, refreshUser }),
+    [user, loading, signIn, signOut, changePassword, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

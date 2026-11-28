@@ -24,6 +24,7 @@ import {
   Sun,
   User,
   UserCog,
+  IdCard,
   Users,
   Network,
 } from 'lucide-react'
@@ -208,6 +209,7 @@ export function CommandPalette({
       { id: 'nav-mine', group: 'nav', icon: User, label: t('nav.myShifts'), keywords: 'ca cua toi my shifts', run: go('/my-shifts') },
       { id: 'nav-pending', group: 'nav', icon: Clock3, label: t('nav.pending'), keywords: 'cho xac nhan pending diem danh confirm', run: go('/pending') },
       { id: 'nav-logs', group: 'nav', icon: ScrollText, label: t('nav.actionLog'), keywords: 'nhat ky activity log logs', run: go('/logs') },
+      { id: 'nav-profile', group: 'nav', icon: IdCard, label: t('nav.profile'), keywords: 'ho so cua toi ca nhan profile about me thong tin email ngay vao nghi viec', run: go('/me') },
       { id: 'nav-status', group: 'nav', icon: Network, label: t('nav.status'), keywords: 'trang thai status ket noi connection', run: go('/status') },
       { id: 'nav-help', group: 'help', icon: BookOpen, label: t('nav.help'), keywords: 'huong dan help docs tai lieu guide cach dung', run: go('/help') },
       ...(isAdmin
