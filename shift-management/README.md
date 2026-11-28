@@ -144,7 +144,7 @@ Vài điểm cần biết:
 - Sai email hoặc mật khẩu sẽ hiện *"Email hoặc mật khẩu không đúng."* Các lỗi khác (bị khoá, giới hạn số lần thử) hiện nguyên văn để dễ báo cho quản trị viên.
 - Nếu bạn mở một đường dẫn sâu khi chưa đăng nhập (ví dụ `/pending`, hay link đồng nghiệp gửi tới một ca `/?date=2026-09-08&shift=<id>`), hệ thống ghi nhớ **nguyên cả link** — trang, ngày, chế độ xem, bộ lọc, form đang mở — và **đưa bạn về đúng màn hình đó** sau khi đăng nhập xong, không phải mở lại link.
 - Toàn bộ dữ liệu chỉ được tải sau khi có phiên đăng nhập hợp lệ. Người chưa đăng nhập không đọc được gì, kể cả ở tầng cơ sở dữ liệu.
-- **Đã nghỉ việc** (ngày nghỉ đặt trong Supabase đã tới): vẫn đăng nhập được nhưng chỉ thấy trang **Hồ sơ của tôi** với nút Đăng xuất — mọi đường dẫn khác đưa về `/me` ([Hồ sơ của tôi](#hồ-sơ-của-tôi)).
+- **Đã nghỉ việc** (ngày nghỉ đặt trong Supabase đã tới): vẫn đăng nhập được nhưng chỉ thấy trang **Hồ sơ của tôi** với nút **Đổi mật khẩu** và **Đăng xuất** — mọi đường dẫn khác đưa về `/me` ([Hồ sơ của tôi](#hồ-sơ-của-tôi)).
 
 **Đăng xuất**: bấm nút lưới ở góc phải trên cùng rồi chọn **Đăng xuất** (điện thoại: bấm avatar). Phải **bấm hai lần**: lần đầu dòng chuyển đỏ, hiện *Bấm lần nữa để đăng xuất*; bấm tiếp trong 4 giây mới đăng xuất, để quá thì trở lại như cũ. Bạn sẽ được đưa về trang đăng nhập ngay.
 
@@ -224,7 +224,7 @@ Nút bấm trên điện thoại cao tối thiểu 44px; hộp thoại mở dạ
 
 Ngày vào do admin sửa ([Trang Tài khoản](#trang-tài-khoản)); ngày nghỉ chỉ đặt trong Supabase ([mục 11](#đặt-ngày-nghỉ-việc)). Ứng dụng đọc lại hồ sơ mỗi lần mở trang, mỗi khi bạn quay lại tab và mỗi 2 phút, nên thay đổi hiện ra mà không phải đăng nhập lại.
 
-**Người đã nghỉ việc** (từ ngày nghỉ trở đi) vẫn đăng nhập được nhưng cả ứng dụng chỉ còn trang này: thanh trên chỉ có tên ứng dụng và **Đăng xuất**, đầu trang có hộp *Tài khoản làm việc đã ngừng hoạt động* kèm lời cảm ơn, mọi đường dẫn khác đưa về `/me`. Tới ngày nghỉ thì tab đang mở cũng tự chuyển sang trang này (chậm nhất khoảng 2 phút sau khi ngày nghỉ được đặt), và lịch lưu offline cùng thông báo trên máy bị xoá. Database chặn thật: người đã nghỉ gọi thẳng API cũng đọc về rỗng và không ghi được gì (016). Riêng khi mở app lúc **mất mạng** bằng hồ sơ lưu từ trước khi bị đặt ngày nghỉ, máy chưa biết người đó đã nghỉ nên vẫn hiện lịch lưu trên máy (tối đa 2 ngày, chỉ xem) cho tới khi có mạng lại.
+**Người đã nghỉ việc** (từ ngày nghỉ trở đi) vẫn đăng nhập được nhưng cả ứng dụng chỉ còn trang này: thanh trên chỉ có tên ứng dụng, **Đổi mật khẩu** (điện thoại: biểu tượng chìa khoá) và **Đăng xuất**, đầu trang có hộp *Tài khoản làm việc đã ngừng hoạt động* kèm lời cảm ơn, mọi đường dẫn khác đưa về `/me`. Tới ngày nghỉ thì tab đang mở cũng tự chuyển sang trang này (chậm nhất khoảng 2 phút sau khi ngày nghỉ được đặt), và lịch lưu offline cùng thông báo trên máy bị xoá. Database chặn thật: người đã nghỉ gọi thẳng API cũng đọc về rỗng và không ghi được gì (016). Riêng khi mở app lúc **mất mạng** bằng hồ sơ lưu từ trước khi bị đặt ngày nghỉ, máy chưa biết người đó đã nghỉ nên vẫn hiện lịch lưu trên máy (tối đa 2 ngày, chỉ xem) cho tới khi có mạng lại.
 
 ### Khi cửa sổ hẹp
 

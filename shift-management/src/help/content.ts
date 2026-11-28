@@ -289,7 +289,7 @@ const vi: HelpSection[] = [
         type: 'list',
         items: [
           '**Hồ sơ của tôi**: nút lưới (điện thoại: avatar) → Hồ sơ của tôi — tên hiển thị, email, ngày vào, đang làm hay đã nghỉ.',
-          'Đã **nghỉ việc** thì vẫn đăng nhập được nhưng chỉ xem được hồ sơ của mình.',
+          'Đã **nghỉ việc** thì vẫn đăng nhập và đổi mật khẩu được, nhưng chỉ xem được hồ sơ của mình.',
           '**Đổi mật khẩu**: nút lưới (điện thoại: avatar) → Đổi mật khẩu.',
           '**Đăng xuất**: bấm **hai lần**.',
           'Quên mật khẩu: nhờ admin đặt lại.',
@@ -613,7 +613,7 @@ const en: HelpSection[] = [
         type: 'list',
         items: [
           '**My profile**: grid button (phone: avatar) → My profile — email, name, join date, and whether you are working or have left.',
-          'After your **leaving date** you can still sign in, but you only see your own profile.',
+          'After your **leaving date** you can still sign in and change your password, but you only see your own profile.',
           '**Change password**: grid button (phone: avatar) → Change password.',
           '**Sign out**: press **twice**.',
           'Forgot your password: ask an admin to reset it.',
