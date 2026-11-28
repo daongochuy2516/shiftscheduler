@@ -224,7 +224,7 @@ Nút bấm trên điện thoại cao tối thiểu 44px; hộp thoại mở dạ
 
 Ngày vào do admin sửa ([Trang Tài khoản](#trang-tài-khoản)); ngày nghỉ chỉ đặt trong Supabase ([mục 11](#đặt-ngày-nghỉ-việc)). Ứng dụng đọc lại hồ sơ mỗi lần mở trang, mỗi khi bạn quay lại tab và mỗi 2 phút, nên thay đổi hiện ra mà không phải đăng nhập lại.
 
-**Người đã nghỉ việc** (từ ngày nghỉ trở đi) vẫn đăng nhập được nhưng cả ứng dụng chỉ còn trang này: thanh trên chỉ có tên ứng dụng và **Đăng xuất**, đầu trang có hộp *Tài khoản đã ngừng hoạt động*, mọi đường dẫn khác đưa về `/me`. Tới ngày nghỉ thì tab đang mở cũng tự chuyển sang trang này (chậm nhất khoảng 2 phút sau khi ngày nghỉ được đặt), và lịch lưu offline cùng thông báo trên máy bị xoá. Database chặn thật: người đã nghỉ gọi thẳng API cũng đọc về rỗng và không ghi được gì (016). Riêng khi mở app lúc **mất mạng** bằng hồ sơ lưu từ trước khi bị đặt ngày nghỉ, máy chưa biết người đó đã nghỉ nên vẫn hiện lịch lưu trên máy (tối đa 2 ngày, chỉ xem) cho tới khi có mạng lại.
+**Người đã nghỉ việc** (từ ngày nghỉ trở đi) vẫn đăng nhập được nhưng cả ứng dụng chỉ còn trang này: thanh trên chỉ có tên ứng dụng và **Đăng xuất**, đầu trang có hộp *Tài khoản làm việc đã ngừng hoạt động* kèm lời cảm ơn, mọi đường dẫn khác đưa về `/me`. Tới ngày nghỉ thì tab đang mở cũng tự chuyển sang trang này (chậm nhất khoảng 2 phút sau khi ngày nghỉ được đặt), và lịch lưu offline cùng thông báo trên máy bị xoá. Database chặn thật: người đã nghỉ gọi thẳng API cũng đọc về rỗng và không ghi được gì (016). Riêng khi mở app lúc **mất mạng** bằng hồ sơ lưu từ trước khi bị đặt ngày nghỉ, máy chưa biết người đó đã nghỉ nên vẫn hiện lịch lưu trên máy (tối đa 2 ngày, chỉ xem) cho tới khi có mạng lại.
 
 ### Khi cửa sổ hẹp
 

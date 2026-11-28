@@ -581,9 +581,9 @@ export const en = {
   'profile.worked': '{{duration}} in total',
   'profile.firstDay': 'First day',
   'profile.notStarted': 'Not started yet',
-  'profile.leftTitle': 'This account is no longer active',
+  'profile.leftTitle': 'Your work account is no longer active',
   'profile.leftHint':
-    'From your leaving date you can only see this page.',
+    'You are no longer on the Thinkmay staff list. Thank you for everything you contributed to the team.',
   'log.title': 'Action log',
   'log.subtitle': 'Every change to shifts, assignments, templates and locations',
   'log.from': 'From date',
@@ -1413,9 +1413,9 @@ export const vi: Record<Exclude<DictKey, EnglishOnlyKey>, string> = {
   'profile.worked': 'Làm tổng cộng {{duration}}',
   'profile.firstDay': 'Ngày đầu tiên',
   'profile.notStarted': 'Chưa tới ngày vào',
-  'profile.leftTitle': 'Tài khoản đã ngừng hoạt động',
+  'profile.leftTitle': 'Tài khoản làm việc đã ngừng hoạt động',
   'profile.leftHint':
-    'Từ ngày nghỉ, bạn chỉ xem được trang này.',
+    'Bạn hiện không còn trong danh sách nhân sự làm việc tại Thinkmay. Cảm ơn bạn vì những đóng góp cho team trong thời gian qua.',
   'log.title': 'Nhật ký thao tác',
   'log.subtitle': 'Mọi thay đổi trên ca, phân công, ca mẫu và nơi trực',
   'log.from': 'Từ ngày',
