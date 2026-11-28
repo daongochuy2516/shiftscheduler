@@ -13,6 +13,7 @@ import { ActionLogPage } from './pages/ActionLogPage'
 import { StatusPage } from './pages/StatusPage'
 import { AccountsPage } from './pages/AccountsPage'
 import { HelpPage } from './pages/HelpPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { TooltipLayer } from './components/Tooltip'
 import { UpdatePrompt } from './components/UpdatePrompt'
 
@@ -36,6 +37,7 @@ export default function App() {
                 <Route path="status" element={<StatusPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
                 <Route path="help" element={<HelpPage />} />
+                <Route path="me" element={<ProfilePage />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

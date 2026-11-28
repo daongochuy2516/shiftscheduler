@@ -23,6 +23,7 @@ import {
   User,
   UserCog,
   Network,
+  IdCard,
 } from 'lucide-react'
 import { ChangePasswordModal } from './ChangePasswordModal'
 import { useAuth } from '../auth/AuthContext'
@@ -562,6 +563,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <p className="px-1 pb-2 text-center text-xs text-slate-400 select-none">
               {t(greeting, { name: displayName })}
             </p>
+
+            <NavLink
+              to="/me"
+              onClick={() => setAccountOpen(false)}
+              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-700 transition active:bg-slate-100"
+            >
+              <SheetIcon icon={IdCard} tone="bg-slate-100 text-slate-600" />
+              {t('nav.profile')}
+            </NavLink>
 
             <NavLink
               to="/summary"

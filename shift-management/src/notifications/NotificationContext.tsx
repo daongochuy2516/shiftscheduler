@@ -81,6 +81,19 @@ function storageKey(userId: UUID): string {
   return `scheduler.notifications.${userId}`
 }
 
+/**
+ * Xoá thông báo đã lưu của một người — thông báo có tên ca, ngày giờ, nên
+ * người đã nghỉ việc (016) không được giữ lại trên máy.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function clearStoredNotifications(userId: UUID) {
+  try {
+    localStorage.removeItem(storageKey(userId))
+  } catch {
+    // Không có gì để xoá.
+  }
+}
+
 function readStored(userId: UUID): AppNotification[] {
   try {
     const raw = localStorage.getItem(storageKey(userId))
@@ -102,34 +115,43 @@ function newId(): string {
 
 export function NotificationProvider({
   userId,
+  ephemeral = false,
   children,
 }: {
   userId: UUID
+  /**
+   * Không đọc / ghi localStorage: chỉ popup trong phiên này. Cho người đã
+   * nghỉ việc (016) — thông báo cũ có tên ca, giờ ca; đọc lên rồi ghi lại là
+   * dựng lại thứ FormerStaffLayout vừa xoá.
+   */
+  ephemeral?: boolean
   children: ReactNode
 }) {
   // Provider được mount lại theo `key={userId}`, nên đọc một lần là đủ.
   const [items, setItems] = useState<AppNotification[]>(() =>
-    readStored(userId),
+    ephemeral ? [] : readStored(userId),
   )
   const [toasts, setToasts] = useState<string[]>([])
   const [centerOpen, setCenterOpen] = useState(false)
 
   useEffect(() => {
+    if (ephemeral) return
     try {
       localStorage.setItem(storageKey(userId), JSON.stringify(items))
     } catch {
       // Đầy hoặc bị chặn: thông báo vẫn dùng được tới khi tải lại trang.
     }
-  }, [userId, items])
+  }, [userId, items, ephemeral])
 
   // Tab khác của cùng tài khoản vừa đổi danh sách: đọc lại cho khớp.
   useEffect(() => {
+    if (ephemeral) return
     const onStorage = (e: StorageEvent) => {
       if (e.key === storageKey(userId)) setItems(readStored(userId))
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [userId])
+  }, [userId, ephemeral])
 
   const notify = useCallback((input: NotifyInput) => {
     const item: AppNotification = {

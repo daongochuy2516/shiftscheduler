@@ -15,10 +15,14 @@ export const TOMORROW = toDateKey(addDays(now, 1))
 
 const ts = now.toISOString()
 
+function daysAgo(n: number): string {
+  return toDateKey(addDays(now, -n))
+}
+
 /**
  * Huy là admin để thử được cả hai phía của luật chấm công; còn lại là staff.
  * Quản lý là admin đang ẩn (displayed = false): vào được web nhưng không hiện
- * trong các bảng xếp ca.
+ * trong các bảng xếp ca. Khoa đã nghỉ việc (left_on, 016): chỉ xem được Hồ sơ.
  */
 export const MOCK_PROFILES: Account[] = [
   {
@@ -28,6 +32,8 @@ export const MOCK_PROFILES: Account[] = [
     role: 'admin',
     displayed: true,
     created_at: ts,
+    joined_on: daysAgo(900),
+    left_on: null,
   },
   {
     id: 'u-thien',
@@ -36,6 +42,8 @@ export const MOCK_PROFILES: Account[] = [
     role: 'staff',
     displayed: true,
     created_at: ts,
+    joined_on: daysAgo(540),
+    left_on: null,
   },
   {
     id: 'u-an',
@@ -44,6 +52,8 @@ export const MOCK_PROFILES: Account[] = [
     role: 'staff',
     displayed: true,
     created_at: ts,
+    joined_on: daysAgo(400),
+    left_on: null,
   },
   {
     id: 'u-mai',
@@ -52,6 +62,8 @@ export const MOCK_PROFILES: Account[] = [
     role: 'staff',
     displayed: true,
     created_at: ts,
+    joined_on: daysAgo(200),
+    left_on: null,
   },
   {
     id: 'u-long',
@@ -60,6 +72,8 @@ export const MOCK_PROFILES: Account[] = [
     role: 'staff',
     displayed: true,
     created_at: ts,
+    joined_on: daysAgo(75),
+    left_on: null,
   },
   {
     id: 'u-ngoc',
@@ -68,6 +82,8 @@ export const MOCK_PROFILES: Account[] = [
     role: 'staff',
     displayed: true,
     created_at: ts,
+    joined_on: daysAgo(12),
+    left_on: null,
   },
   {
     id: 'u-manager',
@@ -76,6 +92,19 @@ export const MOCK_PROFILES: Account[] = [
     role: 'admin',
     displayed: false,
     created_at: ts,
+    joined_on: daysAgo(1200),
+    left_on: null,
+  },
+  {
+    // Đã nghỉ: đăng nhập được nhưng chỉ xem được trang Hồ sơ (016).
+    id: 'u-khoa',
+    email: 'khoa@thinkwork.test',
+    display_name: 'Khoa Do',
+    role: 'staff',
+    displayed: false,
+    created_at: ts,
+    joined_on: daysAgo(480),
+    left_on: daysAgo(10),
   },
 ]
 

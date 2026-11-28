@@ -15,6 +15,7 @@ import {
   Sun,
   UserCog,
   Network,
+  IdCard,
 } from 'lucide-react'
 import { useI18n } from '../i18n/I18nContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -128,6 +129,11 @@ export function HeaderMenu({
       {open && (
         <MenuPanel label={t('menu.label')}>
           {/* ---- trang ---- */}
+          <Item
+            icon={IdCard}
+            label={t('nav.profile')}
+            onClick={() => run(() => navigate('/me'))}
+          />
           {isAdmin && (
             <Item
               icon={UserCog}

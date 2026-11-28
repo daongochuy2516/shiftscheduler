@@ -37,12 +37,28 @@ export interface Account extends Profile {
    * nào được áp (xem lib/attendance.ts).
    */
   role: 'staff' | 'admin' | null
+  /**
+   * Ngày vào công ty (yyyy-MM-dd), cột của 016. `null` = admin chưa đặt.
+   * Vắng mặt (`undefined`) = 016 chưa chạy — khác `null` để trang Tài khoản
+   * biết có được gửi cột này lên không (gửi cột chưa có là PGRST204).
+   */
+  joined_on?: string | null
+  /**
+   * Ngày nghỉ việc (yyyy-MM-dd), 016. `null` = đang làm. Từ ngày này trở đi
+   * người đó chỉ xem được trang Hồ sơ (`lib/employment.ts`); database chặn
+   * mọi thứ khác. Chỉ đặt được trong Supabase (SQL Editor / Table Editor) —
+   * web chỉ đọc, kể cả admin. Vắng mặt = 016 chưa chạy, như `joined_on`.
+   */
+  left_on?: string | null
 }
 
 /** Những gì admin sửa được ở trang Tài khoản. */
 export interface ProfileInput {
   display_name: string
   displayed: boolean
+  /** Bỏ trống (`undefined`) = không gửi cột — bắt buộc khi 016 chưa chạy. */
+  joined_on?: string | null
+  // Không có left_on: ngày nghỉ chỉ đặt trong Supabase, web không ghi (016).
 }
 
 export interface Shift {
